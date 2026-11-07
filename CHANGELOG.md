@@ -2,6 +2,18 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 009: main brought up to date; merge workflow fixed (branch `company/docs/merge-workflow`)
+
+### Merged into `main`
+- #2 `feat(service): persist data in SQLite with seeded cohort history` (`59e2660`).
+- #5 `docs(research): add dataset research and use-case requirements` (`0a8463d`), replacing #3, which GitHub closed when #2's branch was deleted.
+- #4 `feat(service)!: move care records to organizations with emergency access` (`6ede5ba`).
+
+### Changed
+- `CONTRIBUTING.md`: keep `main` current by merging each PR when green; stacked-PR rules (retarget before the parent merges, update by merging `main`, no force-pushes) (D-072, D-073).
+- `docs/company/CLAUDE.md`: company agents squash-merge their own green, conflict-free PRs (D-072).
+- D-052 superseded by D-072; D-063's stacked-PR procedure superseded by D-073.
+
 ## 2026-11-07 — Session 008: contract 2.0, care teams, emergency access and escalation (branch `company/feat/contract-v2`, stacked on `company/docs/dataset-research`)
 
 ### Added
