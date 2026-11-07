@@ -87,4 +87,11 @@ Refs: D-052
 
 If `main` moves while your PR is open, rebase again (step 4) and push with `git push --force-with-lease` to your own branch only.
 
-**Stacked pull requests.** When your work depends on a PR that is not merged yet, branch from that PR's branch and open your PR with `--base <that branch>`, so its diff shows only your commits. Once the parent PR is squash-merged, GitHub retargets your PR to `main`; then run `git rebase --onto origin/main <old parent tip> <your branch>` and push with `--force-with-lease`.
+**Keep `main` current.** Merge each pull request as soon as CI is green and GitHub shows no conflicts, so `main` always reflects what has been built. Prefer finishing and merging a PR before starting work that depends on it.
+
+**Stacked pull requests (only when unavoidable).** If your work depends on a PR that is not merged yet:
+
+1. Branch from that PR's branch and open your PR with `--base <that branch>`, so its diff shows only your commits.
+2. **Before the parent PR is merged, retarget your PR to `main`** (`gh pr edit <n> --base main`). GitHub *closes* a PR whose base branch is deleted, and a closed PR cannot be retargeted.
+3. After the parent is squash-merged, update your branch by merging `main` into it (`git merge origin/main`) and push normally. Do not rebase or force-push shared branches.
+4. Conflicts after a squash merge are expected where your branch edited lines the parent added. If `git diff <parent's old tip> origin/main` is empty, `main` contains nothing you are missing, and your branch's version of each conflicting file is the correct result. In append-only log files, keep every entry from both sides.
