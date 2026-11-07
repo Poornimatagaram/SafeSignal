@@ -1,9 +1,8 @@
-# Enforces CONTRIBUTING.md on every pull request into main, and keeps main green.
+# Enforces CONTRIBUTING.md on every pull request (including stacked PRs), and keeps main green.
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
+  pull_request:          # every PR, including PRs stacked on another branch
   push:
     branches: [main]
 
