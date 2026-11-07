@@ -187,3 +187,33 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. APScheduler job: for each active enrollment whose window closed today with no record, insert a `missed` scheduler record (D-003) and a relay `missed` alert routed by links; alert within 1 minute (AL-01).
 2. Demo control to set a patient's window so the missed alert fires on cue (Scoping Doc 21.3).
 3. Then Step 4: company portal (`apps/company-web`).
+
+---
+
+## Session 007 — 2026-11-07 (Sat) · Dataset research and use-case requirements
+
+**Goal:** Find real datasets that make the demo authentic (real data is messy), save the research, and record the product owner's clarified use case.
+
+**Outputs**
+- `docs/research/datasets.md`. Verified live through the ClinicalTrials.gov API: per-arm adverse events for FLAURA (4 arms), MARIPOSA (3 arms) and MELODY (infants, 2 arms), and protocol and statistical analysis plan PDFs for FLAURA, MARIPOSA, AURA3, FLAURA2 and MELODY.
+- Requirements recorded: ages 0–100 with proxy reporting (D-058); trial-set cadence, wellbeing questions, voice or typing (D-059); escalation at 1, 2 and 3 missed check-ins including the hospital and public-service medical experts (D-060); several drug programs, 4 groups of 250, 1–2 real documents per trial (D-061); doctor sees medical history only, with hospital-level continuity (D-062).
+- CI now runs on stacked PRs (D-063).
+
+**Findings**
+- No public dataset has daily per-patient check-ins on these drugs; the demo keeps generating them, but from real per-arm rates.
+- PRO-CTCAE items cannot be altered or used in a product for sale; we follow its structure only.
+- FLAURA reports shortness of breath and cough on osimertinib, confirming that `schema/terms.json` needs correcting (OnSIDES).
+- The UCI download link for the Drugs.com reviews has moved.
+
+**Decisions:** D-057 to D-063 (open parts in D-060, D-061, D-062).
+
+**Open items (need the product owner)**
+- D-060: who the public-service medical experts are, and patient consent to inform them.
+- D-061: confirm the portfolio (Tagrisso, Rybrevant, infant nirsevimab) and a fictional company name.
+- D-062: care-team or hospital key design for record continuity.
+- PR #2 still open; this branch is stacked on it.
+
+**Next**
+1. Contract 1.2 proposal: reporter field (D-058), survey schedule (D-059), escalation level and hospital recipients on alerts (D-060, D-062), multiple programs (D-061). Teammate briefs updated with it.
+2. Step 3, extended: scheduler with the 3-step escalation ladder.
+3. Real-data seed: per-arm rates from ClinicalTrials.gov, term list corrected from OnSIDES, trial documents fetched into the company `document` table.
