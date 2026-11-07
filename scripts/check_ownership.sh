@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails if your branch changes files outside the folders your area owns (D-044). Run before every push.
 #
-#   scripts/check_ownership.sh            # area taken from the branch name: <company|patient|doctor>/<topic>
+#   scripts/check_ownership.sh            # area taken from the branch name: <area>/<type>/<description>
 #   scripts/check_ownership.sh doctor     # or name the area explicitly
 #
 # Checks committed changes since origin/main plus uncommitted and untracked files.
@@ -10,7 +10,7 @@ set -euo pipefail
 
 area="${1:-$(git rev-parse --abbrev-ref HEAD | cut -d/ -f1)}"
 case "$area" in company|patient|doctor) ;; *)
-  echo "Unknown area '$area'. Use a branch named <company|patient|doctor>/<topic> or pass the area." >&2; exit 2;;
+  echo "Unknown area '$area'. Use a branch named <company|patient|doctor>/<type>/<description> (CONTRIBUTING.md) or pass the area." >&2; exit 2;;
 esac
 
 owner_of() {
