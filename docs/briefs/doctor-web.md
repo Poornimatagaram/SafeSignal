@@ -25,16 +25,16 @@ Headers on every request: `X-Role: doctor`, `X-Actor-Id: dr_3a7f10b2`. Allowed c
 | `GET /v1/doctors/{id}/patients` | `[{patient_ref, granted_at}]` (active care links only) |
 | `GET /v1/doctors/{id}/envelopes?since=` | `[{envelope_id, patient_ref, ciphertext, payload_sha256, received_at}]` |
 | `POST /v1/doctors/{id}/envelopes/{envelope_id}/ack` | `{envelope_id, fetched_at}` |
-| `GET /v1/doctors/{id}/alerts?since=` | `[{alert_id, patient_ref, alert_type, created_at}]` |
+| `GET /v1/doctors/{id}/alerts?since=` | `[{alert_id, patient_ref, alert_type, created_at, received_at}]` |
 
-`since` returns items strictly after the timestamp, oldest first, at most 100 per call; keep the newest seen value in `dr_sync_state`.
+`since` returns items strictly after the timestamp, oldest first, at most 100 per call. For both envelopes and alerts, keep the newest **`received_at`** you have seen in `dr_sync_state` and pass it as `since`; never use an alert's `created_at` (device time, can be older) (D-054). Timestamps have microseconds; store them as strings and compare as-is.
 
 ## Changed from the scoping doc (these override Sections 25–26)
 - **`doctor_view.sql` adds** `dr_timeline_entry.envelope_id` and `.status`, plus `dr_key` (your key pair) and `dr_sync_state` (cursors) (D-011).
 - **Timeline entry ID** is `<envelope_id>:<term_code>`; an envelope with no symptoms still updates `dr_patient.last_checkin`.
 - **Public key:** patients get 404 until you register it, so register on first launch (D-025).
 - **Revoked consent:** the service stops returning that patient, their undelivered envelopes and alerts (D-013). Data you already stored stays in your browser; mark the patient as no longer shared.
-- **Alerts:** `missed` comes from the service scheduler (not built yet), `severe` from the patient device (D-016).
+- **Alerts:** `missed` comes from the service scheduler (not built yet; seeded history has a few for Walter and Priya), `severe` from the patient device (D-016). Show `created_at` as the event time; page on `received_at` (D-054).
 - Paths: `web/doctor/` → `apps/doctor-web/`; hash vectors are tested in `packages/contract-ts` (D-029, D-030).
 
 ## Always
