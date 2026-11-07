@@ -130,3 +130,30 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. SQLite store at `var/service/` replacing the stub; seed from `schema/demo_fixtures.json` plus 1,000 synthetic enrollments and history.
 2. `scripts/reset_all.sh`.
 3. Update `docs/INTEGRATION_STATUS.md` at the H3 switch-over.
+
+---
+
+## Session 005 — 2026-11-07 (Sat) · Conventional Commits and pull-request workflow
+
+**Goal:** From now on, every main piece of work follows industry-standard git practice: its own branch, Conventional Commit messages split by type, push the branch, confirm no conflicts with `main`, open a pull request.
+
+**Outputs**
+- `CONTRIBUTING.md` (branches, commit types and scopes, PR steps, squash merging), PR template, CI workflow, `scripts/check_commits.sh`.
+- All instruction files point to `CONTRIBUTING.md`; company agents open PRs but merge only when asked.
+- This work itself followed the new flow on `company/chore/git-workflow` with four commits: `docs(repo)`, `ci`, `chore(github)`, `docs`.
+
+**Verification**
+- `check_commits.sh`: accepts `feat(service): ...` and `feat(schema)!: ...`; rejects "Added stuff", uppercase descriptions, trailing periods, unknown types and subjects over 72 characters.
+- Generated `schema/` files regenerate with no diff (the new CI step passes locally).
+- Branch checks, push, conflict check and PR status: see the PR.
+
+**Decisions:** D-048 to D-052.
+
+**Open items**
+- Repo owner settings (D-045, D-050): protect `main`, require CI, squash merging only, auto-delete head branches.
+- D-046 handles; D-008, D-039 still open.
+
+**Next (Step 2)** on `company/feat/sqlite-store`:
+1. SQLite store at `var/service/` replacing the stub; seed from `schema/demo_fixtures.json` plus 1,000 synthetic enrollments and history.
+2. `scripts/reset_all.sh`.
+3. Update `docs/INTEGRATION_STATUS.md` at the H3 switch-over.

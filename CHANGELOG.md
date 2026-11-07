@@ -2,6 +2,24 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 005: Conventional Commits and pull-request workflow (branch `company/chore/git-workflow`)
+
+### Added
+- `CONTRIBUTING.md`: branch naming `<area>/<type>/<description>`, Conventional Commits 1.0.0 with project scopes, pull-request flow, squash merging (D-048, D-049, D-050).
+- `.github/workflows/ci.yml`: ownership, commit-message and PR-title checks; contract, service and TypeScript tests; generated-file sync check (D-051).
+- `.github/pull_request_template.md` (D-050).
+- `scripts/check_commits.sh`: local Conventional Commits check, also used by CI (D-051).
+- Decisions D-048 to D-052.
+
+### Changed
+- `README.md`: the git workflow section now points to `CONTRIBUTING.md`.
+- Root `CLAUDE.md`, `docs/company/CLAUDE.md`, `docs/briefs/*.md`: workflow is branch → Conventional Commits → checks → rebase → push → PR; company agents do not merge PRs unless asked (D-052).
+- `scripts/check_ownership.sh`: messages updated for the new branch format.
+- D-044 merge step superseded by D-049 and D-050.
+
+### Removed
+- Merged local branches `company/repo-structure`, `company/teammate-onboarding`, `company/shared-remote`, `company/log-push` (never pushed).
+
 ## 2026-11-07 — Session 004: shared GitHub repo (branch `company/shared-remote`)
 
 ### Added
