@@ -2,6 +2,24 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 003: teammate onboarding (branch `company/teammate-onboarding`)
+
+### Added
+- `schema/demo_fixtures.json`: demo IDs, enrollments, links, company users, on-device profiles (D-033); contract test for it.
+- `docs/INTEGRATION_STATUS.md`: what the service does today, endpoint status, switch-over plan, how to run it for browser apps (D-036).
+- `docs/company/CLAUDE.md`: company-owner instructions (moved out of the root file) (D-034).
+- `apps/patient-runtime/CLAUDE.md`, `apps/patient-web/CLAUDE.md`, `apps/doctor-web/CLAUDE.md`: full agent briefs with corrected paths and "Changed from the scoping doc" lists; `AGENTS.md` links in each and at the root (D-034).
+- `apps/<teammate app>/CHANGELOG.md` for each teammate app (D-035).
+- `scripts/send_demo_envelope.py`: fake Walter device for doctor-web testing (D-037).
+- Decisions D-033 to D-039 (D-039 open).
+
+### Changed
+- Root `CLAUDE.md`: now team-wide only (routing table, sources, shared rules) (D-034).
+- `apps/service/sentinel_service/demo_ids.py` and `stub_store.py`: load demo IDs, enrollments and links from `schema/demo_fixtures.json` (D-033).
+- `README.md`: "New here?" pointer, log rule, demo-envelope script; teammate app READMEs point to their `CLAUDE.md`, the status page and fixtures.
+- `CODEOWNERS`: `docs/`, root `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md`, `README.md` owned by the company side (D-035).
+- `schema/CHANGELOG.md`: notes `demo_fixtures.json` under 1.0.
+
 ## 2026-11-07 — Session 002: centralized repo structure (branch `company/repo-structure`)
 
 ### Added

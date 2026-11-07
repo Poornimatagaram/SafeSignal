@@ -98,3 +98,26 @@ def test_cohort_view_suppresses_small_groups(tmp_path: Path):
     assert rows == [("SE_RASH", 6, None, 6)]  # cough dropped; 2 severe shown as NULL (<5)
     comp = db.execute("SELECT records, patients, completion_rate FROM v_completion_weekly").fetchall()
     assert comp == [(6, 6, 1.0)]
+
+
+def test_demo_fixtures_match_contract():
+    import re
+    f = json.loads((SCHEMA_DIR / "demo_fixtures.json").read_text())
+    pat = enums()["id_patterns"]
+    cohorts = {c["cohort_id"]: c["drug_version"] for c in f["cohorts"]}
+    assert set(cohorts) == set(enums()["cohort_id"])
+    assert re.match(pat["program_id"], f["program"]["program_id"])
+    for d in f["doctors"]:
+        assert re.match(pat["doctor_id"], d["doctor_id"])
+    for c in f["caregivers"]:
+        assert re.match(pat["caregiver_id"], c["caregiver_id"])
+    for u in f["company_users"]:
+        assert re.match(pat["company_user_id"], u["user_id"]) and u["role"] in enums()["roles"]
+    enrolled = {e["patient_ref"]: e for e in f["enrollments"]}
+    for p in f["device_profiles"]:
+        assert re.match(pat["patient_ref"], p["patient_ref"])
+        e = enrolled[p["patient_ref"]]
+        assert (p["program_id"], p["cohort_id"]) == (e["program_id"], e["cohort_id"])
+        assert p["drug_version"] == cohorts[p["cohort_id"]]
+        assert p["drug_name"] == f["program"]["drug_name"]
+        assert re.match(r"^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$", e["checkin_window"])  # D-005 UTC window

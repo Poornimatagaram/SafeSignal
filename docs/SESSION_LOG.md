@@ -65,3 +65,33 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. `apps/service/sentinel_service/db.py`: SQLite store at `var/service/company.db` and `var/service/relay.db` replacing `StubStore`.
 2. `apps/service/sentinel_service/seed.py`: program, 4 cohorts, 1,000 enrollments, terms, surveys, demo links, 3–4 weeks of history.
 3. `scripts/reset_all.sh` (wipes `var/`).
+
+---
+
+## Session 003 — 2026-11-07 (Sat) · Teammate onboarding
+
+**Goal:** Make the repo self-explanatory for the patient and doctor teammates and their coding agents, with no outside briefing needed beyond what cannot live in a repo.
+
+**Gaps found and fixed**
+1. Root `CLAUDE.md` held company-only rules that teammates' agents would also load → split into team-wide root plus `docs/company/CLAUDE.md` (D-034).
+2. Shared logs would conflict → per-app changelogs; root logs company-owned (D-035).
+3. Scoping doc briefs and 26.6 examples are outdated → per-app `CLAUDE.md` with corrected paths and every contract change that affects that app.
+4. No statement of service behaviour → `docs/INTEGRATION_STATUS.md` (D-036).
+5. Demo IDs lived inside our app; no device profile for Walter → `schema/demo_fixtures.json` (D-033).
+6. Doctor side had no way to get test data → `scripts/send_demo_envelope.py` (D-037).
+
+**Verification**
+- `packages/contract-py`: 22 passed (new fixture test). `apps/service`: 17 passed. `packages/contract-ts`: 8/8.
+- Live: `send_demo_envelope.py` exits with a clear message before the doctor key exists; after registering a key, envelope 201 and severe alert 201 (routed to doctor and caregiver); the envelope decrypts with the doctor's private key and its hash matches.
+- `@sentinel/contract` installed as a `file:` dependency into a scratch project and imported correctly.
+
+**Decisions:** D-033 to D-039 (D-039 open).
+
+**Open items**
+- D-008 (caregiver `summary`) and D-039 (who builds the caregiver view).
+- Needs people, not the repo: shared GitHub remote and handles for `CODEOWNERS`; model downloads for the patient runtime (Ollama 3B, faster-whisper, spaCy); schema 1.0 sign-off; hotspot IP on the day.
+
+**Next (Step 2)**
+1. SQLite store at `var/service/` replacing the stub; seed from `schema/demo_fixtures.json` plus 1,000 synthetic enrollments and history.
+2. `scripts/reset_all.sh`.
+3. Update `docs/INTEGRATION_STATUS.md` at the H3 switch-over.

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "note": "Synthetic demo data only (Scoping Doc 3, 21.3; D-023, D-033). Single source for demo IDs across all apps. 'device_profiles' seed patient.db on the patient's device and must never be sent anywhere.",
+  "program": { "program_id": "prog_demo_01", "company_id": "co_demo", "drug_name": "Tagrisso" },
+  "cohorts": [
+    { "cohort_id": "cohort_A", "drug_version": "v1", "label": "Tagrisso v1" },
+    { "cohort_id": "cohort_B", "drug_version": "v2", "label": "Tagrisso v2" },
+    { "cohort_id": "cohort_C", "drug_version": "v3", "label": "Tagrisso v3" },
+    { "cohort_id": "cohort_D", "drug_version": "v4", "label": "Tagrisso v4" }
+  ],
+  "doctors": [
+    { "doctor_id": "dr_3a7f10b2", "display_name": "Dr. Shah", "clinic": "Demo Clinic" }
+  ],
+  "caregivers": [
+    { "caregiver_id": "cg_7e21c9a4", "display_name": "Anna", "patient_ref": "pt_4b82d0c6" }
+  ],
+  "company_users": [
+    { "user_id": "usr_dr_lee", "display_name": "Dr. Lee", "role": "company_safety" },
+    { "user_id": "usr_marco", "display_name": "Marco", "role": "company_reader" },
+    { "user_id": "usr_admin", "display_name": "Survey admin", "role": "company_admin" }
+  ],
+  "enrollments": [
+    { "patient_ref": "pt_4b82d0c6", "program_id": "prog_demo_01", "cohort_id": "cohort_B", "checkin_window": "14:00-17:00" },
+    { "patient_ref": "pt_9c1d2e3f", "program_id": "prog_demo_01", "cohort_id": "cohort_A", "checkin_window": "13:00-14:00" }
+  ],
+  "care_links": [
+    { "doctor_id": "dr_3a7f10b2", "patient_ref": "pt_4b82d0c6", "status": "active" },
+    { "doctor_id": "dr_3a7f10b2", "patient_ref": "pt_9c1d2e3f", "status": "active" }
+  ],
+  "caregiver_links": [
+    { "caregiver_id": "cg_7e21c9a4", "patient_ref": "pt_4b82d0c6", "detail_level": "alerts_only", "status": "active" }
+  ],
+  "device_profiles": [
+    {
+      "patient_ref": "pt_4b82d0c6",
+      "display_name": "Walter",
+      "date_of_birth": "1934-03-12",
+      "phone": "555-0142",
+      "program_id": "prog_demo_01",
+      "cohort_id": "cohort_B",
+      "drug_name": "Tagrisso",
+      "drug_version": "v2",
+      "doctor_id": "dr_3a7f10b2",
+      "caregiver_id": "cg_7e21c9a4",
+      "enrolled_at": "2026-10-17T15:00:00Z",
+      "consent": { "share_doctor": true, "share_caregiver": true, "caregiver_detail": "alerts_only" }
+    },
+    {
+      "patient_ref": "pt_9c1d2e3f",
+      "display_name": "Priya",
+      "date_of_birth": "1968-07-04",
+      "phone": "555-0187",
+      "program_id": "prog_demo_01",
+      "cohort_id": "cohort_A",
+      "drug_name": "Tagrisso",
+      "drug_version": "v1",
+      "doctor_id": "dr_3a7f10b2",
+      "caregiver_id": null,
+      "enrolled_at": "2026-10-17T15:00:00Z",
+      "consent": { "share_doctor": true, "share_caregiver": false, "caregiver_detail": "alerts_only" }
+    }
+  ]
+}

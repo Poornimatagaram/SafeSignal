@@ -8,6 +8,11 @@
 /apps/company-web/          @COMPANY_OWNER
 /scripts/                   @COMPANY_OWNER
 /CODEOWNERS                 @COMPANY_OWNER
+/docs/                      @COMPANY_OWNER
+/CLAUDE.md                  @COMPANY_OWNER
+/AGENTS.md                  @COMPANY_OWNER
+/CHANGELOG.md               @COMPANY_OWNER
+/README.md                  @COMPANY_OWNER
 
 # Patient side
 /apps/patient-runtime/      @PATIENT_OWNER

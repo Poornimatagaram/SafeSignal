@@ -13,3 +13,4 @@ Initial contract, from Scoping Doc Section 26 with these changes (see `docs/DECI
 - `relay.sql`: caregiver link timestamps; nullable `doctor.public_key` (D-025).
 - `patient.sql`: `patient_profile.drug_name` (D-010), `term_cache.known_for_program` (D-007).
 - `doctor_view.sql`: `dr_timeline_entry.envelope_id`/`status`, `dr_key`, `dr_sync_state` (D-011).
+- Added before sign-off (data only, no payload change): `demo_fixtures.json` (D-033).
