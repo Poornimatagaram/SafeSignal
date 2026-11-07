@@ -26,3 +26,6 @@ dist/
 
 # OS
 .DS_Store
+
+# Runtime databases for every app live here (wiped by scripts/reset_all.sh)
+var/

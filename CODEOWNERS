@@ -1,0 +1,17 @@
+# Ownership by folder. Nobody edits another owner's folder; request changes from its owner.
+# GitHub handles to be filled in when the shared remote exists (see docs/DECISIONS.md D-026).
+
+# Company side (pharma persona): contract, shared packages, service, company portal, shared tooling
+/schema/                    @COMPANY_OWNER
+/packages/                  @COMPANY_OWNER
+/apps/service/              @COMPANY_OWNER
+/apps/company-web/          @COMPANY_OWNER
+/scripts/                   @COMPANY_OWNER
+/CODEOWNERS                 @COMPANY_OWNER
+
+# Patient side
+/apps/patient-runtime/      @PATIENT_OWNER
+/apps/patient-web/          @PATIENT_OWNER
+
+# Doctor side
+/apps/doctor-web/           @DOCTOR_OWNER

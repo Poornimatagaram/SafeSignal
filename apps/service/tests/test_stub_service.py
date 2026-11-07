@@ -8,8 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from nacl.public import PrivateKey, SealedBox
 
-from clients.sentinel_client import SendRejected, SentinelClient, build_envelope
-from contract import SCHEMA_DIR, canonical, payload_sha256
+from sentinel_contract.client import SendRejected, SentinelClient, build_envelope
+from sentinel_contract import SCHEMA_DIR, canonical, payload_sha256
 from sentinel_service import demo_ids as ids
 from sentinel_service.main import app
 from sentinel_service.stub_store import StubStore
@@ -156,7 +156,7 @@ def test_since_paging_is_strictly_after(c):
 
 
 def test_client_refuses_free_text_before_sending(c):
-    from contract import ContractError
+    from sentinel_contract import ContractError
     client = SentinelClient("http://testserver", ids.WALTER, http=TestClient(app))
     bad = json.loads((EX / "company_record.invalid.json").read_text())["payload"]
     with pytest.raises(ContractError):

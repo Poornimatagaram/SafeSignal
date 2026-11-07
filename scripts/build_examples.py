@@ -1,6 +1,6 @@
 """Regenerate schema/examples/ (valid + invalid payloads) and hash_vectors.json.
 
-Run: uv run python scripts/build_examples.py
+Run from the repo root: uv run --project packages/contract-py python scripts/build_examples.py
 Owner-only: examples are part of the contract; regenerate and commit after any schema change.
 """
 
@@ -9,11 +9,8 @@ from __future__ import annotations
 import base64
 import copy
 import json
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from contract import SCHEMA_DIR, canonical, payload_sha256, validation_errors  # noqa: E402
+from sentinel_contract import SCHEMA_DIR, canonical, payload_sha256, validation_errors
 
 OUT = SCHEMA_DIR / "examples"
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from contract import SCHEMA_DIR, PAYLOAD_SCHEMAS, canonical, enums, payload_sha256, validation_errors
+from sentinel_contract import SCHEMA_DIR, PAYLOAD_SCHEMAS, canonical, enums, payload_sha256, validation_errors
 
 EX = SCHEMA_DIR / "examples"
 
