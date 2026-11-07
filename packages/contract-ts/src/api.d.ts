@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/healthz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liveness and seed state (no auth) */
+        get: operations["healthz_healthz_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/survey": {
         parameters: {
             query?: never;
@@ -303,6 +320,8 @@ export interface components {
             alert_type: "missed" | "severe";
             /** Created At */
             created_at: string;
+            /** Received At */
+            received_at: string;
         };
         /** CohortWeeklyRow */
         CohortWeeklyRow: {
@@ -375,6 +394,8 @@ export interface components {
             alert_type: "missed" | "severe";
             /** Created At */
             created_at: string;
+            /** Received At */
+            received_at: string;
         };
         /** Envelope */
         Envelope: {
@@ -467,6 +488,18 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** Health */
+        Health: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "ok";
+            /** Contract Version */
+            contract_version: string;
+            /** Seeded */
+            seeded: boolean;
+        };
         /** LinkedPatient */
         LinkedPatient: {
             /** Patient Ref */
@@ -556,6 +589,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    healthz_healthz_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
     get_survey_v1_survey_get: {
         parameters: {
             query: {

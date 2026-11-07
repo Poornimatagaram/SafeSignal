@@ -2,10 +2,31 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Sentinel service",
-    "description": "Side-Effect Sentinel API. Contract source of truth: schema/ in the repository. Every request needs X-Role and X-Actor-Id headers.",
-    "version": "1.0"
+    "description": "SafeSignal / Sentinel API. Contract source of truth: schema/ in the repository. Every request except /healthz needs X-Role and X-Actor-Id headers.",
+    "version": "1.1"
   },
   "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness and seed state (no auth)",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/survey": {
       "get": {
         "tags": [
@@ -1565,6 +1586,10 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
           }
         },
         "type": "object",
@@ -1572,7 +1597,8 @@
           "alert_id",
           "patient_ref",
           "alert_type",
-          "created_at"
+          "created_at",
+          "received_at"
         ],
         "title": "CaregiverAlert"
       },
@@ -1761,6 +1787,10 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
           }
         },
         "type": "object",
@@ -1768,7 +1798,8 @@
           "alert_id",
           "patient_ref",
           "alert_type",
-          "created_at"
+          "created_at",
+          "received_at"
         ],
         "title": "DoctorAlert"
       },
@@ -1994,6 +2025,30 @@
           "message"
         ],
         "title": "FieldError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          },
+          "seeded": {
+            "type": "boolean",
+            "title": "Seeded"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "contract_version",
+          "seeded"
+        ],
+        "title": "Health"
       },
       "LinkedPatient": {
         "properties": {
