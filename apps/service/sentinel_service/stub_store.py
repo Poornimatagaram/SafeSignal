@@ -42,20 +42,22 @@ class StubStore:
         t0 = "2026-11-01T00:00:00Z"
 
         self.terms = terms
-        self.enrollment = {
-            ids.WALTER: {"program_id": ids.PROGRAM_ID, "cohort_id": "cohort_B", "checkin_window": "14:00-17:00"},
-            ids.PRIYA: {"program_id": ids.PROGRAM_ID, "cohort_id": "cohort_A", "checkin_window": "13:00-14:00"},
-        }
+        self.enrollment = {e["patient_ref"]: {k: e[k] for k in ("program_id", "cohort_id", "checkin_window")}
+                           for e in ids.ENROLLMENTS}
         self.surveys = {  # cohort_id -> list of versions (latest last)
             c: [{"config_id": f"cfg_{c.lower()}_v1", "cohort_id": c, "version": 1,
                  "published_at": t0, "questions": survey["questions"]}]
             for c in ids.COHORTS
         }
         # D-025: no placeholder key; the doctor's browser registers the real one on first launch.
-        self.doctors = {ids.DR_SHAH: {"display_name": "Dr. Shah", "clinic": "Demo Clinic", "public_key": None}}
-        self.care_links = {(ids.DR_SHAH, p): {"status": "active", "granted_at": t0} for p in (ids.WALTER, ids.PRIYA)}
-        self.caregiver_links = {(ids.ANNA, ids.WALTER): {"status": "active", "detail_level": "alerts_only",
-                                                        "granted_at": t0}}
+        self.doctors = {d["doctor_id"]: {"display_name": d["display_name"], "clinic": d["clinic"], "public_key": None}
+                        for d in ids.DOCTORS}
+        self.care_links = {(l["doctor_id"], l["patient_ref"]): {"status": l["status"], "granted_at": t0}
+                           for l in ids.CARE_LINKS}
+        self.caregiver_links = {(l["caregiver_id"], l["patient_ref"]): {"status": l["status"],
+                                                                        "detail_level": l["detail_level"],
+                                                                        "granted_at": t0}
+                                for l in ids.CAREGIVER_LINKS}
         self.consent = {}
         self.records: dict[str, dict] = {}
         self.envelopes: dict[str, dict] = {}

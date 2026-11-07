@@ -2,6 +2,8 @@
 
 Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.md`.
 
+**New here?** Open your app folder's `CLAUDE.md` (also `AGENTS.md`): it is the full brief for you and your coding agent. What the service does today: `docs/INTEGRATION_STATUS.md`. Demo IDs: `schema/demo_fixtures.json`.
+
 ## Layout and ownership
 
 | Path | What | Owner | Port | Runtime data |
@@ -16,11 +18,12 @@ Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `
 | `apps/doctor-web/` | Doctor view (`@sentinel/doctor-web`) | Doctor | 5174 | IndexedDB `sentinel_doctor_view` |
 | `evals/` | Leakage, F1 and re-ask evaluations | Team | — | — |
 | `data/` | Public data (openFDA cache) and synthetic generators | Team | — | — |
-| `scripts/` | Shared tooling | Company | — | — |
+| `scripts/` | Shared tooling, incl. `send_demo_envelope.py` (fake Walter device for doctor-web testing) | Company | — | — |
 | `var/` | All runtime databases (gitignored) | — | — | — |
 
 ## Rules
 - Edit only your own folders (`CODEOWNERS`). Contract changes go through the company owner (Scoping Doc 26.11).
+- Log changes in your app's `CHANGELOG.md`; root `CHANGELOG.md` and `docs/` belong to the company owner.
 - Each app is its own project with its own lockfile; there is no root lockfile. Use the contract as a path dependency:
   - Python: `[tool.uv.sources] sentinel-contract = { path = "../../packages/contract-py", editable = true }`
   - JS: `"@sentinel/contract": "file:../../packages/contract-ts"`
