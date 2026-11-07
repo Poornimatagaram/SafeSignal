@@ -2,6 +2,20 @@
 
 @../../docs/briefs/doctor-web.md
 
-<!-- The brief above is maintained by the company owner; request changes from them. Everything below is yours to edit. -->
+<!-- The brief above is maintained by the company owner. Everything below is the doctor owner's. -->
 
-## Owner notes
+## Read first
+`ARCHITECTURE.md` (how it fits) · `DECISIONS.md` (why; open requests) · `SESSION_LOG.md` (where we stopped).
+When you finish: add to `CHANGELOG.md` and `SESSION_LOG.md`; new decisions go in `DECISIONS.md`.
+
+## Also in this app
+Caregiver view at `#/caregiver`: `GET /v1/caregivers/{id}/alerts`, `X-Role: caregiver`, Anna `cg_7e21c9a4`. Alert type, escalation level and time only (DW-02).
+
+## Commands
+`npm run dev` · `npm run build` (includes `check-secrets`) · `npx eslint src scripts`
+
+## Git
+`CONTRIBUTING.md`: one `doctor/<type>/<topic>` branch per component, cut from the latest `main`; commit scope `doctor-web` (or `evals`); run `scripts/check_ownership.sh` and `scripts/check_commits.sh` before pushing; PR into `main`, squash-merge when green. Never push to `main`.
+
+## Secrets
+No promo codes or API keys anywhere (code, docs, logs, commits). Keys go only in `.env.local`. `VITE_*` values ship to the browser, so sponsor keys are never `VITE_*`.

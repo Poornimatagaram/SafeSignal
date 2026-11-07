@@ -1,0 +1,5 @@
+# Root .gitignore ignores .env.*; the example has no secrets.
+!.env.example
+
+# Vite dev-server cache
+.vite/
