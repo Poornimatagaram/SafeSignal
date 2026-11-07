@@ -2,6 +2,25 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 008: contract 2.0, care teams, emergency access and escalation (branch `company/feat/contract-v2`, stacked on `company/docs/dataset-research`)
+
+### Added
+- `docs/design/contract-2.0.md`: design for organization-held records, emergency access, emergency contacts and escalation.
+- Relay store: organizations, members, key grants, care and emergency links, emergency contacts, care inbox, alert deliveries, relay access log (D-064, D-065, D-067, D-068).
+- Service: organization endpoints (members, keys, key grants, patients, envelopes, alerts, acks), `POST /v1/orgs/{org_id}/emergency-access`, `GET /v1/doctors/{id}/orgs`, `GET /v1/orgs/{org_id}/public-key`, `POST /v1/care-envelopes`; `escalation.py` (one recipient rule set).
+- Seed: fictional organizations and doctors, care and emergency links, Walter's emergency contacts, proxy reporters (~15%), input modes, historical escalation levels with deliveries.
+- Tests: contract-py 24 (fixture and consent rules), service 35 (doctor change, emergency access, consent, escalation levels, proxy reporting).
+- Decisions D-064 to D-071.
+
+### Changed
+- Contract 2.0 (breaking, D-070): `care_envelope.json` replaces `doctor_envelope.json`; consent, company record, doctor payload, alert and survey schemas at 2.0; `relay.sql`, `patient.sql`, `doctor_view.sql`, `company.sql`, `enums.json`, `demo_fixtures.json`; `CONTRACT_VERSION` 2.0 in both contract packages; client `fetch_org_key` and `build_envelope(…, org_id, …)`; OpenAPI and TypeScript types regenerated.
+- `scripts/send_demo_envelope.py`: sends to the care team and consented emergency organizations.
+- Teammate briefs and `docs/INTEGRATION_STATUS.md` rewritten for 2.0.
+- D-025 superseded by D-064; open parts of D-060, D-061 and D-062 resolved.
+
+### Removed
+- `/v1/doctor-envelopes`, `/v1/doctors/{id}/public-key` (patient read), `/v1/doctors/{id}/patients|envelopes|alerts` and the doctor ack.
+
 ## 2026-11-07 — Session 007: dataset research and new use-case requirements (branch `company/docs/dataset-research`, stacked on `company/feat/sqlite-store`)
 
 ### Added

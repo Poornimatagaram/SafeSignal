@@ -5,7 +5,7 @@
     "why": "Transcript must never leave the device, even encrypted"
   },
   "payload": {
-    "schema_version": "1.0",
+    "schema_version": "2.0",
     "patient_ref": "pt_4b82d0c6",
     "display_name": "Walter",
     "drug_name": "Tagrisso",
@@ -22,6 +22,8 @@
         "possible_link_flag": true
       }
     ],
+    "reporter": "self",
+    "age_years": 92,
     "transcript_text": "Well, my grandson..."
   }
 }

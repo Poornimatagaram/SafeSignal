@@ -15,11 +15,12 @@ from sentinel_contract import SCHEMA_DIR, canonical, payload_sha256, validation_
 OUT = SCHEMA_DIR / "examples"
 
 WALTER = "pt_4b82d0c6"
-DR_SHAH = "dr_3a7f10b2"
+NORTHGATE = "org_5e1a2b3c"   # Walter's care-team organization
+LAKESIDE = "org_8f4d6a2e"    # Walter's emergency hospital
 ANNA = "cg_7e21c9a4"
 
 company_record = {
-    "schema_version": "1.0",
+    "schema_version": "2.0",
     "record_id": "rec_7f3c9a1e",
     "patient_ref": WALTER,
     "program_id": "prog_demo_01",
@@ -34,11 +35,13 @@ company_record = {
          "known_side_effect": True, "possible_link_flag": False},
     ],
     "unanswered_questions": 0,
-    "consent": {"doctor": True, "caregiver": True},
+    "consent": {"care_team": True, "caregiver": True},
+    "reporter": "self",
+    "input_mode": "voice",
 }
 
 doctor_payload = {
-    "schema_version": "1.0",
+    "schema_version": "2.0",
     "patient_ref": WALTER,
     "display_name": "Walter",
     "drug_name": "Tagrisso",
@@ -50,22 +53,24 @@ doctor_payload = {
         {"term_code": "SE_RASH", "severity": "moderate", "onset": "1_3_days",
          "known_side_effect": True, "possible_link_flag": True},
     ],
+    "reporter": "self",
+    "age_years": 92,
 }
 
 # Placeholder ciphertext: real envelopes carry a libsodium sealed box. Shape-valid only.
 fake_ciphertext = base64.b64encode(b"SEALED-BOX-PLACEHOLDER-" + canonical(doctor_payload)[:80]).decode()
 
-doctor_envelope = {
-    "schema_version": "1.0",
+care_envelope = {
+    "schema_version": "2.0",
     "envelope_id": "env_91c2a7d4",
-    "doctor_id": DR_SHAH,
+    "org_id": NORTHGATE,
     "patient_ref": WALTER,
     "ciphertext": fake_ciphertext,
     "payload_sha256": payload_sha256(doctor_payload),
 }
 
 alert_event = {
-    "schema_version": "1.0",
+    "schema_version": "2.0",
     "alert_id": "alt_5d0e8c11",
     "patient_ref": WALTER,
     "alert_type": "severe",
@@ -73,16 +78,24 @@ alert_event = {
 }
 
 consent_update = {
-    "schema_version": "1.0",
+    "schema_version": "2.0",
     "patient_ref": WALTER,
-    "doctor_id": DR_SHAH,
+    "care_org_id": NORTHGATE,
+    "share_care_team": True,
     "caregiver_id": ANNA,
-    "share_doctor": True,
     "share_caregiver": True,
     "caregiver_detail": "alerts_only",
+    "emergency_consent": True,
+    "emergency_org_ids": [LAKESIDE],
+    "emergency_contacts": [
+        {"contact_id": "ec_1f2e3d4c", "contact_type": "emergency_service", "phone": "911", "org_id": None, "priority": 1},
+        {"contact_id": "ec_5a6b7c8d", "contact_type": "hospital", "phone": "+16175550199", "org_id": LAKESIDE,
+         "priority": 2},
+    ],
 }
 
 survey_config = {
+    "schedule": {"every_days": 1},
     "questions": [
         {"question_id": "q1", "purpose": "wellbeing", "asks": [
             "How have you been feeling since yesterday?",
@@ -121,7 +134,7 @@ def mutate(base: dict, fn) -> dict:
 VALID = {
     "company_record": company_record,
     "doctor_payload": doctor_payload,
-    "doctor_envelope": doctor_envelope,
+    "care_envelope": care_envelope,
     "alert_event": alert_event,
     "consent_update": consent_update,
     "survey_config": survey_config,
@@ -139,8 +152,8 @@ INVALID = {
         "/transcript_text",
         "Transcript must never leave the device, even encrypted",
     ),
-    "doctor_envelope": (
-        mutate(doctor_envelope, lambda d: d.update(ciphertext="not base64 !!")),
+    "care_envelope": (
+        mutate(care_envelope, lambda d: d.update(ciphertext="not base64 !!")),
         "/ciphertext",
         "Ciphertext must be standard base64",
     ),
@@ -150,9 +163,9 @@ INVALID = {
         "Devices may only send 'severe'; 'missed' is created by the service scheduler",
     ),
     "consent_update": (
-        mutate(consent_update, lambda d: d.pop("caregiver_detail")),
-        "/caregiver_detail",
-        "Required field missing",
+        mutate(consent_update, lambda d: d.update(emergency_consent=False)),
+        "/emergency_contacts",
+        "Emergency contacts and emergency organizations require emergency_consent (D-067)",
     ),
     "survey_config": (
         mutate(survey_config, lambda d: d["questions"][0]["asks"].pop()),

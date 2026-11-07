@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel service",
     "description": "SafeSignal / Sentinel API. Contract source of truth: schema/ in the repository. Every request except /healthz needs X-Role and X-Actor-Id headers.",
-    "version": "1.1"
+    "version": "2.0"
   },
   "paths": {
     "/healthz": {
@@ -274,13 +274,13 @@
         }
       }
     },
-    "/v1/doctor-envelopes": {
+    "/v1/care-envelopes": {
       "post": {
         "tags": [
           "patient_device"
         ],
-        "summary": "Doctor envelope (schema/doctor_envelope.json)",
-        "operationId": "post_envelope_v1_doctor_envelopes_post",
+        "summary": "Care envelope sealed to an organization (schema/care_envelope.json)",
+        "operationId": "post_envelope_v1_care_envelopes_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -445,7 +445,7 @@
         "tags": [
           "patient_device"
         ],
-        "summary": "Consent update (schema/consent_update.json)",
+        "summary": "Consent update: care team, caregiver, emergency organizations and contacts (schema/consent_update.json)",
         "operationId": "put_consent_v1_consent__patient_ref__put",
         "parameters": [
           {
@@ -534,21 +534,21 @@
         }
       }
     },
-    "/v1/doctors/{doctor_id}/public-key": {
+    "/v1/orgs/{org_id}/public-key": {
       "get": {
         "tags": [
           "patient_device"
         ],
-        "summary": "Get Public Key",
-        "operationId": "get_public_key_v1_doctors__doctor_id__public_key_get",
+        "summary": "Care-team key of a linked organization (care team or consented emergency)",
+        "operationId": "get_org_key_v1_orgs__org_id__public_key_get",
         "parameters": [
           {
-            "name": "doctor_id",
+            "name": "org_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Doctor Id"
+              "title": "Org Id"
             }
           }
         ],
@@ -558,7 +558,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublicKeyResponse"
+                  "$ref": "#/components/schemas/OrgKeyResponse"
                 }
               }
             }
@@ -619,8 +619,100 @@
         "tags": [
           "doctor"
         ],
-        "summary": "Put Public Key",
-        "operationId": "put_public_key_v1_doctors__doctor_id__public_key_put",
+        "summary": "Register the organization's care-team key (admin)",
+        "operationId": "put_org_key_v1_orgs__org_id__public_key_put",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicKeyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKeyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/doctors/{doctor_id}/public-key": {
+      "put": {
+        "tags": [
+          "doctor"
+        ],
+        "summary": "Register the doctor's personal key (receives key grants)",
+        "operationId": "put_doctor_key_v1_doctors__doctor_id__public_key_put",
         "parameters": [
           {
             "name": "doctor_id",
@@ -706,13 +798,13 @@
         }
       }
     },
-    "/v1/doctors/{doctor_id}/patients": {
+    "/v1/doctors/{doctor_id}/orgs": {
       "get": {
         "tags": [
           "doctor"
         ],
-        "summary": "Doctor Patients",
-        "operationId": "doctor_patients_v1_doctors__doctor_id__patients_get",
+        "summary": "Organizations the doctor is an active member of",
+        "operationId": "doctor_orgs_v1_doctors__doctor_id__orgs_get",
         "parameters": [
           {
             "name": "doctor_id",
@@ -732,9 +824,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/LinkedPatient"
+                    "$ref": "#/components/schemas/OrgMembership"
                   },
-                  "title": "Response Doctor Patients V1 Doctors  Doctor Id  Patients Get"
+                  "title": "Response Doctor Orgs V1 Doctors  Doctor Id  Orgs Get"
                 }
               }
             }
@@ -792,14 +884,23 @@
         }
       }
     },
-    "/v1/doctors/{doctor_id}/envelopes": {
-      "get": {
+    "/v1/orgs/{org_id}/members/{doctor_id}": {
+      "put": {
         "tags": [
           "doctor"
         ],
-        "summary": "Doctor Envelopes",
-        "operationId": "doctor_envelopes_v1_doctors__doctor_id__envelopes_get",
+        "summary": "Add, change or revoke a member (admin); revoking removes their key grant",
+        "operationId": "put_member_v1_orgs__org_id__members__doctor_id__put",
         "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          },
           {
             "name": "doctor_id",
             "in": "path",
@@ -807,6 +908,367 @@
             "schema": {
               "type": "string",
               "title": "Doctor Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberState"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/orgs/{org_id}/key-grants": {
+      "post": {
+        "tags": [
+          "doctor"
+        ],
+        "summary": "Give a member the org key, sealed to their personal key (admin)",
+        "operationId": "post_key_grant_v1_orgs__org_id__key_grants_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyGrantBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyGrantReceipt"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/orgs/{org_id}/key-grants/{doctor_id}": {
+      "get": {
+        "tags": [
+          "doctor"
+        ],
+        "summary": "The calling doctor's own key grant",
+        "operationId": "get_key_grant_v1_orgs__org_id__key_grants__doctor_id__get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "doctor_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doctor Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyGrant"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/orgs/{org_id}/patients": {
+      "get": {
+        "tags": [
+          "doctor"
+        ],
+        "summary": "Patients whose care team is this organization (members)",
+        "operationId": "org_patients_v1_orgs__org_id__patients_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LinkedPatient"
+                  },
+                  "title": "Response Org Patients V1 Orgs  Org Id  Patients Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/orgs/{org_id}/envelopes": {
+      "get": {
+        "tags": [
+          "doctor"
+        ],
+        "summary": "Care-team envelopes since a time (members)",
+        "operationId": "org_envelopes_v1_orgs__org_id__envelopes_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
             }
           },
           {
@@ -836,7 +1298,7 @@
                   "items": {
                     "$ref": "#/components/schemas/Envelope"
                   },
-                  "title": "Response Doctor Envelopes V1 Doctors  Doctor Id  Envelopes Get"
+                  "title": "Response Org Envelopes V1 Orgs  Org Id  Envelopes Get"
                 }
               }
             }
@@ -894,21 +1356,21 @@
         }
       }
     },
-    "/v1/doctors/{doctor_id}/envelopes/{envelope_id}/ack": {
+    "/v1/orgs/{org_id}/envelopes/{envelope_id}/ack": {
       "post": {
         "tags": [
           "doctor"
         ],
         "summary": "Ack Envelope",
-        "operationId": "ack_envelope_v1_doctors__doctor_id__envelopes__envelope_id__ack_post",
+        "operationId": "ack_envelope_v1_orgs__org_id__envelopes__envelope_id__ack_post",
         "parameters": [
           {
-            "name": "doctor_id",
+            "name": "org_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Doctor Id"
+              "title": "Org Id"
             }
           },
           {
@@ -985,21 +1447,21 @@
         }
       }
     },
-    "/v1/doctors/{doctor_id}/alerts": {
+    "/v1/orgs/{org_id}/alerts": {
       "get": {
         "tags": [
           "doctor"
         ],
-        "summary": "Doctor Alerts",
-        "operationId": "doctor_alerts_v1_doctors__doctor_id__alerts_get",
+        "summary": "Alerts delivered to this care team since a time (members)",
+        "operationId": "org_alerts_v1_orgs__org_id__alerts_get",
         "parameters": [
           {
-            "name": "doctor_id",
+            "name": "org_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Doctor Id"
+              "title": "Org Id"
             }
           },
           {
@@ -1027,9 +1489,101 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DoctorAlert"
+                    "$ref": "#/components/schemas/Alert"
                   },
-                  "title": "Response Doctor Alerts V1 Doctors  Doctor Id  Alerts Get"
+                  "title": "Response Org Alerts V1 Orgs  Org Id  Alerts Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/orgs/{org_id}/emergency-access": {
+      "post": {
+        "tags": [
+          "doctor"
+        ],
+        "summary": "Emergency access to a patient's envelopes (members of a consented emergency organization; coded reason; logged; notifies caregiver and care team)",
+        "operationId": "emergency_access_v1_orgs__org_id__emergency_access_post",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmergencyAccessBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyAccessResult"
                 }
               }
             }
@@ -1113,7 +1667,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CaregiverAlert"
+                    "$ref": "#/components/schemas/Alert"
                   },
                   "title": "Response Caregiver Alerts V1 Caregivers  Caregiver Id  Alerts Get"
                 }
@@ -1542,30 +2096,7 @@
   },
   "components": {
     "schemas": {
-      "AlertAccepted": {
-        "properties": {
-          "alert_id": {
-            "type": "string",
-            "title": "Alert Id"
-          },
-          "routed_doctor": {
-            "type": "boolean",
-            "title": "Routed Doctor"
-          },
-          "routed_caregiver": {
-            "type": "boolean",
-            "title": "Routed Caregiver"
-          }
-        },
-        "type": "object",
-        "required": [
-          "alert_id",
-          "routed_doctor",
-          "routed_caregiver"
-        ],
-        "title": "AlertAccepted"
-      },
-      "CaregiverAlert": {
+      "Alert": {
         "properties": {
           "alert_id": {
             "type": "string",
@@ -1579,9 +2110,21 @@
             "type": "string",
             "enum": [
               "missed",
-              "severe"
+              "severe",
+              "emergency_access"
             ],
             "title": "Alert Type"
+          },
+          "escalation_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation Level"
           },
           "created_at": {
             "type": "string",
@@ -1597,10 +2140,34 @@
           "alert_id",
           "patient_ref",
           "alert_type",
+          "escalation_level",
           "created_at",
           "received_at"
         ],
-        "title": "CaregiverAlert"
+        "title": "Alert"
+      },
+      "AlertAccepted": {
+        "properties": {
+          "alert_id": {
+            "type": "string",
+            "title": "Alert Id"
+          },
+          "routed_care_team": {
+            "type": "boolean",
+            "title": "Routed Care Team"
+          },
+          "routed_caregiver": {
+            "type": "boolean",
+            "title": "Routed Caregiver"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alert_id",
+          "routed_care_team",
+          "routed_caregiver"
+        ],
+        "title": "AlertAccepted"
       },
       "CohortWeeklyRow": {
         "properties": {
@@ -1711,7 +2278,7 @@
             "type": "string",
             "title": "Patient Ref"
           },
-          "doctor_id": {
+          "care_org_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -1720,7 +2287,11 @@
                 "type": "null"
               }
             ],
-            "title": "Doctor Id"
+            "title": "Care Org Id"
+          },
+          "share_care_team": {
+            "type": "boolean",
+            "title": "Share Care Team"
           },
           "caregiver_id": {
             "anyOf": [
@@ -1732,10 +2303,6 @@
               }
             ],
             "title": "Caregiver Id"
-          },
-          "share_doctor": {
-            "type": "boolean",
-            "title": "Share Doctor"
           },
           "share_caregiver": {
             "type": "boolean",
@@ -1749,6 +2316,21 @@
             ],
             "title": "Caregiver Detail"
           },
+          "emergency_consent": {
+            "type": "boolean",
+            "title": "Emergency Consent"
+          },
+          "emergency_org_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Emergency Org Ids"
+          },
+          "emergency_contact_count": {
+            "type": "integer",
+            "title": "Emergency Contact Count"
+          },
           "updated_at": {
             "type": "string",
             "title": "Updated At"
@@ -1757,51 +2339,89 @@
         "type": "object",
         "required": [
           "patient_ref",
-          "doctor_id",
+          "care_org_id",
+          "share_care_team",
           "caregiver_id",
-          "share_doctor",
           "share_caregiver",
           "caregiver_detail",
+          "emergency_consent",
+          "emergency_org_ids",
+          "emergency_contact_count",
           "updated_at"
         ],
         "title": "ConsentState"
       },
-      "DoctorAlert": {
+      "EmergencyAccessBody": {
         "properties": {
-          "alert_id": {
+          "patient_ref": {
             "type": "string",
-            "title": "Alert Id"
+            "title": "Patient Ref"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "unresponsive_patient",
+              "emergency_admission",
+              "escalation_level_3"
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_ref",
+          "reason"
+        ],
+        "title": "EmergencyAccessBody"
+      },
+      "EmergencyAccessResult": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
           },
           "patient_ref": {
             "type": "string",
             "title": "Patient Ref"
           },
-          "alert_type": {
+          "reason": {
             "type": "string",
-            "enum": [
-              "missed",
-              "severe"
-            ],
-            "title": "Alert Type"
+            "title": "Reason"
           },
-          "created_at": {
+          "accessed_at": {
             "type": "string",
-            "title": "Created At"
+            "title": "Accessed At"
           },
-          "received_at": {
+          "notification_alert_id": {
             "type": "string",
-            "title": "Received At"
+            "title": "Notification Alert Id"
+          },
+          "notified": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notified"
+          },
+          "envelopes": {
+            "items": {
+              "$ref": "#/components/schemas/Envelope"
+            },
+            "type": "array",
+            "title": "Envelopes"
           }
         },
         "type": "object",
         "required": [
-          "alert_id",
+          "org_id",
           "patient_ref",
-          "alert_type",
-          "created_at",
-          "received_at"
+          "reason",
+          "accessed_at",
+          "notification_alert_id",
+          "notified",
+          "envelopes"
         ],
-        "title": "DoctorAlert"
+        "title": "EmergencyAccessResult"
       },
       "Envelope": {
         "properties": {
@@ -1943,6 +2563,39 @@
             ],
             "title": "Source"
           },
+          "reporter": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "self",
+                  "parent",
+                  "caregiver",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter"
+          },
+          "input_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "voice",
+                  "text",
+                  "mixed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Mode"
+          },
           "unanswered_questions": {
             "type": "integer",
             "title": "Unanswered Questions"
@@ -1965,6 +2618,8 @@
           "iso_week",
           "status",
           "source",
+          "reporter",
+          "input_mode",
           "unanswered_questions",
           "symptoms"
         ],
@@ -2050,6 +2705,85 @@
         ],
         "title": "Health"
       },
+      "KeyGrant": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          },
+          "doctor_id": {
+            "type": "string",
+            "title": "Doctor Id"
+          },
+          "granted_by": {
+            "type": "string",
+            "title": "Granted By"
+          },
+          "granted_at": {
+            "type": "string",
+            "title": "Granted At"
+          },
+          "wrapped_key": {
+            "type": "string",
+            "title": "Wrapped Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "doctor_id",
+          "granted_by",
+          "granted_at",
+          "wrapped_key"
+        ],
+        "title": "KeyGrant"
+      },
+      "KeyGrantBody": {
+        "properties": {
+          "doctor_id": {
+            "type": "string",
+            "title": "Doctor Id"
+          },
+          "wrapped_key": {
+            "type": "string",
+            "title": "Wrapped Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "doctor_id",
+          "wrapped_key"
+        ],
+        "title": "KeyGrantBody"
+      },
+      "KeyGrantReceipt": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          },
+          "doctor_id": {
+            "type": "string",
+            "title": "Doctor Id"
+          },
+          "granted_by": {
+            "type": "string",
+            "title": "Granted By"
+          },
+          "granted_at": {
+            "type": "string",
+            "title": "Granted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "doctor_id",
+          "granted_by",
+          "granted_at"
+        ],
+        "title": "KeyGrantReceipt"
+      },
       "LinkedPatient": {
         "properties": {
           "patient_ref": {
@@ -2067,6 +2801,143 @@
           "granted_at"
         ],
         "title": "LinkedPatient"
+      },
+      "MemberBody": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "attending",
+              "on_call",
+              "admin"
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "status"
+        ],
+        "title": "MemberBody"
+      },
+      "MemberState": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          },
+          "doctor_id": {
+            "type": "string",
+            "title": "Doctor Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "granted_at": {
+            "type": "string",
+            "title": "Granted At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "doctor_id",
+          "role",
+          "status",
+          "granted_at",
+          "revoked_at"
+        ],
+        "title": "MemberState"
+      },
+      "OrgKeyResponse": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          },
+          "public_key": {
+            "type": "string",
+            "title": "Public Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "public_key"
+        ],
+        "title": "OrgKeyResponse"
+      },
+      "OrgMembership": {
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "org_type": {
+            "type": "string",
+            "enum": [
+              "hospital",
+              "clinic"
+            ],
+            "title": "Org Type"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "attending",
+              "on_call",
+              "admin"
+            ],
+            "title": "Role"
+          },
+          "org_key_registered": {
+            "type": "boolean",
+            "title": "Org Key Registered"
+          },
+          "has_key_grant": {
+            "type": "boolean",
+            "title": "Has Key Grant"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "display_name",
+          "org_type",
+          "role",
+          "org_key_registered",
+          "has_key_grant"
+        ],
+        "title": "OrgMembership"
       },
       "PublicKeyBody": {
         "properties": {
@@ -2116,6 +2987,19 @@
           "payload_sha256"
         ],
         "title": "RecordAccepted"
+      },
+      "Schedule": {
+        "properties": {
+          "every_days": {
+            "type": "integer",
+            "title": "Every Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "every_days"
+        ],
+        "title": "Schedule"
       },
       "SurveyPublished": {
         "properties": {
@@ -2187,6 +3071,9 @@
             "type": "string",
             "title": "Published At"
           },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
           "questions": {
             "items": {
               "$ref": "#/components/schemas/SurveyQuestion"
@@ -2201,6 +3088,7 @@
           "cohort_id",
           "version",
           "published_at",
+          "schedule",
           "questions"
         ],
         "title": "SurveyResponse"

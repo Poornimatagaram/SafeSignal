@@ -217,3 +217,33 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Contract 1.2 proposal: reporter field (D-058), survey schedule (D-059), escalation level and hospital recipients on alerts (D-060, D-062), multiple programs (D-061). Teammate briefs updated with it.
 2. Step 3, extended: scheduler with the 3-step escalation ladder.
 3. Real-data seed: per-arm rates from ClinicalTrials.gov, term list corrected from OnSIDES, trial documents fetched into the company `document` table.
+
+---
+
+## Session 008 — 2026-11-07 (Sat) · Contract 2.0: care teams, emergency access, escalation
+
+**Goal:** Turn the product owner's answers into the next phase: records held by hospitals (doctors change), emergency access for a hospital the patient chose, user-defined emergency contacts with consent, the 1/2/3 missed check-in escalation, patients of any age with proxies, schedules, and voice or typing.
+
+**Product owner answers recorded**
+- Public-service medical expert = 911 or the hospital the user prefers, set at setup with consent (D-067).
+- Records must stay with the hospital; emergencies must not be blocked by permissions (D-064, D-065).
+- Fictional company name with real public data (D-071).
+
+**Outputs**
+- Design doc, contract 2.0 schemas and fixtures, service endpoints, escalation module, seed, tests, demo script, briefs, integration status (branch `company/feat/contract-v2`, stacked on PR #3).
+
+**Verification**
+- Tests: contract-py 24, service 35, contract-ts 8/8.
+- Live on a running server: the demo script stops with a clear message until Northgate's key exists; after Dr. Patel registers it, Walter's envelope is accepted and visible to Dr. Shah; the severe alert reaches the care team and Anna; Northgate's alert feed shows Priya's escalation levels; the service log contains no names or phone numbers.
+- Found and fixed a false positive in the leakage test ("911" occurs inside hex hashes); it now checks stored values.
+
+**Decisions:** D-064 to D-071 (D-025 superseded; D-060, D-061, D-062 resolved).
+
+**Open items**
+- D-008 (caregiver `summary` detail), D-039 (who builds the caregiver view).
+- Key rotation after a doctor leaves (v1).
+- PR #2 and PR #3 still open; this branch is stacked on #3.
+
+**Next**
+1. Missed check-in scheduler: detect due check-ins per schedule and window, write scheduler records, raise level 1/2/3 alerts through `escalation.py`, within 1 minute; demo control to fire Priya's alert on cue.
+2. Real-data seed: fictional company name, per-arm rates from ClinicalTrials.gov, OnSIDES-corrected terms, trial documents in the company `document` table, an infant program (MELODY).

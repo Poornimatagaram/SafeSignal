@@ -5,6 +5,9 @@
     "why": "Every question needs exactly 3 asks (first ask + 2 re-asks)"
   },
   "payload": {
+    "schedule": {
+      "every_days": 1
+    },
     "questions": [
       {
         "question_id": "q1",

@@ -2,34 +2,134 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sentinel.local/schema/doctor_payload.json",
   "title": "SentinelDoctorPayload",
-  "description": "Plaintext inside a doctor envelope. Encrypted on the device to the doctor's X25519 key; decrypted only in the doctor's browser. The service never sees this shape.",
+  "description": "Plaintext inside a care envelope. Sealed on the device to an organization's care-team key; decrypted only in a member doctor's browser. The service never sees this shape. 2.0 adds reporter and age_years (D-066).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "patient_ref", "display_name", "drug_name", "drug_version", "checkin_date", "status", "trend", "symptoms"],
+  "required": [
+    "schema_version",
+    "patient_ref",
+    "display_name",
+    "drug_name",
+    "drug_version",
+    "checkin_date",
+    "status",
+    "trend",
+    "symptoms",
+    "reporter",
+    "age_years"
+  ],
   "properties": {
-    "schema_version": { "const": "1.0" },
-    "patient_ref": { "type": "string", "pattern": "^pt_[a-f0-9]{8}$" },
-    "display_name": { "type": "string", "minLength": 1, "maxLength": 80 },
-    "drug_name": { "type": "string", "minLength": 1, "maxLength": 60 },
-    "drug_version": { "enum": ["v1", "v2", "v3", "v4"] },
-    "checkin_date": { "type": "string", "pattern": "^20[0-9]{2}-[01][0-9]-[0-3][0-9]$" },
-    "status": { "enum": ["completed", "partial", "missed"] },
-    "trend": { "enum": ["better", "same", "worse", "unknown"] },
+    "schema_version": {
+      "const": "2.0"
+    },
+    "patient_ref": {
+      "type": "string",
+      "pattern": "^pt_[a-f0-9]{8}$"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "drug_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "drug_version": {
+      "enum": [
+        "v1",
+        "v2",
+        "v3",
+        "v4"
+      ]
+    },
+    "checkin_date": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-[01][0-9]-[0-3][0-9]$"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "partial",
+        "missed"
+      ]
+    },
+    "trend": {
+      "enum": [
+        "better",
+        "same",
+        "worse",
+        "unknown"
+      ]
+    },
     "symptoms": {
       "type": "array",
       "maxItems": 10,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["term_code", "severity", "onset", "known_side_effect", "possible_link_flag"],
+        "required": [
+          "term_code",
+          "severity",
+          "onset",
+          "known_side_effect",
+          "possible_link_flag"
+        ],
         "properties": {
-          "term_code": { "enum": ["SE_RASH", "SE_DRY_SKIN", "SE_PARONYCHIA", "SE_DIARRHEA", "SE_STOMATITIS", "SE_FATIGUE", "SE_DECREASED_APPETITE", "SE_INFUSION_REACTION", "SE_DYSPNEA", "SE_COUGH", "SE_EDEMA", "SE_OTHER_REVIEW"] },
-          "severity": { "enum": ["mild", "moderate", "severe"] },
-          "onset": { "enum": ["today", "1_3_days", "4_7_days", "over_7_days", "unknown"] },
-          "known_side_effect": { "type": "boolean" },
-          "possible_link_flag": { "type": "boolean" }
+          "term_code": {
+            "enum": [
+              "SE_RASH",
+              "SE_DRY_SKIN",
+              "SE_PARONYCHIA",
+              "SE_DIARRHEA",
+              "SE_STOMATITIS",
+              "SE_FATIGUE",
+              "SE_DECREASED_APPETITE",
+              "SE_INFUSION_REACTION",
+              "SE_DYSPNEA",
+              "SE_COUGH",
+              "SE_EDEMA",
+              "SE_OTHER_REVIEW"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "mild",
+              "moderate",
+              "severe"
+            ]
+          },
+          "onset": {
+            "enum": [
+              "today",
+              "1_3_days",
+              "4_7_days",
+              "over_7_days",
+              "unknown"
+            ]
+          },
+          "known_side_effect": {
+            "type": "boolean"
+          },
+          "possible_link_flag": {
+            "type": "boolean"
+          }
         }
       }
+    },
+    "reporter": {
+      "enum": [
+        "self",
+        "parent",
+        "caregiver",
+        "other"
+      ]
+    },
+    "age_years": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 120
     }
   }
 }

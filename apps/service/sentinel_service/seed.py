@@ -24,6 +24,7 @@ from pathlib import Path
 
 from sentinel_contract import SCHEMA_DIR, payload_sha256
 
+from . import escalation
 from .common import fmt_ts, iso_week
 from .db import REPO_ROOT, Databases, default_data_dir
 
@@ -57,6 +58,8 @@ SEVERITY = {"default": [("mild", 0.62), ("moderate", 0.30), ("severe", 0.08)],
             "SE_DYSPNEA": [("mild", 0.55), ("moderate", 0.30), ("severe", 0.15)]}
 WINDOWS = ["13:00-16:00", "14:00-17:00", "15:00-18:00", "16:00-19:00"]
 FIXTURE_ADHERENCE = {"Walter": 0.97, "Priya": 0.82}
+PROXY_RATE = 0.15        # share of synthetic patients whose check-ins a caregiver or parent answers (D-058)
+INPUT_MODES = [("voice", 0.6), ("text", 0.3), ("mixed", 0.1)]  # D-059
 PARTIAL_RATE = 0.04
 REPORT_RATE = 0.85      # chance a patient mentions an ongoing symptom on a given check-in
 LINK_FLAG_RATE = 0.05   # dermatologic episodes flagged "possible link, for review"
@@ -127,13 +130,13 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
 
     # ---- patients ----
     ids: set[str] = {p["patient_ref"] for p in fx["device_profiles"]}
-    patients = []  # dicts: patient_ref, cohort_id, window, adherence, consent_doctor, consent_caregiver
+    patients = []  # dicts: patient_ref, cohort_id, window, adherence, consents, reporter, linked, enrolled
     fixture_enroll = {e["patient_ref"]: e for e in fx["enrollments"]}
     for p in fx["device_profiles"]:
         e = fixture_enroll[p["patient_ref"]]
         patients.append({"patient_ref": p["patient_ref"], "cohort_id": e["cohort_id"], "window": e["checkin_window"],
                          "adherence": FIXTURE_ADHERENCE.get(p["display_name"], 0.85),
-                         "consent_doctor": p["consent"]["share_doctor"],
+                         "consent_care_team": p["consent"]["share_care_team"], "reporter": p["reporter_default"],
                          "consent_caregiver": p["consent"]["share_caregiver"], "linked": True,
                          "enrolled": date.fromisoformat(p["enrolled_at"][:10])})
     cohorts = {c["cohort_id"]: c["drug_version"] for c in fx["cohorts"]}
@@ -142,7 +145,8 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
         for _ in range(max(patients_per_cohort - have, 0)):
             patients.append({"patient_ref": _uid(rng, "pt_", ids), "cohort_id": cohort_id,
                              "window": rng.choice(WINDOWS), "adherence": rng.uniform(0.62, 0.95),
-                             "consent_doctor": rng.random() < 0.7, "consent_caregiver": rng.random() < 0.45,
+                             "consent_care_team": rng.random() < 0.7, "consent_caregiver": rng.random() < 0.45,
+                             "reporter": "caregiver" if rng.random() < PROXY_RATE else "self",
                              "linked": False, "enrolled": None})
 
     # ---- days and weeks of history ----
@@ -166,6 +170,7 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
                     sev = _pick(rng, SEVERITY.get(term, SEVERITY["default"]))
                     flag = term in DERM and rng.random() < LINK_FLAG_RATE
                     episodes.append((term, rng.choice(wdays), wk, sev, flag))
+        consecutive_missed = 0
         for d in days:
             if p["enrolled"] and d < p["enrolled"]:
                 continue  # no check-ins before the patient enrolled
@@ -185,24 +190,29 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
                         syms.append({"term_code": term, "severity": sev, "onset": _onset((d - sday).days),
                                      "known_side_effect": known[term], "possible_link_flag": flag})
             payload = {
-                "schema_version": "1.0", "record_id": _uid(rng, "rec_", record_ids),
+                "schema_version": "2.0", "record_id": _uid(rng, "rec_", record_ids),
                 "patient_ref": p["patient_ref"], "program_id": program["program_id"], "cohort_id": cohort_id,
                 "drug_version": version, "iso_week": wk, "status": status, "symptoms": syms,
                 "unanswered_questions": rng.randint(1, 2) if status == "partial" else 0,
-                "consent": {"doctor": p["consent_doctor"], "caregiver": p["consent_caregiver"]},
+                "consent": {"care_team": p["consent_care_team"], "caregiver": p["consent_caregiver"]},
             }
-            records.append((payload["record_id"], "1.0", p["patient_ref"], program["program_id"], cohort_id, version,
-                            wk, status, payload["unanswered_questions"], int(p["consent_doctor"]),
-                            int(p["consent_caregiver"]), payload_sha256(payload),
-                            "scheduler" if status == "missed" else "device", fmt_ts(received)))
+            if status != "missed":  # scheduler records have no reporter or input mode
+                payload["reporter"] = p["reporter"]
+                payload["input_mode"] = _pick(rng, INPUT_MODES)
+            records.append((payload["record_id"], "2.0", p["patient_ref"], program["program_id"], cohort_id, version,
+                            wk, status, payload["unanswered_questions"], int(p["consent_care_team"]),
+                            int(p["consent_caregiver"]), payload_sha256(payload), payload.get("reporter"),
+                            payload.get("input_mode"), "scheduler" if status == "missed" else "device",
+                            fmt_ts(received)))
             symptoms.extend((payload["record_id"], s["term_code"], s["severity"], s["onset"],
                              int(s["known_side_effect"]), int(s["possible_link_flag"])) for s in syms)
-            if p["linked"]:
-                kinds = (["missed"] if status == "missed" else []) + \
-                        (["severe"] if any(s["severity"] == "severe" for s in syms) else [])
-                for kind in kinds:
-                    alerts.append((_uid(rng, "alt_", alert_ids), p["patient_ref"], kind, fmt_ts(received),
-                                   fmt_ts(received)))
+            consecutive_missed = consecutive_missed + 1 if status == "missed" else 0
+            if p["linked"]:  # D-068: missed alerts carry the escalation level (consecutive misses, capped at 3)
+                if status == "missed":
+                    alerts.append((_uid(rng, "alt_", alert_ids), p["patient_ref"], "missed",
+                                   min(consecutive_missed, 3), fmt_ts(received)))
+                if any(s["severity"] == "severe" for s in syms):
+                    alerts.append((_uid(rng, "alt_", alert_ids), p["patient_ref"], "severe", None, fmt_ts(received)))
 
     # ---- write ----
     c, r = dbs.company, dbs.relay
@@ -216,33 +226,42 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
                         int(t["severe_trigger"])) for t in terms])
         c.executemany("INSERT INTO survey_config VALUES (?,?,?,?,?,?)",
                       [(f"cfg_{k.lower()}_v1", k, 1, json.dumps(survey), t0, admin) for k in cohorts])
-        c.executemany("INSERT INTO enrollment VALUES (?,?,?,?,1)",
-                      [(p["patient_ref"], program["program_id"], p["cohort_id"], p["window"]) for p in patients])
-        c.executemany("INSERT INTO checkin_record VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", records)
+        c.executemany("INSERT INTO enrollment (patient_ref, program_id, cohort_id, checkin_window, start_date, active) "
+                      "VALUES (?,?,?,?,?,1)",
+                      [(p["patient_ref"], program["program_id"], p["cohort_id"], p["window"],
+                        (p["enrolled"] or monday).isoformat()) for p in patients])
+        c.executemany("INSERT INTO checkin_record (record_id, schema_version, patient_ref, program_id, cohort_id, "
+                      "drug_version, iso_week, status, unanswered_questions, consent_care_team, consent_caregiver, "
+                      "payload_sha256, reporter, input_mode, source, received_at) "
+                      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", records)
         c.executemany("INSERT INTO symptom_record (record_id, term_code, severity, onset, known_side_effect, "
                       "possible_link_flag) VALUES (?,?,?,?,?,?)", symptoms)
 
         profiles = {p["patient_ref"]: p for p in fx["device_profiles"]}
-        r.executemany("INSERT INTO doctor (doctor_id, display_name, clinic, public_key) VALUES (?,?,?,NULL)",
-                      [(d["doctor_id"], d["display_name"], d["clinic"]) for d in fx["doctors"]])
-        r.executemany("INSERT INTO care_link (doctor_id, patient_ref, status, granted_at) VALUES (?,?,?,?)",
-                      [(l["doctor_id"], l["patient_ref"], l["status"],
-                        profiles[l["patient_ref"]]["enrolled_at"].replace("Z", ".000000Z"))
+        granted = {pr: profiles[pr]["enrolled_at"].replace("Z", ".000000Z") for pr in profiles}
+        r.executemany("INSERT INTO organization (org_id, display_name, org_type, public_key, created_at) "
+                      "VALUES (?,?,?,NULL,?)",
+                      [(o["org_id"], o["display_name"], o["org_type"], t0) for o in fx["organizations"]])
+        r.executemany("INSERT INTO doctor (doctor_id, display_name, public_key) VALUES (?,?,NULL)",
+                      [(d["doctor_id"], d["display_name"]) for d in fx["doctors"]])
+        r.executemany("INSERT INTO org_member (org_id, doctor_id, role, status, granted_at) VALUES (?,?,?,?,?)",
+                      [(m["org_id"], m["doctor_id"], m["role"], m["status"], t0) for m in fx["org_members"]])
+        r.executemany("INSERT INTO care_link (org_id, patient_ref, link_type, status, granted_at) VALUES (?,?,?,?,?)",
+                      [(l["org_id"], l["patient_ref"], l["link_type"], l["status"], granted[l["patient_ref"]])
                        for l in fx["care_links"]])
         r.executemany("INSERT INTO caregiver_link (caregiver_id, patient_ref, detail_level, status, granted_at) "
                       "VALUES (?,?,?,?,?)",
-                      [(l["caregiver_id"], l["patient_ref"], l["detail_level"], l["status"],
-                        profiles[l["patient_ref"]]["enrolled_at"].replace("Z", ".000000Z"))
+                      [(l["caregiver_id"], l["patient_ref"], l["detail_level"], l["status"], granted[l["patient_ref"]])
                        for l in fx["caregiver_links"]])
-        routing = {}
-        for a in alerts:
-            pr = a[1]
-            if pr not in routing:
-                routing[pr] = (any(l["patient_ref"] == pr and l["status"] == "active" for l in fx["care_links"]),
-                               any(l["patient_ref"] == pr and l["status"] == "active" for l in fx["caregiver_links"]))
-        r.executemany("INSERT INTO alert (alert_id, patient_ref, alert_type, created_at, received_at, routed_doctor, "
-                      "routed_caregiver) VALUES (?,?,?,?,?,?,?)",
-                      [a + (int(routing[a[1]][0]), int(routing[a[1]][1])) for a in alerts])
+        r.executemany("INSERT INTO emergency_contact (contact_id, patient_ref, contact_type, phone, org_id, priority, "
+                      "consented_at) VALUES (?,?,?,?,?,?,?)",
+                      [(e["contact_id"], e["patient_ref"], e["contact_type"], e["phone"], e["org_id"], e["priority"],
+                        granted[e["patient_ref"]]) for e in fx["emergency_contacts"]
+                       if profiles[e["patient_ref"]]["consent"]["emergency_consent"]])  # D-067
+        for alert_id, patient_ref, kind, level, at in alerts:
+            r.execute("INSERT INTO alert (alert_id, patient_ref, alert_type, escalation_level, created_at, received_at) "
+                      "VALUES (?,?,?,?,?,?)", (alert_id, patient_ref, kind, level, at, at))
+            escalation.record_deliveries(r, alert_id, escalation.recipients(r, patient_ref, kind, level), at)
 
     return {"patients": len(patients), "days": len(days), "weeks": week_keys, "records": len(records),
             "symptoms": len(symptoms), "relay_alerts": len(alerts)}

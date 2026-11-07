@@ -10,7 +10,9 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 Severity = Literal["mild", "moderate", "severe"]
-AlertType = Literal["missed", "severe"]
+AlertType = Literal["missed", "severe", "emergency_access"]
+Reporter = Literal["self", "parent", "caregiver", "other"]
+InputMode = Literal["voice", "text", "mixed"]
 
 
 class Health(BaseModel):
@@ -36,11 +38,16 @@ class SurveyQuestion(BaseModel):
     asks: list[str]
 
 
+class Schedule(BaseModel):
+    every_days: int  # check-in cadence for the cohort (D-059)
+
+
 class SurveyResponse(BaseModel):
     config_id: str
     cohort_id: str
     version: int
     published_at: str
+    schedule: Schedule
     questions: list[SurveyQuestion]
 
 
@@ -70,17 +77,20 @@ class EnvelopeAccepted(BaseModel):
 
 class AlertAccepted(BaseModel):
     alert_id: str
-    routed_doctor: bool
+    routed_care_team: bool
     routed_caregiver: bool
 
 
 class ConsentState(BaseModel):
     patient_ref: str
-    doctor_id: Optional[str]
+    care_org_id: Optional[str]
+    share_care_team: bool
     caregiver_id: Optional[str]
-    share_doctor: bool
     share_caregiver: bool
     caregiver_detail: Literal["alerts_only", "summary"]
+    emergency_consent: bool
+    emergency_org_ids: list[str]
+    emergency_contact_count: int  # contacts themselves are never echoed back
     updated_at: str
 
 
@@ -102,20 +112,13 @@ class EnvelopeAck(BaseModel):
     fetched_at: str
 
 
-class DoctorAlert(BaseModel):
+class Alert(BaseModel):
     alert_id: str
     patient_ref: str
     alert_type: AlertType
+    escalation_level: Optional[int]  # 1, 2 or 3 for missed check-ins (D-068); null otherwise
     created_at: str   # event time (device or scheduler)
     received_at: str  # service time; use this as the `since` cursor (D-054)
-
-
-class CaregiverAlert(BaseModel):
-    alert_id: str
-    patient_ref: str
-    alert_type: AlertType
-    created_at: str
-    received_at: str
 
 
 class PublicKeyBody(BaseModel):
@@ -125,6 +128,65 @@ class PublicKeyBody(BaseModel):
 class PublicKeyResponse(BaseModel):
     doctor_id: str
     public_key: str
+
+
+class OrgKeyResponse(BaseModel):
+    org_id: str
+    public_key: str
+
+
+class OrgMembership(BaseModel):
+    org_id: str
+    display_name: str
+    org_type: Literal["hospital", "clinic"]
+    role: Literal["attending", "on_call", "admin"]
+    org_key_registered: bool
+    has_key_grant: bool
+
+
+class MemberBody(BaseModel):
+    role: Literal["attending", "on_call", "admin"]
+    status: Literal["active", "revoked"]
+
+
+class MemberState(BaseModel):
+    org_id: str
+    doctor_id: str
+    role: str
+    status: str
+    granted_at: str
+    revoked_at: Optional[str]
+
+
+class KeyGrantBody(BaseModel):
+    doctor_id: str
+    wrapped_key: str  # base64 sealed box of the org private key to the member's personal public key
+
+
+class KeyGrantReceipt(BaseModel):
+    org_id: str
+    doctor_id: str
+    granted_by: str
+    granted_at: str
+
+
+class KeyGrant(KeyGrantReceipt):
+    wrapped_key: str
+
+
+class EmergencyAccessBody(BaseModel):
+    patient_ref: str
+    reason: Literal["unresponsive_patient", "emergency_admission", "escalation_level_3"]
+
+
+class EmergencyAccessResult(BaseModel):
+    org_id: str
+    patient_ref: str
+    reason: str
+    accessed_at: str
+    notification_alert_id: str
+    notified: list[str]  # recipient types told about this access
+    envelopes: list[Envelope]
 
 
 class CohortWeeklyRow(BaseModel):
@@ -171,5 +233,7 @@ class ExportRecord(BaseModel):
     iso_week: str
     status: str
     source: Literal["device", "scheduler"]
+    reporter: Optional[Reporter]     # null for scheduler records
+    input_mode: Optional[InputMode]  # null for scheduler records
     unanswered_questions: int
     symptoms: list[ExportSymptom]

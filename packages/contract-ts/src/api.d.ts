@@ -72,7 +72,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/doctor-envelopes": {
+    "/v1/care-envelopes": {
         parameters: {
             query?: never;
             header?: never;
@@ -81,8 +81,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Doctor envelope (schema/doctor_envelope.json) */
-        post: operations["post_envelope_v1_doctor_envelopes_post"];
+        /** Care envelope sealed to an organization (schema/care_envelope.json) */
+        post: operations["post_envelope_v1_care_envelopes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -114,8 +114,26 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Consent update (schema/consent_update.json) */
+        /** Consent update: care team, caregiver, emergency organizations and contacts (schema/consent_update.json) */
         put: operations["put_consent_v1_consent__patient_ref__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Care-team key of a linked organization (care team or consented emergency) */
+        get: operations["get_org_key_v1_orgs__org_id__public_key_get"];
+        /** Register the organization's care-team key (admin) */
+        put: operations["put_org_key_v1_orgs__org_id__public_key_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -130,10 +148,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Public Key */
-        get: operations["get_public_key_v1_doctors__doctor_id__public_key_get"];
-        /** Put Public Key */
-        put: operations["put_public_key_v1_doctors__doctor_id__public_key_put"];
+        get?: never;
+        /** Register the doctor's personal key (receives key grants) */
+        put: operations["put_doctor_key_v1_doctors__doctor_id__public_key_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -141,15 +158,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/doctors/{doctor_id}/patients": {
+    "/v1/doctors/{doctor_id}/orgs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Doctor Patients */
-        get: operations["doctor_patients_v1_doctors__doctor_id__patients_get"];
+        /** Organizations the doctor is an active member of */
+        get: operations["doctor_orgs_v1_doctors__doctor_id__orgs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -158,15 +175,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/doctors/{doctor_id}/envelopes": {
+    "/v1/orgs/{org_id}/members/{doctor_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Doctor Envelopes */
-        get: operations["doctor_envelopes_v1_doctors__doctor_id__envelopes_get"];
+        get?: never;
+        /** Add, change or revoke a member (admin); revoking removes their key grant */
+        put: operations["put_member_v1_orgs__org_id__members__doctor_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/key-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give a member the org key, sealed to their personal key (admin) */
+        post: operations["post_key_grant_v1_orgs__org_id__key_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/key-grants/{doctor_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The calling doctor's own key grant */
+        get: operations["get_key_grant_v1_orgs__org_id__key_grants__doctor_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -175,7 +226,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/doctors/{doctor_id}/envelopes/{envelope_id}/ack": {
+    "/v1/orgs/{org_id}/patients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Patients whose care team is this organization (members) */
+        get: operations["org_patients_v1_orgs__org_id__patients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/envelopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Care-team envelopes since a time (members) */
+        get: operations["org_envelopes_v1_orgs__org_id__envelopes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/envelopes/{envelope_id}/ack": {
         parameters: {
             query?: never;
             header?: never;
@@ -185,24 +270,41 @@ export interface paths {
         get?: never;
         put?: never;
         /** Ack Envelope */
-        post: operations["ack_envelope_v1_doctors__doctor_id__envelopes__envelope_id__ack_post"];
+        post: operations["ack_envelope_v1_orgs__org_id__envelopes__envelope_id__ack_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/doctors/{doctor_id}/alerts": {
+    "/v1/orgs/{org_id}/alerts": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Doctor Alerts */
-        get: operations["doctor_alerts_v1_doctors__doctor_id__alerts_get"];
+        /** Alerts delivered to this care team since a time (members) */
+        get: operations["org_alerts_v1_orgs__org_id__alerts_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/emergency-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emergency access to a patient's envelopes (members of a consented emergency organization; coded reason; logged; notifies caregiver and care team) */
+        post: operations["emergency_access_v1_orgs__org_id__emergency_access_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -298,17 +400,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AlertAccepted */
-        AlertAccepted: {
-            /** Alert Id */
-            alert_id: string;
-            /** Routed Doctor */
-            routed_doctor: boolean;
-            /** Routed Caregiver */
-            routed_caregiver: boolean;
-        };
-        /** CaregiverAlert */
-        CaregiverAlert: {
+        /** Alert */
+        Alert: {
             /** Alert Id */
             alert_id: string;
             /** Patient Ref */
@@ -317,11 +410,22 @@ export interface components {
              * Alert Type
              * @enum {string}
              */
-            alert_type: "missed" | "severe";
+            alert_type: "missed" | "severe" | "emergency_access";
+            /** Escalation Level */
+            escalation_level: number | null;
             /** Created At */
             created_at: string;
             /** Received At */
             received_at: string;
+        };
+        /** AlertAccepted */
+        AlertAccepted: {
+            /** Alert Id */
+            alert_id: string;
+            /** Routed Care Team */
+            routed_care_team: boolean;
+            /** Routed Caregiver */
+            routed_caregiver: boolean;
         };
         /** CohortWeeklyRow */
         CohortWeeklyRow: {
@@ -365,12 +469,12 @@ export interface components {
         ConsentState: {
             /** Patient Ref */
             patient_ref: string;
-            /** Doctor Id */
-            doctor_id: string | null;
+            /** Care Org Id */
+            care_org_id: string | null;
+            /** Share Care Team */
+            share_care_team: boolean;
             /** Caregiver Id */
             caregiver_id: string | null;
-            /** Share Doctor */
-            share_doctor: boolean;
             /** Share Caregiver */
             share_caregiver: boolean;
             /**
@@ -378,24 +482,41 @@ export interface components {
              * @enum {string}
              */
             caregiver_detail: "alerts_only" | "summary";
+            /** Emergency Consent */
+            emergency_consent: boolean;
+            /** Emergency Org Ids */
+            emergency_org_ids: string[];
+            /** Emergency Contact Count */
+            emergency_contact_count: number;
             /** Updated At */
             updated_at: string;
         };
-        /** DoctorAlert */
-        DoctorAlert: {
-            /** Alert Id */
-            alert_id: string;
+        /** EmergencyAccessBody */
+        EmergencyAccessBody: {
             /** Patient Ref */
             patient_ref: string;
             /**
-             * Alert Type
+             * Reason
              * @enum {string}
              */
-            alert_type: "missed" | "severe";
-            /** Created At */
-            created_at: string;
-            /** Received At */
-            received_at: string;
+            reason: "unresponsive_patient" | "emergency_admission" | "escalation_level_3";
+        };
+        /** EmergencyAccessResult */
+        EmergencyAccessResult: {
+            /** Org Id */
+            org_id: string;
+            /** Patient Ref */
+            patient_ref: string;
+            /** Reason */
+            reason: string;
+            /** Accessed At */
+            accessed_at: string;
+            /** Notification Alert Id */
+            notification_alert_id: string;
+            /** Notified */
+            notified: string[];
+            /** Envelopes */
+            envelopes: components["schemas"]["Envelope"][];
         };
         /** Envelope */
         Envelope: {
@@ -460,6 +581,10 @@ export interface components {
              * @enum {string}
              */
             source: "device" | "scheduler";
+            /** Reporter */
+            reporter: ("self" | "parent" | "caregiver" | "other") | null;
+            /** Input Mode */
+            input_mode: ("voice" | "text" | "mixed") | null;
             /** Unanswered Questions */
             unanswered_questions: number;
             /** Symptoms */
@@ -500,12 +625,99 @@ export interface components {
             /** Seeded */
             seeded: boolean;
         };
+        /** KeyGrant */
+        KeyGrant: {
+            /** Org Id */
+            org_id: string;
+            /** Doctor Id */
+            doctor_id: string;
+            /** Granted By */
+            granted_by: string;
+            /** Granted At */
+            granted_at: string;
+            /** Wrapped Key */
+            wrapped_key: string;
+        };
+        /** KeyGrantBody */
+        KeyGrantBody: {
+            /** Doctor Id */
+            doctor_id: string;
+            /** Wrapped Key */
+            wrapped_key: string;
+        };
+        /** KeyGrantReceipt */
+        KeyGrantReceipt: {
+            /** Org Id */
+            org_id: string;
+            /** Doctor Id */
+            doctor_id: string;
+            /** Granted By */
+            granted_by: string;
+            /** Granted At */
+            granted_at: string;
+        };
         /** LinkedPatient */
         LinkedPatient: {
             /** Patient Ref */
             patient_ref: string;
             /** Granted At */
             granted_at: string;
+        };
+        /** MemberBody */
+        MemberBody: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "attending" | "on_call" | "admin";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "revoked";
+        };
+        /** MemberState */
+        MemberState: {
+            /** Org Id */
+            org_id: string;
+            /** Doctor Id */
+            doctor_id: string;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+            /** Granted At */
+            granted_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+        };
+        /** OrgKeyResponse */
+        OrgKeyResponse: {
+            /** Org Id */
+            org_id: string;
+            /** Public Key */
+            public_key: string;
+        };
+        /** OrgMembership */
+        OrgMembership: {
+            /** Org Id */
+            org_id: string;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Org Type
+             * @enum {string}
+             */
+            org_type: "hospital" | "clinic";
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "attending" | "on_call" | "admin";
+            /** Org Key Registered */
+            org_key_registered: boolean;
+            /** Has Key Grant */
+            has_key_grant: boolean;
         };
         /** PublicKeyBody */
         PublicKeyBody: {
@@ -525,6 +737,11 @@ export interface components {
             record_id: string;
             /** Payload Sha256 */
             payload_sha256: string;
+        };
+        /** Schedule */
+        Schedule: {
+            /** Every Days */
+            every_days: number;
         };
         /** SurveyPublished */
         SurveyPublished: {
@@ -555,6 +772,7 @@ export interface components {
             version: number;
             /** Published At */
             published_at: string;
+            schedule: components["schemas"]["Schedule"];
             /** Questions */
             questions: components["schemas"]["SurveyQuestion"][];
         };
@@ -814,7 +1032,7 @@ export interface operations {
             };
         };
     };
-    post_envelope_v1_doctor_envelopes_post: {
+    post_envelope_v1_care_envelopes_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1029,12 +1247,12 @@ export interface operations {
             };
         };
     };
-    get_public_key_v1_doctors__doctor_id__public_key_get: {
+    get_org_key_v1_orgs__org_id__public_key_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                doctor_id: string;
+                org_id: string;
             };
             cookie?: never;
         };
@@ -1046,7 +1264,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublicKeyResponse"];
+                    "application/json": components["schemas"]["OrgKeyResponse"];
                 };
             };
             /** @description Unauthorized */
@@ -1096,7 +1314,78 @@ export interface operations {
             };
         };
     };
-    put_public_key_v1_doctors__doctor_id__public_key_put: {
+    put_org_key_v1_orgs__org_id__public_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicKeyBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgKeyResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_doctor_key_v1_doctors__doctor_id__public_key_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -1167,12 +1456,290 @@ export interface operations {
             };
         };
     };
-    doctor_patients_v1_doctors__doctor_id__patients_get: {
+    doctor_orgs_v1_doctors__doctor_id__orgs_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 doctor_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgMembership"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_member_v1_orgs__org_id__members__doctor_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                doctor_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberState"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_key_grant_v1_orgs__org_id__key_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyGrantBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyGrantReceipt"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_key_grant_v1_orgs__org_id__key_grants__doctor_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+                doctor_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyGrant"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    org_patients_v1_orgs__org_id__patients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
             };
             cookie?: never;
         };
@@ -1234,14 +1801,14 @@ export interface operations {
             };
         };
     };
-    doctor_envelopes_v1_doctors__doctor_id__envelopes_get: {
+    org_envelopes_v1_orgs__org_id__envelopes_get: {
         parameters: {
             query?: {
                 since?: string | null;
             };
             header?: never;
             path: {
-                doctor_id: string;
+                org_id: string;
             };
             cookie?: never;
         };
@@ -1303,12 +1870,12 @@ export interface operations {
             };
         };
     };
-    ack_envelope_v1_doctors__doctor_id__envelopes__envelope_id__ack_post: {
+    ack_envelope_v1_orgs__org_id__envelopes__envelope_id__ack_post: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                doctor_id: string;
+                org_id: string;
                 envelope_id: string;
             };
             cookie?: never;
@@ -1371,14 +1938,14 @@ export interface operations {
             };
         };
     };
-    doctor_alerts_v1_doctors__doctor_id__alerts_get: {
+    org_alerts_v1_orgs__org_id__alerts_get: {
         parameters: {
             query?: {
                 since?: string | null;
             };
             header?: never;
             path: {
-                doctor_id: string;
+                org_id: string;
             };
             cookie?: never;
         };
@@ -1390,7 +1957,78 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DoctorAlert"][];
+                    "application/json": components["schemas"]["Alert"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    emergency_access_v1_orgs__org_id__emergency_access_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmergencyAccessBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyAccessResult"];
                 };
             };
             /** @description Unauthorized */
@@ -1457,7 +2095,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaregiverAlert"][];
+                    "application/json": components["schemas"]["Alert"][];
                 };
             };
             /** @description Unauthorized */

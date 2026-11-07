@@ -1,6 +1,13 @@
 {
-  "schema_version": "1.0",
-  "roles": ["patient_device", "doctor", "caregiver", "company_reader", "company_admin", "company_safety"],
+  "schema_version": "2.0",
+  "roles": [
+    "patient_device",
+    "doctor",
+    "caregiver",
+    "company_reader",
+    "company_admin",
+    "company_safety"
+  ],
   "id_patterns": {
     "patient_ref": "^pt_[a-f0-9]{8}$",
     "record_id": "^rec_[a-f0-9]{8}$",
@@ -11,22 +18,134 @@
     "envelope_id": "^env_[a-f0-9]{8}$",
     "config_id": "^cfg_[a-z0-9_]{1,32}$",
     "company_user_id": "^usr_[a-z0-9_]{1,24}$",
-    "payload_sha256": "^[a-f0-9]{64}$"
+    "payload_sha256": "^[a-f0-9]{64}$",
+    "org_id": "^org_[a-f0-9]{8}$",
+    "contact_id": "^ec_[a-f0-9]{8}$",
+    "phone": "^(\\+[1-9][0-9]{6,14}|[0-9]{3})$"
   },
-  "cohort_id": ["cohort_A", "cohort_B", "cohort_C", "cohort_D"],
-  "drug_version": ["v1", "v2", "v3", "v4"],
-  "checkin_status": ["completed", "partial", "missed"],
-  "record_source": ["device", "scheduler"],
-  "severity": ["mild", "moderate", "severe"],
-  "onset": ["today", "1_3_days", "4_7_days", "over_7_days", "unknown"],
-  "answer_rating": ["complete", "partial", "off_topic", "rambling", "no_answer"],
-  "trend": ["better", "same", "worse", "unknown"],
-  "alert_type": ["missed", "severe"],
-  "caregiver_detail": ["alerts_only", "summary"],
-  "link_status": ["active", "revoked"],
-  "outbox_destination": ["company_record", "doctor_envelope", "alert", "consent"],
-  "outbox_status": ["queued", "sent", "failed"],
-  "question_purpose": ["wellbeing", "symptom_screen", "severity", "onset", "adherence", "exposure"],
+  "cohort_id": [
+    "cohort_A",
+    "cohort_B",
+    "cohort_C",
+    "cohort_D"
+  ],
+  "drug_version": [
+    "v1",
+    "v2",
+    "v3",
+    "v4"
+  ],
+  "checkin_status": [
+    "completed",
+    "partial",
+    "missed"
+  ],
+  "record_source": [
+    "device",
+    "scheduler"
+  ],
+  "severity": [
+    "mild",
+    "moderate",
+    "severe"
+  ],
+  "onset": [
+    "today",
+    "1_3_days",
+    "4_7_days",
+    "over_7_days",
+    "unknown"
+  ],
+  "answer_rating": [
+    "complete",
+    "partial",
+    "off_topic",
+    "rambling",
+    "no_answer"
+  ],
+  "trend": [
+    "better",
+    "same",
+    "worse",
+    "unknown"
+  ],
+  "alert_type": [
+    "missed",
+    "severe",
+    "emergency_access"
+  ],
+  "escalation_level": [
+    1,
+    2,
+    3
+  ],
+  "alert_recipient": [
+    "patient",
+    "caregiver",
+    "care_team",
+    "emergency_contact"
+  ],
+  "caregiver_detail": [
+    "alerts_only",
+    "summary"
+  ],
+  "link_status": [
+    "active",
+    "revoked"
+  ],
+  "care_link_type": [
+    "care_team",
+    "emergency"
+  ],
+  "org_type": [
+    "hospital",
+    "clinic"
+  ],
+  "org_role": [
+    "attending",
+    "on_call",
+    "admin"
+  ],
+  "contact_type": [
+    "emergency_service",
+    "hospital",
+    "person"
+  ],
+  "emergency_access_reason": [
+    "unresponsive_patient",
+    "emergency_admission",
+    "escalation_level_3"
+  ],
+  "reporter": [
+    "self",
+    "parent",
+    "caregiver",
+    "other"
+  ],
+  "input_mode": [
+    "voice",
+    "text",
+    "mixed"
+  ],
+  "outbox_destination": [
+    "company_record",
+    "care_envelope",
+    "alert",
+    "consent"
+  ],
+  "outbox_status": [
+    "queued",
+    "sent",
+    "failed"
+  ],
+  "question_purpose": [
+    "wellbeing",
+    "symptom_screen",
+    "severity",
+    "onset",
+    "adherence",
+    "exposure"
+  ],
   "term_code": [
     "SE_RASH",
     "SE_DRY_SKIN",

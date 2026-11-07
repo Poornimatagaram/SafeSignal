@@ -1,8 +1,0 @@
-{
-  "schema_version": "1.0",
-  "envelope_id": "env_91c2a7d4",
-  "doctor_id": "dr_3a7f10b2",
-  "patient_ref": "pt_4b82d0c6",
-  "ciphertext": "U0VBTEVELUJPWC1QTEFDRUhPTERFUi17ImNoZWNraW5fZGF0ZSI6IjIwMjYtMTEtMDciLCJkaXNwbGF5X25hbWUiOiJXYWx0ZXIiLCJkcnVnX25hbWUiOiJUYWdyaXNzbyIsImRydQ==",
-  "payload_sha256": "18c93a20d798d1d26950b14d1dc661627552557d805a81d5a4f5c1f5a8768371"
-}

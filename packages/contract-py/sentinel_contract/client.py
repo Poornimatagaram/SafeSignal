@@ -98,8 +98,9 @@ class SentinelClient:
     def fetch_terms(self, program_id: str) -> dict:
         return self._get("/v1/terms", {"program_id": program_id})
 
-    def fetch_doctor_key(self, doctor_id: str) -> str:
-        return self._get(f"/v1/doctors/{doctor_id}/public-key")["public_key"]
+    def fetch_org_key(self, org_id: str) -> str:
+        """Care-team (or consented emergency) organization's public key; 404 until its admin registers one."""
+        return self._get(f"/v1/orgs/{org_id}/public-key")["public_key"]
 
     # ---------- sends (the only outbound patient data) ----------
 
@@ -125,7 +126,7 @@ class SentinelClient:
 
     def send_envelope(self, envelope: dict) -> SendResult:
         # Receipt hash for an envelope is the plaintext hash it carries (26.13).
-        return self._send("POST", "/v1/doctor-envelopes", "doctor_envelope", envelope, envelope["payload_sha256"])
+        return self._send("POST", "/v1/care-envelopes", "care_envelope", envelope, envelope["payload_sha256"])
 
     def send_alert(self, alert: dict) -> SendResult:
         return self._send("POST", "/v1/alerts", "alert_event", alert, payload_sha256(alert))
@@ -135,8 +136,11 @@ class SentinelClient:
                           payload_sha256(consent))
 
 
-def build_envelope(envelope_id: str, doctor_id: str, plaintext: dict, doctor_public_key_b64: str) -> dict:
-    """Validate the doctor payload, hash it, and seal it to the doctor's X25519 key (libsodium sealed box).
+def build_envelope(envelope_id: str, org_id: str, plaintext: dict, org_public_key_b64: str) -> dict:
+    """Validate the doctor payload, hash it, and seal it to an organization's care-team X25519 key (sealed box).
+
+    Build one envelope per recipient organization: the care team, plus each consented emergency organization
+    (contract 2.0, docs/design/contract-2.0.md). Each gets its own envelope_id.
 
     Store the returned envelope in the outbox and resend it unchanged on retry: sealing is randomized,
     so re-sealing would produce a different ciphertext and a 409.
@@ -144,12 +148,12 @@ def build_envelope(envelope_id: str, doctor_id: str, plaintext: dict, doctor_pub
     from nacl.public import PublicKey, SealedBox
 
     validate("doctor_payload", plaintext)
-    key = PublicKey(base64.b64decode(doctor_public_key_b64))
+    key = PublicKey(base64.b64decode(org_public_key_b64))
     ciphertext = SealedBox(key).encrypt(canonical(plaintext))
     return {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "envelope_id": envelope_id,
-        "doctor_id": doctor_id,
+        "org_id": org_id,
         "patient_ref": plaintext["patient_ref"],
         "ciphertext": base64.b64encode(ciphertext).decode("ascii"),
         "payload_sha256": payload_sha256(plaintext),

@@ -58,8 +58,12 @@ def test_synthetic_records_are_contract_valid_and_hashed(full):
                    "program_id": r["program_id"], "cohort_id": r["cohort_id"], "drug_version": r["drug_version"],
                    "iso_week": r["iso_week"], "status": r["status"], "symptoms": syms,
                    "unanswered_questions": r["unanswered_questions"],
-                   "consent": {"doctor": bool(r["consent_doctor"]), "caregiver": bool(r["consent_caregiver"])}}
-        assert validation_errors("company_record", payload) == []
+                   "consent": {"care_team": bool(r["consent_care_team"]), "caregiver": bool(r["consent_caregiver"])}}
+        if r["source"] == "device":  # device records are full 2.0 company records
+            payload.update(reporter=r["reporter"], input_mode=r["input_mode"])
+            assert validation_errors("company_record", payload) == []
+        else:
+            assert r["status"] == "missed" and r["reporter"] is None and r["input_mode"] is None
         assert payload_sha256(payload) == r["payload_sha256"]
         assert r["source"] == ("scheduler" if r["status"] == "missed" else "device")
 
@@ -84,7 +88,37 @@ def test_relay_alerts_only_for_linked_patients(full):
     s, summary, _ = full
     linked = {r[0] for r in s.db.relay.execute("SELECT DISTINCT patient_ref FROM alert")}
     assert linked <= {ids.WALTER, ids.PRIYA} and summary["relay_alerts"] > 0
-    assert s.db.relay.execute("SELECT COUNT(*) FROM doctor WHERE public_key IS NOT NULL").fetchone()[0] == 0  # D-025
+    for table in ("doctor", "organization"):  # keys are generated in browsers, never seeded (D-025)
+        assert s.db.relay.execute(f"SELECT COUNT(*) FROM {table} WHERE public_key IS NOT NULL").fetchone()[0] == 0
+
+
+def test_escalation_levels_follow_consecutive_misses(full):
+    s, _, _ = full
+    for patient in (ids.WALTER, ids.PRIYA):
+        statuses = [r[0] for r in q(s, "SELECT status FROM checkin_record WHERE patient_ref = ? ORDER BY received_at",
+                                    patient)]
+        expected, run = [], 0
+        for st in statuses:
+            run = run + 1 if st == "missed" else 0
+            if st == "missed":
+                expected.append(min(run, 3))
+        levels = [r[0] for r in s.db.relay.execute(
+            "SELECT escalation_level FROM alert WHERE patient_ref = ? AND alert_type = 'missed' ORDER BY received_at",
+            (patient,))]
+        assert levels == expected
+    deliveries = {tuple(r) for r in s.db.relay.execute(
+        "SELECT a.escalation_level, d.recipient_type FROM alert a JOIN alert_delivery d ON d.alert_id = a.alert_id "
+        "WHERE a.alert_type = 'missed'")}
+    assert all(t != "emergency_contact" for lvl, t in deliveries if lvl < 3)  # contacts only at level 3 (D-068)
+    assert {t for _, t in deliveries} >= {"patient", "care_team"}
+
+
+def test_proxy_reporting_and_input_modes_present(full):
+    s, _, _ = full
+    reporters = dict(q(s, "SELECT reporter, COUNT(*) FROM checkin_record WHERE source = 'device' GROUP BY reporter"))
+    modes = dict(q(s, "SELECT input_mode, COUNT(*) FROM checkin_record WHERE source = 'device' GROUP BY input_mode"))
+    assert set(reporters) == {"self", "caregiver"} and 0.05 < reporters["caregiver"] / sum(reporters.values()) < 0.3
+    assert set(modes) == {"voice", "text", "mixed"}
 
 
 def test_company_db_has_no_identifiers(full):
@@ -96,6 +130,9 @@ def test_company_db_has_no_identifiers(full):
     dump = "\n".join(s.db.company.iterdump())
     for p in fixtures["device_profiles"]:
         assert p["display_name"] not in dump and p["phone"] not in dump and p["date_of_birth"] not in dump
+    for contact in fixtures["emergency_contacts"]:  # emergency contacts live only in relay.db (D-067)
+        # as stored SQL literals: a bare "911" also occurs inside hex hashes
+        assert f"'{contact['phone']}'" not in dump and contact["contact_id"] not in dump
 
 
 def test_seed_is_idempotent_and_data_survives_restart(tmp_path):
@@ -110,7 +147,7 @@ def test_seed_is_idempotent_and_data_survives_restart(tmp_path):
     assert is_seeded(s2.db)
     assert s2.put_record(ids.WALTER, rec)[0] == 200  # still there, idempotent
     meta = s2.db.company.execute("SELECT schema_version FROM schema_meta").fetchone()[0]
-    assert meta == "1.1"
+    assert meta == "2.0"
     s2.close()
 
 
@@ -118,7 +155,7 @@ def test_healthz_reports_seed_state(tmp_path):
     app.state.store = SqliteStore.open(tmp_path)
     try:
         with TestClient(app) as c:
-            assert c.get("/healthz").json() == {"status": "ok", "contract_version": "1.1", "seeded": False}
+            assert c.get("/healthz").json() == {"status": "ok", "contract_version": "2.0", "seeded": False}
     finally:
         app.state.store.close()
         app.state.store = None
