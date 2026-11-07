@@ -17,7 +17,8 @@ from jsonschema import Draft202012Validator
 
 # Repo layout: <root>/packages/contract-py/sentinel_contract/__init__.py -> <root>/schema
 SCHEMA_DIR = Path(os.environ.get("SENTINEL_SCHEMA_DIR") or Path(__file__).resolve().parents[3] / "schema")
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.0"     # value of `schema_version` inside every payload
+CONTRACT_VERSION = "1.1"   # release of schema/ as a whole (tables + API); sent as X-Schema-Version
 
 PAYLOAD_SCHEMAS = {
     "company_record": "company_record.json",

@@ -1,5 +1,6 @@
 -- Relay store (Sentinel service; doctor and caregiver roles only). Scoping Doc 26.5.
 -- Holds encrypted envelopes, consent links and alerts. The company role has no path to this file.
+-- Server timestamps are UTC with microseconds ('YYYY-MM-DDTHH:MM:SS.ffffffZ') so they sort and page correctly (D-054).
 
 CREATE TABLE IF NOT EXISTS schema_meta (
   id              INTEGER PRIMARY KEY CHECK (id = 1),
@@ -49,10 +50,11 @@ CREATE TABLE IF NOT EXISTS alert (
   alert_id         TEXT PRIMARY KEY,            -- alt_xxxxxxxx
   patient_ref      TEXT NOT NULL,
   alert_type       TEXT NOT NULL CHECK (alert_type IN ('missed','severe')),
-  created_at       TEXT NOT NULL,
+  created_at       TEXT NOT NULL,                -- event time from the device (or scheduler)
+  received_at      TEXT NOT NULL,                -- D-054: service time; `since` paging uses this, never created_at
   routed_doctor    INTEGER NOT NULL,
   routed_caregiver INTEGER NOT NULL,
   acknowledged_at  TEXT
 );
 
-CREATE INDEX IF NOT EXISTS ix_alert_patient_created ON alert(patient_ref, created_at);
+CREATE INDEX IF NOT EXISTS ix_alert_received ON alert(received_at);
