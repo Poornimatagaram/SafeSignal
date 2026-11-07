@@ -247,3 +247,25 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Missed check-in scheduler: detect due check-ins per schedule and window, write scheduler records, raise level 1/2/3 alerts through `escalation.py`, within 1 minute; demo control to fire Priya's alert on cue.
 2. Real-data seed: fictional company name, per-arm rates from ClinicalTrials.gov, OnSIDES-corrected terms, trial documents in the company `document` table, an infant program (MELODY).
+
+---
+
+## Session 009 — 2026-11-07 (Sat) · Bring `main` up to date
+
+**Goal:** `main` must match what has been built, without conflicts. Three PRs were open and stacked (#2 ← #3 ← #4).
+
+**What happened**
+- Merged #2 (squash). GitHub did not retarget #3; it closed #3 because #3's base branch was deleted.
+- A rebase plus force-push to move #3 onto `main` was blocked by the permission system as history rewriting. Used a non-destructive method instead: merged `main` into the branch; the only conflicts were in the three append-only log files, where the branch was a strict superset (verified: no line from `main` missing).
+- Opened #5 from the same branch to replace #3, **retargeted #4 to `main` before merging #5** so it could not be closed too, merged #5.
+- Merged `main` into #4's branch: many textual conflicts, all caused by squashed duplicates. Proved `main` was identical to #4's base (`git diff` empty), so resolved every file to #4's version and verified the result byte for byte. Merged #4.
+
+**Verification**
+- `main` = `6ede5ba`; byte-for-byte equal to the finished contract 2.0 work; no open PRs; only `main` on the remote.
+- Fresh clone of `main`: contract-py 24, service 35, contract-ts 8/8 pass; CI on `main` green.
+
+**Decisions:** D-072 (merge own PRs when green and conflict-free; supersedes D-052), D-073 (stacked-PR procedure; supersedes the D-063 rebase steps).
+
+**Next**
+1. Missed check-in scheduler with the 3-level escalation (`company/feat/missed-checkin-scheduler`).
+2. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates, OnSIDES terms, trial documents, infant program.
