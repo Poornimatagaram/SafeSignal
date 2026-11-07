@@ -108,7 +108,8 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 **Outputs**
 - Merge of the remote's initial commit with only the two add/add conflicts resolved (README, `.gitignore`), then a separate guard-rail commit: `.gitattributes`, `AGENTS.md` as plain files, `scripts/check_ownership.sh`, README git workflow, per-area `evals/` and `data/`, `CODEOWNERS` handle, instruction updates.
-- Pushed `main` to `origin` as a fast-forward (no force).
+- Pushed `main` to `origin` as a fast-forward `4db7bc0..60ae124` (no force).
+- Fresh clone from GitHub as a teammate: contract-py 22, service 17, contract-ts 8/8 pass; a `doctor/timeline` branch writing `apps/doctor-web/src/lib/crypto.ts` passes `check_ownership.sh` and the file is not ignored; no tracked file is ignored.
 
 **Verification**
 - `git check-ignore`: app source under `src/lib/`, `components/parts/` kept; `var/`, `.venv`, `node_modules`, `.env`, `keys/` ignored; no tracked file newly ignored.

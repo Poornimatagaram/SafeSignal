@@ -5,7 +5,7 @@ All changes to the project, newest first. Schema-only history is also kept in `s
 ## 2026-11-07 — Session 004: shared GitHub repo (branch `company/shared-remote`)
 
 ### Added
-- Remote `origin` = `https://github.com/Poornimatagaram/SafeSignal.git`; its initial commit merged (unrelated histories, no force push) (D-041).
+- Remote `origin` = `https://github.com/Poornimatagaram/SafeSignal.git`; its initial commit merged (unrelated histories, no force push) (D-041). `main` pushed as fast-forward `4db7bc0..60ae124` and verified from a fresh clone.
 - `LICENSE` (MIT, from the repo owner's initial commit).
 - `.gitattributes`: LF line endings everywhere; generated files marked (D-042).
 - `scripts/check_ownership.sh`: fails if a branch changes files outside its area's folders (D-044).
