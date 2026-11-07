@@ -1,4 +1,4 @@
-"""API behaviour tests against the stub (Scoping Doc 26.13 error codes, 26.15 checklist items the stub covers)."""
+"""API behaviour against the SQLite store (Scoping Doc 26.13 error codes and the 26.15 checklist)."""
 
 import base64
 import copy
@@ -12,7 +12,6 @@ from sentinel_contract.client import SendRejected, SentinelClient, build_envelop
 from sentinel_contract import SCHEMA_DIR, canonical, payload_sha256
 from sentinel_service import demo_ids as ids
 from sentinel_service.main import app
-from sentinel_service.stub_store import StubStore
 
 EX = SCHEMA_DIR / "examples"
 PT = {"X-Role": "patient_device", "X-Actor-Id": ids.WALTER}
@@ -23,19 +22,13 @@ def example(kind):
     return json.loads((EX / f"{kind}.valid.json").read_text())
 
 
-@pytest.fixture()
-def c():
-    app.state.store = StubStore()  # fresh state per test
-    return TestClient(app)
-
-
 def test_missing_headers_401(c):
     assert c.get("/v1/survey", params={"cohort_id": "cohort_B"}).status_code == 401
 
 
 def test_schema_version_header(c):
     r = c.get("/v1/terms", params={"program_id": ids.PROGRAM_ID}, headers=PT)
-    assert r.headers["X-Schema-Version"] == "1.0"
+    assert r.headers["X-Schema-Version"] == "1.1"
     terms = {t["term_code"]: t for t in r.json()["terms"]}
     assert terms["SE_RASH"]["known_for_program"] is True
     assert terms["SE_COUGH"]["known_for_program"] is False  # Rybrevant-only
@@ -86,14 +79,23 @@ def test_company_roles(c):
     r = c.put("/v1/company/cohorts/cohort_B/survey", json=example("survey_config"), headers=admin)
     assert r.status_code == 201 and r.json()["version"] == 2
     assert c.get("/v1/survey", params={"cohort_id": "cohort_B"}, headers=PT).json()["version"] == 2
-    assert len(app.state.store.access_log) == 2
+    log = app.state.store.db.company.execute("SELECT actor_role, action FROM access_log ORDER BY id").fetchall()
+    assert [tuple(r) for r in log] == [("company_reader", "read"), ("company_admin", "publish_survey")]
 
 
-def test_cohort_rows_never_below_5(c):
-    reader = {"X-Role": "company_reader", "X-Actor-Id": ids.MARCO}
-    rows = c.get("/v1/company/cohorts/weekly", params={"program_id": ids.PROGRAM_ID}, headers=reader).json()
+def test_cohort_rows_never_below_5(seeded):
+    store, _ = seeded
+    app.state.store = store
+    try:
+        with TestClient(app) as c:
+            reader = {"X-Role": "company_reader", "X-Actor-Id": ids.MARCO}
+            rows = c.get("/v1/company/cohorts/weekly", params={"program_id": ids.PROGRAM_ID}, headers=reader).json()
+            comp = c.get("/v1/company/completion", params={"program_id": ids.PROGRAM_ID}, headers=reader).json()
+    finally:
+        app.state.store = None
     assert rows and all(r["patients"] >= 5 and r["reporting_patients"] >= 5 for r in rows)
     assert all(r["severe_patients"] is None or r["severe_patients"] == 0 or r["severe_patients"] >= 5 for r in rows)
+    assert len(comp) == 4 * 2 and all(0 < r["completion_rate"] < 1 and r["missed_rate"] > 0 for r in comp)
 
 
 def test_export_has_no_receipt_time(c):
@@ -135,24 +137,36 @@ def test_envelope_round_trip_with_real_encryption_and_revocation(c):
     with pytest.raises(SendRejected) as e:
         client.send_envelope(env2)
     assert e.value.status == 403
-    assert c.get(f"/v1/doctors/{ids.DR_SHAH}/patients", headers=DR).json() == [
-        {"patient_ref": ids.PRIYA, "granted_at": "2026-11-01T00:00:00Z"}]
+    assert [p["patient_ref"] for p in c.get(f"/v1/doctors/{ids.DR_SHAH}/patients", headers=DR).json()] == [ids.PRIYA]
 
 
 def test_severe_alert_routed_to_doctor_and_caregiver(c):
     r = c.post("/v1/alerts", json=example("alert_event"), headers=PT)
     assert r.status_code == 201 and r.json()["routed_doctor"] and r.json()["routed_caregiver"]
     dr = c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", headers=DR).json()
-    assert {a["alert_type"] for a in dr} == {"missed", "severe"}
+    assert [a["alert_type"] for a in dr] == ["severe"]
     cg = c.get(f"/v1/caregivers/{ids.ANNA}/alerts", headers={"X-Role": "caregiver", "X-Actor-Id": ids.ANNA}).json()
     assert [a["alert_type"] for a in cg] == ["severe"] and set(cg[0]) == {"alert_id", "patient_ref", "alert_type",
-                                                                         "created_at"}
+                                                                         "created_at", "received_at"}
 
 
-def test_since_paging_is_strictly_after(c):
-    dr = c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", headers=DR).json()
-    assert len(dr) == 1
-    assert c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", params={"since": dr[0]["created_at"]}, headers=DR).json() == []
+def test_since_pages_on_receive_time_not_device_time(c):
+    late = dict(example("alert_event"), alert_id="alt_0000000a", created_at="2026-11-01T09:00:00Z")  # queued offline
+    first = c.post("/v1/alerts", json=example("alert_event"), headers=PT)
+    assert first.status_code == 201
+    seen = c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", headers=DR).json()
+    cursor = seen[-1]["received_at"]
+    assert c.post("/v1/alerts", json=late, headers=PT).status_code == 201  # arrives after the cursor
+    nxt = c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", params={"since": cursor}, headers=DR).json()
+    assert [a["alert_id"] for a in nxt] == ["alt_0000000a"]  # D-054: device created_at is older, still delivered
+    assert c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", params={"since": nxt[0]["received_at"]}, headers=DR).json() == []
+
+
+def test_since_accepts_second_precision_and_rejects_garbage(c):
+    c.post("/v1/alerts", json=example("alert_event"), headers=PT)
+    assert len(c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", params={"since": "2020-01-01T00:00:00Z"},
+                     headers=DR).json()) == 1
+    assert c.get(f"/v1/doctors/{ids.DR_SHAH}/alerts", params={"since": "yesterday"}, headers=DR).status_code == 422
 
 
 def test_client_refuses_free_text_before_sending(c):
@@ -161,7 +175,7 @@ def test_client_refuses_free_text_before_sending(c):
     bad = json.loads((EX / "company_record.invalid.json").read_text())["payload"]
     with pytest.raises(ContractError):
         client.send_record(bad)
-    assert app.state.store.records == {}
+    assert app.state.store.db.company.execute("SELECT COUNT(*) FROM checkin_record").fetchone()[0] == 0
 
 
 def test_public_key_404_until_registered(c):
