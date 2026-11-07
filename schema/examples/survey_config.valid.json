@@ -1,0 +1,58 @@
+{
+  "questions": [
+    {
+      "question_id": "q1",
+      "purpose": "wellbeing",
+      "asks": [
+        "How have you been feeling since yesterday?",
+        "Have you felt any different in your body since yesterday?",
+        "Did you feel unwell yesterday, yes or no?"
+      ]
+    },
+    {
+      "question_id": "q2",
+      "purpose": "symptom_screen",
+      "asks": [
+        "Have you noticed anything new on your skin or nails?",
+        "Any new rash, spots or nail changes?",
+        "Is it a rash, a nail problem, or nothing new?"
+      ]
+    },
+    {
+      "question_id": "q3",
+      "purpose": "severity",
+      "asks": [
+        "How bad is it?",
+        "Is it mild, moderate or severe?",
+        "Is it bad enough to stop you doing things, yes or no?"
+      ]
+    },
+    {
+      "question_id": "q4",
+      "purpose": "onset",
+      "asks": [
+        "When did it start?",
+        "Did it start today, in the last few days, or earlier?",
+        "Did it start this week, yes or no?"
+      ]
+    },
+    {
+      "question_id": "q5",
+      "purpose": "adherence",
+      "asks": [
+        "Did you take your medicine today?",
+        "Have you had your tablets or treatment today?",
+        "Yes or no?"
+      ]
+    },
+    {
+      "question_id": "q6",
+      "purpose": "exposure",
+      "asks": [
+        "Anything new you started using, eating or doing?",
+        "Any new soap, cream, food or activity?",
+        "Yes or no?"
+      ]
+    }
+  ]
+}

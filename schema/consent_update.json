@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel.local/schema/consent_update.json",
+  "title": "SentinelConsentUpdate",
+  "description": "Sent to PUT /v1/consent/{patient_ref}. doctor_id and caregiver_id name which links to activate or revoke; null when the patient has none.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "patient_ref", "doctor_id", "caregiver_id", "share_doctor", "share_caregiver", "caregiver_detail"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "patient_ref": { "type": "string", "pattern": "^pt_[a-f0-9]{8}$" },
+    "doctor_id": { "oneOf": [{ "type": "string", "pattern": "^dr_[a-f0-9]{8}$" }, { "type": "null" }] },
+    "caregiver_id": { "oneOf": [{ "type": "string", "pattern": "^cg_[a-f0-9]{8}$" }, { "type": "null" }] },
+    "share_doctor": { "type": "boolean" },
+    "share_caregiver": { "type": "boolean" },
+    "caregiver_detail": { "enum": ["alerts_only", "summary"] }
+  }
+}

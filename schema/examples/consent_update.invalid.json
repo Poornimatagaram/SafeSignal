@@ -1,0 +1,15 @@
+{
+  "_expect": {
+    "status": 422,
+    "field": "/caregiver_detail",
+    "why": "Required field missing"
+  },
+  "payload": {
+    "schema_version": "1.0",
+    "patient_ref": "pt_4b82d0c6",
+    "doctor_id": "dr_3a7f10b2",
+    "caregiver_id": "cg_7e21c9a4",
+    "share_doctor": true,
+    "share_caregiver": true
+  }
+}

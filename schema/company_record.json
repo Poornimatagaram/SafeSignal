@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel.local/schema/company_record.json",
+  "title": "SentinelCompanyRecord",
+  "description": "Company payload sent by the patient device's egress gate to POST /v1/records. No free-text fields (Scoping Doc 14.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_id", "patient_ref", "program_id", "cohort_id", "drug_version", "iso_week", "status", "symptoms", "unanswered_questions", "consent"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "record_id": { "type": "string", "pattern": "^rec_[a-f0-9]{8}$" },
+    "patient_ref": { "type": "string", "pattern": "^pt_[a-f0-9]{8}$" },
+    "program_id": { "type": "string", "pattern": "^prog_[a-z0-9_]{1,24}$" },
+    "cohort_id": { "enum": ["cohort_A", "cohort_B", "cohort_C", "cohort_D"] },
+    "drug_version": { "enum": ["v1", "v2", "v3", "v4"] },
+    "iso_week": { "type": "string", "pattern": "^20[0-9]{2}-W[0-5][0-9]$" },
+    "status": { "enum": ["completed", "partial", "missed"] },
+    "symptoms": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["term_code", "severity", "onset", "known_side_effect", "possible_link_flag"],
+        "properties": {
+          "term_code": { "enum": ["SE_RASH", "SE_DRY_SKIN", "SE_PARONYCHIA", "SE_DIARRHEA", "SE_STOMATITIS", "SE_FATIGUE", "SE_DECREASED_APPETITE", "SE_INFUSION_REACTION", "SE_DYSPNEA", "SE_COUGH", "SE_EDEMA", "SE_OTHER_REVIEW"] },
+          "severity": { "enum": ["mild", "moderate", "severe"] },
+          "onset": { "enum": ["today", "1_3_days", "4_7_days", "over_7_days", "unknown"] },
+          "known_side_effect": { "type": "boolean" },
+          "possible_link_flag": { "type": "boolean" }
+        }
+      }
+    },
+    "unanswered_questions": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["doctor", "caregiver"],
+      "properties": {
+        "doctor": { "type": "boolean" },
+        "caregiver": { "type": "boolean" }
+      }
+    }
+  }
+}

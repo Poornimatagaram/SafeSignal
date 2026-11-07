@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "alert_id": "alt_5d0e8c11",
+  "patient_ref": "pt_4b82d0c6",
+  "alert_type": "severe",
+  "created_at": "2026-11-07T14:05:00Z"
+}

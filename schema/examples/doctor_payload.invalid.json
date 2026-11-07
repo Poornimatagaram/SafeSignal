@@ -1,0 +1,27 @@
+{
+  "_expect": {
+    "status": 422,
+    "field": "/transcript_text",
+    "why": "Transcript must never leave the device, even encrypted"
+  },
+  "payload": {
+    "schema_version": "1.0",
+    "patient_ref": "pt_4b82d0c6",
+    "display_name": "Walter",
+    "drug_name": "Tagrisso",
+    "drug_version": "v2",
+    "checkin_date": "2026-11-07",
+    "status": "completed",
+    "trend": "worse",
+    "symptoms": [
+      {
+        "term_code": "SE_RASH",
+        "severity": "moderate",
+        "onset": "1_3_days",
+        "known_side_effect": true,
+        "possible_link_flag": true
+      }
+    ],
+    "transcript_text": "Well, my grandson..."
+  }
+}

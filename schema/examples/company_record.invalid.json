@@ -1,0 +1,39 @@
+{
+  "_expect": {
+    "status": 422,
+    "field": "/notes",
+    "why": "Free-text field: the egress-gate refusal shown in the demo"
+  },
+  "payload": {
+    "schema_version": "1.0",
+    "record_id": "rec_7f3c9a1e",
+    "patient_ref": "pt_4b82d0c6",
+    "program_id": "prog_demo_01",
+    "cohort_id": "cohort_B",
+    "drug_version": "v2",
+    "iso_week": "2026-W45",
+    "status": "completed",
+    "symptoms": [
+      {
+        "term_code": "SE_RASH",
+        "severity": "moderate",
+        "onset": "1_3_days",
+        "known_side_effect": true,
+        "possible_link_flag": true
+      },
+      {
+        "term_code": "SE_PARONYCHIA",
+        "severity": "mild",
+        "onset": "4_7_days",
+        "known_side_effect": true,
+        "possible_link_flag": false
+      }
+    ],
+    "unanswered_questions": 0,
+    "consent": {
+      "doctor": true,
+      "caregiver": true
+    },
+    "notes": "my grandson visited and I got a rash"
+  }
+}

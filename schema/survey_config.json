@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentinel.local/schema/survey_config.json",
+  "title": "SentinelSurveyQuestions",
+  "description": "Body of PUT /v1/company/cohorts/{cohort_id}/survey and the questions array of GET /v1/survey. Questions only; never patient data. asks[0] is the first ask, asks[1] the simpler re-ask, asks[2] the choices or yes/no re-ask (Scoping Doc 25.4).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["questions"],
+  "properties": {
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question_id", "purpose", "asks"],
+        "properties": {
+          "question_id": { "type": "string", "pattern": "^q[0-9]{1,2}$" },
+          "purpose": { "enum": ["wellbeing", "symptom_screen", "severity", "onset", "adherence", "exposure"] },
+          "asks": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "string", "minLength": 3, "maxLength": 200 }
+          }
+        }
+      }
+    }
+  }
+}

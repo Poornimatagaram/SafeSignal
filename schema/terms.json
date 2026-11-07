@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "status": "draft: from Scoping Doc 25.3; every row to be verified against cached openFDA label text (task C2)",
+  "terms": [
+    { "term_code": "SE_RASH", "label_term": "Rash", "everyday_words": ["rash", "spots", "red skin", "itchy bumps"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_DRY_SKIN", "label_term": "Dry skin", "everyday_words": ["dry", "flaky", "cracked skin"], "drug_scope": ["Tagrisso"], "severe_trigger": false },
+    { "term_code": "SE_PARONYCHIA", "label_term": "Nail infection or nail changes", "everyday_words": ["sore nails", "cracked nails", "swollen fingertips"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_DIARRHEA", "label_term": "Diarrhea", "everyday_words": ["loose stools", "runny tummy"], "drug_scope": ["Tagrisso"], "severe_trigger": false },
+    { "term_code": "SE_STOMATITIS", "label_term": "Mouth sores", "everyday_words": ["mouth ulcers", "sore mouth"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_FATIGUE", "label_term": "Fatigue", "everyday_words": ["tired", "worn out", "no energy"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_DECREASED_APPETITE", "label_term": "Decreased appetite", "everyday_words": ["not hungry", "off my food"], "drug_scope": ["Tagrisso"], "severe_trigger": false },
+    { "term_code": "SE_INFUSION_REACTION", "label_term": "Infusion-related reaction", "everyday_words": ["felt sick during the drip", "chills at infusion"], "drug_scope": ["Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_DYSPNEA", "label_term": "Shortness of breath", "everyday_words": ["out of breath", "can't catch my breath"], "drug_scope": ["Rybrevant"], "severe_trigger": true },
+    { "term_code": "SE_COUGH", "label_term": "Cough", "everyday_words": ["coughing", "chesty"], "drug_scope": ["Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_EDEMA", "label_term": "Swelling", "everyday_words": ["swollen ankles", "puffy legs"], "drug_scope": ["Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_OTHER_REVIEW", "label_term": "Other, needs review", "everyday_words": [], "drug_scope": [], "severe_trigger": false }
+  ]
+}
