@@ -1,0 +1,14 @@
+{
+  "name": "@sentinel/contract",
+  "version": "1.0.0",
+  "description": "Sentinel contract helpers for JS/TS apps: canonical JSON, payload SHA-256, generated API types",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./api": { "types": "./src/api.d.ts" }
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}

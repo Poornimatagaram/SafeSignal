@@ -11,7 +11,7 @@ import json
 import random
 from datetime import datetime, timezone
 
-from contract import SCHEMA_DIR, payload_sha256, validation_errors
+from sentinel_contract import SCHEMA_DIR, payload_sha256, validation_errors
 
 from . import demo_ids as ids
 from .errors import conflict, forbidden, not_found, unprocessable

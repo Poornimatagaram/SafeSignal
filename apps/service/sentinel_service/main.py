@@ -16,7 +16,7 @@ from fastapi import Body, Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
-from contract import SCHEMA_VERSION, enums
+from sentinel_contract import SCHEMA_VERSION, enums
 
 from . import models as m
 from .errors import ApiError, forbidden

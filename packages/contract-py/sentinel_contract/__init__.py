@@ -8,13 +8,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schema"
+# Repo layout: <root>/packages/contract-py/sentinel_contract/__init__.py -> <root>/schema
+SCHEMA_DIR = Path(os.environ.get("SENTINEL_SCHEMA_DIR") or Path(__file__).resolve().parents[3] / "schema")
 SCHEMA_VERSION = "1.0"
 
 PAYLOAD_SCHEMAS = {

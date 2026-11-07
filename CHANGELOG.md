@@ -2,6 +2,26 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 002: centralized repo structure (branch `company/repo-structure`)
+
+### Added
+- `README.md` (layout, ownership, ports, naming, run and check commands) and `CODEOWNERS` (placeholder handles) (D-026, D-027).
+- `packages/contract-py/pyproject.toml` (`sentinel-contract`, hatchling) and `apps/service/pyproject.toml` with the contract as an editable path dependency; one lockfile per project (D-028).
+- `packages/contract-ts/`: `package.json` (`@sentinel/contract`), `src/index.js` + `index.d.ts` (`canonical`, async `payloadSha256` on Web Crypto), `test/hash_vectors.test.mjs` (D-029).
+- Ownership READMEs in `apps/company-web`, `apps/patient-runtime`, `apps/patient-web`, `apps/doctor-web`, `apps/service`, plus `evals/` and `data/` (D-030).
+- `.gitignore`: `var/` for all runtime databases (D-031).
+- Decisions D-026 to D-032.
+
+### Changed
+- Moved (history kept with `git mv`): scoping document → `docs/scoping-document.md`; `contract/` → `packages/contract-py/sentinel_contract/`; `clients/sentinel_client.py` → `sentinel_contract/client.py`; `clients/sentinel_api.d.ts` → `packages/contract-ts/src/api.d.ts`; `schema/examples/check_hash_vectors.mjs` → `packages/contract-ts/test/hash_vectors.test.mjs`; `sentinel_service/` → `apps/service/sentinel_service/`; tests split into `packages/contract-py/tests/` and `apps/service/tests/`; root `pyproject.toml`, `uv.lock`, `.python-version` → `apps/service/`.
+- Imports now `from sentinel_contract import ...` and `from sentinel_contract.client import ...`; `SCHEMA_DIR` resolves from the repo root or `SENTINEL_SCHEMA_DIR`.
+- `scripts/build_examples.py` and `scripts/export_openapi.py` run with `uv run --project ...` and no longer patch `sys.path` for the contract.
+- `CLAUDE.md`: new paths, test commands and branch rule.
+- D-012 superseded by D-027 (doctor UI belongs to the doctor teammate); D-019 paths superseded by D-029.
+
+### Removed
+- Root `contract/`, `clients/`, `tests/`, root `pyproject.toml`/`uv.lock`/`.python-version`.
+
 ## 2026-11-07 — Session 001: H1 handover package
 
 ### Added

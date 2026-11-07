@@ -1,0 +1,40 @@
+# Side-Effect Sentinel
+
+Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.md`.
+
+## Layout and ownership
+
+| Path | What | Owner | Port | Runtime data |
+| --- | --- | --- | --- | --- |
+| `schema/` | The contract: SQL, JSON Schemas, enums, terms, OpenAPI, examples | Company | — | — |
+| `packages/contract-py/` | Python `sentinel_contract`: hashing, validation, `SentinelClient` | Company | — | — |
+| `packages/contract-ts/` | npm `@sentinel/contract`: hashing, generated API types | Company | — | — |
+| `apps/service/` | Python `sentinel_service`: company DB, relay store, API, scheduler | Company | 8000 | `var/service/company.db`, `var/service/relay.db` |
+| `apps/company-web/` | Company portal (`@sentinel/company-web`) | Company | 5175 | — |
+| `apps/patient-runtime/` | Python `sentinel_patient`: speech-to-text, model, filter, egress gate | Patient | 8001 | `var/patient/patient.db` |
+| `apps/patient-web/` | Patient screen (`@sentinel/patient-web`) | Patient | 5173 | — |
+| `apps/doctor-web/` | Doctor view (`@sentinel/doctor-web`) | Doctor | 5174 | IndexedDB `sentinel_doctor_view` |
+| `evals/` | Leakage, F1 and re-ask evaluations | Team | — | — |
+| `data/` | Public data (openFDA cache) and synthetic generators | Team | — | — |
+| `scripts/` | Shared tooling | Company | — | — |
+| `var/` | All runtime databases (gitignored) | — | — | — |
+
+## Rules
+- Edit only your own folders (`CODEOWNERS`). Contract changes go through the company owner (Scoping Doc 26.11).
+- Each app is its own project with its own lockfile; there is no root lockfile. Use the contract as a path dependency:
+  - Python: `[tool.uv.sources] sentinel-contract = { path = "../../packages/contract-py", editable = true }`
+  - JS: `"@sentinel/contract": "file:../../packages/contract-ts"`
+- Python packages are named `sentinel_<app>`; npm packages `@sentinel/<app>`; env vars `SENTINEL_*` (shared) or `SERVICE_*` / `PATIENT_*` / `DOCTOR_*` / `COMPANY_*`.
+- Branches: `<company|patient|doctor>/<topic>`, merged into `main`.
+
+## Run
+```bash
+cd apps/service && uv sync && uv run uvicorn sentinel_service.main:app --port 8000   # API docs: http://127.0.0.1:8000/docs
+```
+
+## Check
+```bash
+(cd packages/contract-py && uv run pytest -q)
+(cd apps/service && uv run pytest -q)
+npm test --prefix packages/contract-ts
+```

@@ -1,6 +1,7 @@
 """Patient-side client for the Sentinel service (Scoping Doc 26.11 item 4).
 
-Used ONLY by device_runtime/egress_gate.py. The gate owns the outbox, egress_log and the receipt; this client
+Used ONLY by the patient runtime's egress gate (apps/patient-runtime).
+Import: from sentinel_contract.client import SentinelClient The gate owns the outbox, egress_log and the receipt; this client
 validates, hashes and sends. Every send validates against the published JSON Schema first and refuses to send
 an invalid payload (the refusal shown in the demo).
 
@@ -15,15 +16,12 @@ from __future__ import annotations
 
 import base64
 import os
-import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Optional
 
 import httpx
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from contract import ContractError, canonical, payload_sha256, validate  # noqa: E402
+from . import ContractError, canonical, payload_sha256, validate
 
 BACKOFF_SECONDS = [2, 4, 8, 16, 32, 60]
 
