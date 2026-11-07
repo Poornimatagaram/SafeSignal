@@ -17,7 +17,7 @@
 ## Rules for everyone
 - Edit only the folders your owner owns (`CODEOWNERS`). `schema/` and `packages/` are read-only outside the company side; request changes from the company owner.
 - Keep your log in your own folder (`apps/<app>/CHANGELOG.md`); never edit root `CHANGELOG.md`, `docs/DECISIONS.md` or `docs/SESSION_LOG.md` from an app.
-- Git: follow the README "Git workflow". Work on a `<company|patient|doctor>/<topic>` branch, never commit to `main` directly, never force-push, and run `scripts/check_ownership.sh` before every push; it must pass. Commit and push only when your user asks.
+- Git: follow `CONTRIBUTING.md` exactly: branch `<area>/<type>/<description>` from the latest `main`, Conventional Commits, `scripts/check_ownership.sh` and `scripts/check_commits.sh` pass, rebase on `origin/main`, push the branch, open a pull request. Never commit to `main` directly or force-push a shared branch. Commit, push and open PRs only when your user asks.
 - In `evals/` and `data/`, write only inside your area's subfolder (`evals/<area>/`, `data/<area>/`).
 - Security (Scoping Doc 26.12) is blocking: synthetic data only; never commit `*.db`, `.env`, keys or audio; never log transcripts, patient words, names, decrypted payloads or request bodies; no cloud speech, cloud AI on patient data, analytics or tracking.
 - Runtime databases live under `var/<app>/` only.

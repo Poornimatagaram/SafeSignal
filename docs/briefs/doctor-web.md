@@ -51,6 +51,6 @@ Headers on every request: `X-Role: doctor`, `X-Actor-Id: dr_3a7f10b2`. Allowed c
 - Log decrypted payload contents to the console or anywhere else.
 
 ## Done when
-- `scripts/check_ownership.sh` passes on your branch (you changed only your own folders).
+- `scripts/check_ownership.sh` and `scripts/check_commits.sh` pass on your branch, and the pull request into `main` is green with no conflicts (`CONTRIBUTING.md`; commit scope `doctor-web`).
 - Walter's envelopes decrypt, pass hash and schema checks, render on the timeline, and alerts appear within 1 minute.
 - The Doctor and Access-control items of the Scoping Doc 26.15 checklist pass.

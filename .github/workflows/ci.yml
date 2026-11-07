@@ -1,0 +1,63 @@
+# Enforces CONTRIBUTING.md on every pull request into main, and keeps main green.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conventions:
+    name: Ownership and commit messages
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Only the branch owner's folders changed
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: bash scripts/check_ownership.sh "${HEAD_REF%%/*}"
+      - name: Commits and PR title follow Conventional Commits
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: bash scripts/check_commits.sh --title "$PR_TITLE"
+
+  contract-and-service:
+    name: Contract and service (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Contract tests
+        working-directory: packages/contract-py
+        run: uv run --frozen pytest -q
+      - name: Service tests
+        working-directory: apps/service
+        run: uv run --frozen pytest -q
+      - name: Generated contract files are up to date
+        run: |
+          uv run --frozen --project packages/contract-py python scripts/build_examples.py
+          uv run --frozen --project apps/service python scripts/export_openapi.py
+          git diff --exit-code -- schema/
+
+  contract-ts:
+    name: Contract (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Hash vectors
+        run: npm test --prefix packages/contract-ts

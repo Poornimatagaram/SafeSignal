@@ -33,18 +33,8 @@ Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.m
   - JS: `"@sentinel/contract": "file:../../packages/contract-ts"`
 - Python packages are named `sentinel_<app>`; npm packages `@sentinel/<app>`; env vars `SENTINEL_*` (shared) or `SERVICE_*` / `PATIENT_*` / `DOCTOR_*` / `COMPANY_*`.
 
-## Git workflow (everyone, every time)
-Folders never overlap, so following this means no merge conflicts:
-```bash
-git switch main && git pull                         # 1. start from the latest main
-git switch -c <company|patient|doctor>/<topic>      # 2. work on your own branch
-# ... edit only your folders, commit ...
-scripts/check_ownership.sh                          # 3. fails if you touched someone else's folder
-git fetch origin && git rebase origin/main          # 4. replay your commits on the latest main
-git switch main && git pull && git merge --ff-only - && git push   # 5. or push the branch and open a PR
-```
-- Never `git push --force` to `main`, never commit `*.db`, `.env`, keys or audio.
-- Need a change in someone else's folder (including `schema/`)? Ask its owner; don't edit it.
+## Contributing
+Branches, Conventional Commit messages and the pull-request flow are in `CONTRIBUTING.md`; CI enforces them. Folders never overlap, so following it means no merge conflicts.
 
 ## Run
 ```bash

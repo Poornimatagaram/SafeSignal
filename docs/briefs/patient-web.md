@@ -27,5 +27,5 @@ The patient's screen (Walter, 92): large-text, voice-first check-in UI, spoken s
 - Store transcripts or patient words anywhere except through the runtime.
 
 ## Done when
-- `scripts/check_ownership.sh` passes on your branch (you changed only your own folders).
+- `scripts/check_ownership.sh` and `scripts/check_commits.sh` pass on your branch, and the pull request into `main` is green with no conflicts (`CONTRIBUTING.md`; commit scope `patient-web`).
 - Walter's full check-in runs from this screen, the receipt matches the runtime's egress log, and the network-off run completes (Scoping Doc 21.1).

@@ -65,6 +65,6 @@ Use only `from sentinel_contract.client import SentinelClient, build_envelope` (
 - Read or write the service databases or the doctor's browser storage.
 
 ## Done when
-- `scripts/check_ownership.sh` passes on your branch (you changed only your own folders).
+- `scripts/check_ownership.sh` and `scripts/check_commits.sh` pass on your branch, and the pull request into `main` is green with no conflicts (`CONTRIBUTING.md`; commit scope `patient-runtime`).
 - A check-in produces a record accepted by `/v1/records` with 201, the receipt hash equals the service's `payload_sha256`, and the network log shows only the calls above.
 - The Patient and Privacy items of the Scoping Doc 26.15 checklist pass.
