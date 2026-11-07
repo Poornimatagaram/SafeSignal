@@ -133,8 +133,8 @@ def post_record(response: Response, payload: Payload = Body(...), a: Actor = Dep
     return body
 
 
-@app.post("/v1/doctor-envelopes", response_model=m.EnvelopeAccepted, status_code=201, responses=ERRORS,
-          tags=["patient_device"], summary="Doctor envelope (schema/doctor_envelope.json)")
+@app.post("/v1/care-envelopes", response_model=m.EnvelopeAccepted, status_code=201, responses=ERRORS,
+          tags=["patient_device"], summary="Care envelope sealed to an organization (schema/care_envelope.json)")
 def post_envelope(response: Response, payload: Payload = Body(...), a: Actor = Depends(actor),
                   s: SqliteStore = Depends(store)):
     need(a, "patient_device")
@@ -154,60 +154,107 @@ def post_alert(response: Response, payload: Payload = Body(...), a: Actor = Depe
 
 
 @app.put("/v1/consent/{patient_ref}", response_model=m.ConsentState, responses=ERRORS, tags=["patient_device"],
-         summary="Consent update (schema/consent_update.json)")
+         summary="Consent update: care team, caregiver, emergency organizations and contacts "
+                 "(schema/consent_update.json)")
 def put_consent(patient_ref: str, payload: Payload = Body(...), a: Actor = Depends(actor),
                 s: SqliteStore = Depends(store)):
     need(a, "patient_device", match=patient_ref)
     return s.put_consent(a.id, patient_ref, payload)
 
 
-@app.get("/v1/doctors/{doctor_id}/public-key", response_model=m.PublicKeyResponse, responses=ERRORS,
-         tags=["patient_device"])
-def get_public_key(doctor_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+@app.get("/v1/orgs/{org_id}/public-key", response_model=m.OrgKeyResponse, responses=ERRORS, tags=["patient_device"],
+         summary="Care-team key of a linked organization (care team or consented emergency)")
+def get_org_key(org_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
     need(a, "patient_device")
-    return s.get_public_key(a.id, doctor_id)
+    return s.get_org_key(a.id, org_id)
 
 
-# ---------------- doctor ----------------
+# ---------------- doctor and organization ----------------
 
 @app.put("/v1/doctors/{doctor_id}/public-key", response_model=m.PublicKeyResponse, responses=ERRORS,
-         tags=["doctor"])
-def put_public_key(doctor_id: str, body: m.PublicKeyBody, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+         tags=["doctor"], summary="Register the doctor's personal key (receives key grants)")
+def put_doctor_key(doctor_id: str, body: m.PublicKeyBody, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
     need(a, "doctor", match=doctor_id)
-    return s.put_public_key(doctor_id, body.public_key)
+    return s.put_doctor_key(doctor_id, body.public_key)
 
 
-@app.get("/v1/doctors/{doctor_id}/patients", response_model=list[m.LinkedPatient], responses=ERRORS,
-         tags=["doctor"])
-def doctor_patients(doctor_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+@app.get("/v1/doctors/{doctor_id}/orgs", response_model=list[m.OrgMembership], responses=ERRORS, tags=["doctor"],
+         summary="Organizations the doctor is an active member of")
+def doctor_orgs(doctor_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
     need(a, "doctor", match=doctor_id)
-    return s.doctor_patients(doctor_id)
+    return s.doctor_orgs(doctor_id)
 
 
-@app.get("/v1/doctors/{doctor_id}/envelopes", response_model=list[m.Envelope], responses=ERRORS, tags=["doctor"])
-def doctor_envelopes(doctor_id: str, since: Optional[str] = None, a: Actor = Depends(actor),
-                     s: SqliteStore = Depends(store)):
+@app.put("/v1/orgs/{org_id}/public-key", response_model=m.OrgKeyResponse, responses=ERRORS, tags=["doctor"],
+         summary="Register the organization's care-team key (admin)")
+def put_org_key(org_id: str, body: m.PublicKeyBody, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.put_org_key(a.id, org_id, body.public_key)
+
+
+@app.put("/v1/orgs/{org_id}/members/{doctor_id}", response_model=m.MemberState, responses=ERRORS, tags=["doctor"],
+         summary="Add, change or revoke a member (admin); revoking removes their key grant")
+def put_member(org_id: str, doctor_id: str, body: m.MemberBody, a: Actor = Depends(actor),
+               s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.put_member(a.id, org_id, doctor_id, body.role, body.status)
+
+
+@app.post("/v1/orgs/{org_id}/key-grants", response_model=m.KeyGrantReceipt, status_code=201, responses=ERRORS,
+          tags=["doctor"], summary="Give a member the org key, sealed to their personal key (admin)")
+def post_key_grant(org_id: str, body: m.KeyGrantBody, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.put_key_grant(a.id, org_id, body.doctor_id, body.wrapped_key)
+
+
+@app.get("/v1/orgs/{org_id}/key-grants/{doctor_id}", response_model=m.KeyGrant, responses=ERRORS, tags=["doctor"],
+         summary="The calling doctor's own key grant")
+def get_key_grant(org_id: str, doctor_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
     need(a, "doctor", match=doctor_id)
-    return s.doctor_envelopes(doctor_id, since)
+    return s.get_key_grant(doctor_id, org_id)
 
 
-@app.post("/v1/doctors/{doctor_id}/envelopes/{envelope_id}/ack", response_model=m.EnvelopeAck, responses=ERRORS,
-          tags=["doctor"])
-def ack_envelope(doctor_id: str, envelope_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
-    need(a, "doctor", match=doctor_id)
-    return s.ack_envelope(doctor_id, envelope_id)
+@app.get("/v1/orgs/{org_id}/patients", response_model=list[m.LinkedPatient], responses=ERRORS, tags=["doctor"],
+         summary="Patients whose care team is this organization (members)")
+def org_patients(org_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.org_patients(a.id, org_id)
 
 
-@app.get("/v1/doctors/{doctor_id}/alerts", response_model=list[m.DoctorAlert], responses=ERRORS, tags=["doctor"])
-def doctor_alerts(doctor_id: str, since: Optional[str] = None, a: Actor = Depends(actor),
+@app.get("/v1/orgs/{org_id}/envelopes", response_model=list[m.Envelope], responses=ERRORS, tags=["doctor"],
+         summary="Care-team envelopes since a time (members)")
+def org_envelopes(org_id: str, since: Optional[str] = None, a: Actor = Depends(actor),
                   s: SqliteStore = Depends(store)):
-    need(a, "doctor", match=doctor_id)
-    return s.doctor_alerts(doctor_id, since)
+    need(a, "doctor")
+    return s.org_envelopes(a.id, org_id, since)
+
+
+@app.post("/v1/orgs/{org_id}/envelopes/{envelope_id}/ack", response_model=m.EnvelopeAck, responses=ERRORS,
+          tags=["doctor"])
+def ack_envelope(org_id: str, envelope_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.ack_envelope(a.id, org_id, envelope_id)
+
+
+@app.get("/v1/orgs/{org_id}/alerts", response_model=list[m.Alert], responses=ERRORS, tags=["doctor"],
+         summary="Alerts delivered to this care team since a time (members)")
+def org_alerts(org_id: str, since: Optional[str] = None, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.org_alerts(a.id, org_id, since)
+
+
+@app.post("/v1/orgs/{org_id}/emergency-access", response_model=m.EmergencyAccessResult, responses=ERRORS,
+          tags=["doctor"], summary="Emergency access to a patient's envelopes (members of a consented emergency "
+                                   "organization; coded reason; logged; notifies caregiver and care team)")
+def emergency_access(org_id: str, body: m.EmergencyAccessBody, a: Actor = Depends(actor),
+                     s: SqliteStore = Depends(store)):
+    need(a, "doctor")
+    return s.emergency_access(a.id, org_id, body.patient_ref, body.reason)
 
 
 # ---------------- caregiver ----------------
 
-@app.get("/v1/caregivers/{caregiver_id}/alerts", response_model=list[m.CaregiverAlert], responses=ERRORS,
+@app.get("/v1/caregivers/{caregiver_id}/alerts", response_model=list[m.Alert], responses=ERRORS,
          tags=["caregiver"])
 def caregiver_alerts(caregiver_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
     need(a, "caregiver", match=caregiver_id)
@@ -250,11 +297,12 @@ def export_records(program_id: str, format: Literal["json", "csv"] = Query("json
         return rows
     buf = io.StringIO()
     cols = ["record_id", "patient_ref", "program_id", "cohort_id", "drug_version", "iso_week", "status", "source",
-            "unanswered_questions", "term_code", "severity", "onset", "known_side_effect", "possible_link_flag"]
+            "reporter", "input_mode", "unanswered_questions", "term_code", "severity", "onset", "known_side_effect",
+            "possible_link_flag"]
     w = csv.DictWriter(buf, fieldnames=cols)
     w.writeheader()
     for r in rows:
-        base = {k: r[k] for k in cols[:9]}
+        base = {k: r[k] for k in cols[:11]}
         for sym in r["symptoms"] or [{}]:
             w.writerow({**base, **sym})
     return Response(buf.getvalue(), media_type="text/csv",

@@ -1,7 +1,8 @@
-"""Act as Walter's device: send one real sealed-box envelope (and optionally a severe alert) to the running service.
+"""Act as Walter's device: send a real sealed-box envelope to his care team (and to each consented emergency
+hospital whose key is registered), and optionally a severe alert. Contract 2.0.
 
-Lets the doctor web app be built and tested before the patient runtime exists. The doctor web app must have
-registered its public key first (PUT /v1/doctors/{id}/public-key), otherwise this exits with 404.
+Lets the doctor web app be built and tested before the patient runtime exists. The organization's admin must have
+registered its care-team key first (PUT /v1/orgs/{org_id}/public-key), otherwise this exits with 404.
 
 Run from the repo root (service running):
   uv run --project packages/contract-py python scripts/send_demo_envelope.py [--alert] [--trend worse] [--base-url URL]
@@ -33,15 +34,23 @@ def main() -> None:
 
     client = SentinelClient(args.base_url, walter["patient_ref"])
     try:
-        key = client.fetch_doctor_key(walter["doctor_id"])
+        key = client.fetch_org_key(walter["care_org_id"])
     except SendRejected as e:
-        raise SystemExit(f"cannot fetch doctor key ({e.status}): register it from the doctor web app first. {e.body}")
-    env = build_envelope(f"env_{secrets.token_hex(4)}", walter["doctor_id"], plaintext, key)
-    res = client.send_envelope(env)
-    print(f"envelope {env['envelope_id']} -> {res.status_code}, plaintext sha256 {res.payload_sha256}")
+        raise SystemExit(f"cannot fetch the care-team key ({e.status}): the organization admin must register it "
+                         f"from the doctor web app first. {e.body}")
+    recipients = [(walter["care_org_id"], key)]
+    for org in walter["emergency_org_ids"]:
+        try:
+            recipients.append((org, client.fetch_org_key(org)))
+        except SendRejected:
+            print(f"skipping emergency organization {org}: no care-team key registered yet")
+    for org, org_key in recipients:
+        env = build_envelope(f"env_{secrets.token_hex(4)}", org, plaintext, org_key)
+        res = client.send_envelope(env)
+        print(f"envelope {env['envelope_id']} -> {org}: {res.status_code}, plaintext sha256 {res.payload_sha256}")
 
     if args.alert:
-        alert = {"schema_version": "1.0", "alert_id": f"alt_{secrets.token_hex(4)}",
+        alert = {"schema_version": "2.0", "alert_id": f"alt_{secrets.token_hex(4)}",
                  "patient_ref": walter["patient_ref"], "alert_type": "severe",
                  "created_at": now.strftime("%Y-%m-%dT%H:%M:%SZ")}
         res = client.send_alert(alert)
