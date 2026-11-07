@@ -86,3 +86,5 @@ Refs: D-052
 8. Delete the branch after merging.
 
 If `main` moves while your PR is open, rebase again (step 4) and push with `git push --force-with-lease` to your own branch only.
+
+**Stacked pull requests.** When your work depends on a PR that is not merged yet, branch from that PR's branch and open your PR with `--base <that branch>`, so its diff shows only your commits. Once the parent PR is squash-merged, GitHub retargets your PR to `main`; then run `git rebase --onto origin/main <old parent tip> <your branch>` and push with `--force-with-lease`.

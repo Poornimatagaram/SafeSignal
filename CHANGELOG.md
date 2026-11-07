@@ -2,6 +2,16 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 007: dataset research and new use-case requirements (branch `company/docs/dataset-research`, stacked on `company/feat/sqlite-store`)
+
+### Added
+- `docs/research/datasets.md`: public datasets for authentic demo data, verified against live APIs where possible; covers patients aged 0–100 with proxy reporting, licence rules for a public repository, and open questions (D-057).
+- Decisions D-057 to D-063: data strategy, all ages with proxy reporting, configurable cadence and input methods, 3-step missed check-in escalation, multi-drug company with real trial documents, doctor and hospital record continuity, stacked PRs.
+- `CONTRIBUTING.md`: stacked pull-request flow.
+
+### Changed
+- `.github/workflows/ci.yml`: runs on every pull request, not only PRs into `main` (D-063).
+
 ## 2026-11-07 — Session 006: Step 2, SQLite service and seed (branch `company/feat/sqlite-store`)
 
 ### Added
