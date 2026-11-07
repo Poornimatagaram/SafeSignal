@@ -85,10 +85,13 @@ def test_cohort_view_suppresses_small_groups(tmp_path: Path):
     db.execute("INSERT INTO term_code VALUES ('SE_COUGH','Cough','[]','[]',0)")
     for i in range(6):
         p = f"pt_0000000{i}"
-        db.execute("INSERT INTO enrollment VALUES (?, 'prog_demo_01','cohort_B','14:00-17:00',1)", (p,))
+        db.execute("INSERT INTO enrollment (patient_ref, program_id, cohort_id, checkin_window, start_date, active) "
+                   "VALUES (?, 'prog_demo_01','cohort_B','14:00-17:00','2026-11-02',1)", (p,))
         r = f"rec_0000000{i}"
-        db.execute("INSERT INTO checkin_record VALUES (?, '1.0', ?, 'prog_demo_01','cohort_B','v2','2026-W45',"
-                   "'completed',0,1,1,'h','device','t')", (r, p))
+        db.execute("INSERT INTO checkin_record (record_id, schema_version, patient_ref, program_id, cohort_id, "
+                   "drug_version, iso_week, status, unanswered_questions, consent_care_team, consent_caregiver, "
+                   "payload_sha256, reporter, input_mode, source, received_at) VALUES (?, '2.0', ?, 'prog_demo_01', "
+                   "'cohort_B','v2','2026-W45','completed',0,1,1,'h','self','voice','device','t')", (r, p))
         db.execute("INSERT INTO symptom_record (record_id, term_code, severity, onset, known_side_effect, "
                    "possible_link_flag) VALUES (?, 'SE_RASH', ?, 'today', 1, 0)", (r, "severe" if i < 2 else "mild"))
         if i < 3:  # only 3 patients with cough -> suppressed
@@ -121,3 +124,33 @@ def test_demo_fixtures_match_contract():
         assert p["drug_version"] == cohorts[p["cohort_id"]]
         assert p["drug_name"] == f["program"]["drug_name"]
         assert re.match(r"^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$", e["checkin_window"])  # D-005 UTC window
+
+
+def test_fixture_organizations_links_and_contacts():
+    import re
+    f = json.loads((SCHEMA_DIR / "demo_fixtures.json").read_text())
+    pat = enums()["id_patterns"]
+    orgs = {o["org_id"] for o in f["organizations"]}
+    doctors = {d["doctor_id"] for d in f["doctors"]}
+    assert all(re.match(pat["org_id"], o) for o in orgs)
+    assert all(m["org_id"] in orgs and m["doctor_id"] in doctors and m["role"] in enums()["org_role"]
+               for m in f["org_members"])
+    assert any(m["role"] == "admin" for m in f["org_members"])  # someone can register org keys and grant access
+    assert all(l["org_id"] in orgs and l["link_type"] in enums()["care_link_type"] for l in f["care_links"])
+    for c in f["emergency_contacts"]:
+        assert re.match(pat["contact_id"], c["contact_id"]) and re.match(pat["phone"], c["phone"])
+        assert c["org_id"] is None or c["org_id"] in orgs
+    profiles = {p["patient_ref"]: p for p in f["device_profiles"]}
+    for p in profiles.values():  # emergency data only with emergency consent (D-067)
+        if not p["consent"]["emergency_consent"]:
+            assert not p["emergency_org_ids"]
+            assert not [c for c in f["emergency_contacts"] if c["patient_ref"] == p["patient_ref"]]
+
+
+def test_consent_schema_blocks_emergency_data_without_consent():
+    doc = json.loads((EX / "consent_update.valid.json").read_text())
+    doc["emergency_consent"] = False
+    fields = {e["field"] for e in validation_errors("consent_update", doc)}
+    assert {"/emergency_org_ids", "/emergency_contacts"} <= fields
+    doc["emergency_org_ids"], doc["emergency_contacts"] = [], []
+    assert validation_errors("consent_update", doc) == []

@@ -1,9 +1,29 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "patient_ref": "pt_4b82d0c6",
-  "doctor_id": "dr_3a7f10b2",
+  "care_org_id": "org_5e1a2b3c",
+  "share_care_team": true,
   "caregiver_id": "cg_7e21c9a4",
-  "share_doctor": true,
   "share_caregiver": true,
-  "caregiver_detail": "alerts_only"
+  "caregiver_detail": "alerts_only",
+  "emergency_consent": true,
+  "emergency_org_ids": [
+    "org_8f4d6a2e"
+  ],
+  "emergency_contacts": [
+    {
+      "contact_id": "ec_1f2e3d4c",
+      "contact_type": "emergency_service",
+      "phone": "911",
+      "org_id": null,
+      "priority": 1
+    },
+    {
+      "contact_id": "ec_5a6b7c8d",
+      "contact_type": "hospital",
+      "phone": "+16175550199",
+      "org_id": "org_8f4d6a2e",
+      "priority": 2
+    }
+  ]
 }

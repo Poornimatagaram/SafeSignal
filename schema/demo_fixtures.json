@@ -1,34 +1,166 @@
 {
-  "schema_version": "1.0",
-  "note": "Synthetic demo data only (Scoping Doc 3, 21.3; D-023, D-033). Single source for demo IDs across all apps. 'device_profiles' seed patient.db on the patient's device and must never be sent anywhere.",
-  "program": { "program_id": "prog_demo_01", "company_id": "co_demo", "drug_name": "Tagrisso" },
+  "schema_version": "2.0",
+  "note": "Synthetic demo data only (Scoping Doc 3, 21.3; D-023, D-033). Single source for demo IDs across all apps. Organizations and people are fictional. 'device_profiles' seed patient.db on the patient's device; their names, birth dates, phones and contact labels never leave the device (emergency contact phones leave only with emergency consent, D-067).",
+  "program": {
+    "program_id": "prog_demo_01",
+    "company_id": "co_demo",
+    "drug_name": "Tagrisso"
+  },
   "cohorts": [
-    { "cohort_id": "cohort_A", "drug_version": "v1", "label": "Tagrisso v1" },
-    { "cohort_id": "cohort_B", "drug_version": "v2", "label": "Tagrisso v2" },
-    { "cohort_id": "cohort_C", "drug_version": "v3", "label": "Tagrisso v3" },
-    { "cohort_id": "cohort_D", "drug_version": "v4", "label": "Tagrisso v4" }
+    {
+      "cohort_id": "cohort_A",
+      "drug_version": "v1",
+      "label": "Tagrisso v1"
+    },
+    {
+      "cohort_id": "cohort_B",
+      "drug_version": "v2",
+      "label": "Tagrisso v2"
+    },
+    {
+      "cohort_id": "cohort_C",
+      "drug_version": "v3",
+      "label": "Tagrisso v3"
+    },
+    {
+      "cohort_id": "cohort_D",
+      "drug_version": "v4",
+      "label": "Tagrisso v4"
+    }
+  ],
+  "organizations": [
+    {
+      "org_id": "org_5e1a2b3c",
+      "display_name": "Northgate Medical Center",
+      "org_type": "hospital"
+    },
+    {
+      "org_id": "org_8f4d6a2e",
+      "display_name": "Lakeside Emergency Hospital",
+      "org_type": "hospital"
+    }
   ],
   "doctors": [
-    { "doctor_id": "dr_3a7f10b2", "display_name": "Dr. Shah", "clinic": "Demo Clinic" }
+    {
+      "doctor_id": "dr_3a7f10b2",
+      "display_name": "Dr. Shah"
+    },
+    {
+      "doctor_id": "dr_b29c4e71",
+      "display_name": "Dr. Patel"
+    },
+    {
+      "doctor_id": "dr_c71e0f9a",
+      "display_name": "Dr. Rivera"
+    },
+    {
+      "doctor_id": "dr_d4a8e2b6",
+      "display_name": "Dr. Okafor"
+    }
+  ],
+  "org_members": [
+    {
+      "org_id": "org_5e1a2b3c",
+      "doctor_id": "dr_3a7f10b2",
+      "role": "attending",
+      "status": "active"
+    },
+    {
+      "org_id": "org_5e1a2b3c",
+      "doctor_id": "dr_b29c4e71",
+      "role": "admin",
+      "status": "active"
+    },
+    {
+      "org_id": "org_8f4d6a2e",
+      "doctor_id": "dr_d4a8e2b6",
+      "role": "admin",
+      "status": "active"
+    }
   ],
   "caregivers": [
-    { "caregiver_id": "cg_7e21c9a4", "display_name": "Anna", "patient_ref": "pt_4b82d0c6" }
+    {
+      "caregiver_id": "cg_7e21c9a4",
+      "display_name": "Anna",
+      "patient_ref": "pt_4b82d0c6"
+    }
   ],
   "company_users": [
-    { "user_id": "usr_dr_lee", "display_name": "Dr. Lee", "role": "company_safety" },
-    { "user_id": "usr_marco", "display_name": "Marco", "role": "company_reader" },
-    { "user_id": "usr_admin", "display_name": "Survey admin", "role": "company_admin" }
+    {
+      "user_id": "usr_dr_lee",
+      "display_name": "Dr. Lee",
+      "role": "company_safety"
+    },
+    {
+      "user_id": "usr_marco",
+      "display_name": "Marco",
+      "role": "company_reader"
+    },
+    {
+      "user_id": "usr_admin",
+      "display_name": "Survey admin",
+      "role": "company_admin"
+    }
   ],
   "enrollments": [
-    { "patient_ref": "pt_4b82d0c6", "program_id": "prog_demo_01", "cohort_id": "cohort_B", "checkin_window": "14:00-17:00" },
-    { "patient_ref": "pt_9c1d2e3f", "program_id": "prog_demo_01", "cohort_id": "cohort_A", "checkin_window": "13:00-14:00" }
+    {
+      "patient_ref": "pt_4b82d0c6",
+      "program_id": "prog_demo_01",
+      "cohort_id": "cohort_B",
+      "checkin_window": "14:00-17:00"
+    },
+    {
+      "patient_ref": "pt_9c1d2e3f",
+      "program_id": "prog_demo_01",
+      "cohort_id": "cohort_A",
+      "checkin_window": "13:00-14:00"
+    }
   ],
   "care_links": [
-    { "doctor_id": "dr_3a7f10b2", "patient_ref": "pt_4b82d0c6", "status": "active" },
-    { "doctor_id": "dr_3a7f10b2", "patient_ref": "pt_9c1d2e3f", "status": "active" }
+    {
+      "org_id": "org_5e1a2b3c",
+      "patient_ref": "pt_4b82d0c6",
+      "link_type": "care_team",
+      "status": "active"
+    },
+    {
+      "org_id": "org_5e1a2b3c",
+      "patient_ref": "pt_9c1d2e3f",
+      "link_type": "care_team",
+      "status": "active"
+    },
+    {
+      "org_id": "org_8f4d6a2e",
+      "patient_ref": "pt_4b82d0c6",
+      "link_type": "emergency",
+      "status": "active"
+    }
   ],
   "caregiver_links": [
-    { "caregiver_id": "cg_7e21c9a4", "patient_ref": "pt_4b82d0c6", "detail_level": "alerts_only", "status": "active" }
+    {
+      "caregiver_id": "cg_7e21c9a4",
+      "patient_ref": "pt_4b82d0c6",
+      "detail_level": "alerts_only",
+      "status": "active"
+    }
+  ],
+  "emergency_contacts": [
+    {
+      "contact_id": "ec_1f2e3d4c",
+      "patient_ref": "pt_4b82d0c6",
+      "contact_type": "emergency_service",
+      "phone": "911",
+      "org_id": null,
+      "priority": 1
+    },
+    {
+      "contact_id": "ec_5a6b7c8d",
+      "patient_ref": "pt_4b82d0c6",
+      "contact_type": "hospital",
+      "phone": "+16175550199",
+      "org_id": "org_8f4d6a2e",
+      "priority": 2
+    }
   ],
   "device_profiles": [
     {
@@ -40,10 +172,23 @@
       "cohort_id": "cohort_B",
       "drug_name": "Tagrisso",
       "drug_version": "v2",
-      "doctor_id": "dr_3a7f10b2",
       "caregiver_id": "cg_7e21c9a4",
       "enrolled_at": "2026-10-17T15:00:00Z",
-      "consent": { "share_doctor": true, "share_caregiver": true, "caregiver_detail": "alerts_only" }
+      "consent": {
+        "share_care_team": true,
+        "share_caregiver": true,
+        "caregiver_detail": "alerts_only",
+        "emergency_consent": true
+      },
+      "care_org_id": "org_5e1a2b3c",
+      "reporter_default": "self",
+      "emergency_org_ids": [
+        "org_8f4d6a2e"
+      ],
+      "emergency_contact_labels": {
+        "ec_1f2e3d4c": "Emergency services",
+        "ec_5a6b7c8d": "Lakeside Emergency Hospital"
+      }
     },
     {
       "patient_ref": "pt_9c1d2e3f",
@@ -54,10 +199,22 @@
       "cohort_id": "cohort_A",
       "drug_name": "Tagrisso",
       "drug_version": "v1",
-      "doctor_id": "dr_3a7f10b2",
       "caregiver_id": null,
       "enrolled_at": "2026-10-17T15:00:00Z",
-      "consent": { "share_doctor": true, "share_caregiver": false, "caregiver_detail": "alerts_only" }
+      "consent": {
+        "share_care_team": true,
+        "share_caregiver": false,
+        "caregiver_detail": "alerts_only",
+        "emergency_consent": false
+      },
+      "care_org_id": "org_5e1a2b3c",
+      "reporter_default": "self",
+      "emergency_org_ids": [],
+      "emergency_contact_labels": {}
     }
-  ]
+  ],
+  "demo_notes": {
+    "doctor_change": "Dr. Rivera (dr_c71e0f9a) is registered but not a member: the Northgate admin adds and grants her during the demo, and she reads Walter's full history.",
+    "emergency": "Lakeside (Dr. Okafor) is Walter's emergency hospital: it can read his history only through emergency access, which is logged and notifies Anna and Northgate."
+  }
 }

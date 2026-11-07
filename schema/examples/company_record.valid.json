@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "record_id": "rec_7f3c9a1e",
   "patient_ref": "pt_4b82d0c6",
   "program_id": "prog_demo_01",
@@ -25,7 +25,9 @@
   ],
   "unanswered_questions": 0,
   "consent": {
-    "doctor": true,
+    "care_team": true,
     "caregiver": true
-  }
+  },
+  "reporter": "self",
+  "input_mode": "voice"
 }

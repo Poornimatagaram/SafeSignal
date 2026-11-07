@@ -1,6 +1,6 @@
 -- Company DB (Sentinel service, company tenant). Scoping Doc 26.4.
 -- Holds pseudonymized records only. Company endpoints read the v_* views and exports, never base tables directly.
--- Changes from the scoping doc are tagged with their decision ID (docs/DECISIONS.md).
+-- Changes from the scoping doc are tagged with their decision ID (docs/DECISIONS.md). Contract 2.0.
 
 CREATE TABLE IF NOT EXISTS schema_meta (
   id              INTEGER PRIMARY KEY CHECK (id = 1),
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS enrollment (
   program_id      TEXT NOT NULL REFERENCES program(program_id),
   cohort_id       TEXT NOT NULL REFERENCES cohort(cohort_id),
   checkin_window  TEXT NOT NULL,                -- D-005: 'HH:MM-HH:MM' in UTC, e.g. '14:00-17:00'
+  start_date      TEXT NOT NULL,                -- D-069: first due check-in (YYYY-MM-DD); cadence counts from here
   active          INTEGER NOT NULL CHECK (active IN (0,1))
 );
 
@@ -59,9 +60,11 @@ CREATE TABLE IF NOT EXISTS checkin_record (
   iso_week             TEXT NOT NULL,           -- 2026-W45
   status               TEXT NOT NULL CHECK (status IN ('completed','partial','missed')),
   unanswered_questions INTEGER NOT NULL,
-  consent_doctor       INTEGER NOT NULL,
+  consent_care_team    INTEGER NOT NULL,        -- 2.0: consent is to a care-team organization (D-064)
   consent_caregiver    INTEGER NOT NULL,
   payload_sha256       TEXT NOT NULL,           -- matches the patient's egress receipt
+  reporter             TEXT CHECK (reporter IN ('self','parent','caregiver','other')),  -- D-066; NULL for scheduler records
+  input_mode           TEXT CHECK (input_mode IN ('voice','text','mixed')),             -- D-066; NULL for scheduler records
   source               TEXT NOT NULL DEFAULT 'device' CHECK (source IN ('device','scheduler')),  -- D-003
   received_at          TEXT NOT NULL            -- D-009: ops/scheduler only; never returned by a company endpoint
 );

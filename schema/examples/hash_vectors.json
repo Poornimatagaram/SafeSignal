@@ -71,7 +71,7 @@
     {
       "name": "company_record_example",
       "input": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "record_id": "rec_7f3c9a1e",
         "patient_ref": "pt_4b82d0c6",
         "program_id": "prog_demo_01",
@@ -97,17 +97,19 @@
         ],
         "unanswered_questions": 0,
         "consent": {
-          "doctor": true,
+          "care_team": true,
           "caregiver": true
-        }
+        },
+        "reporter": "self",
+        "input_mode": "voice"
       },
-      "canonical": "{\"cohort_id\":\"cohort_B\",\"consent\":{\"caregiver\":true,\"doctor\":true},\"drug_version\":\"v2\",\"iso_week\":\"2026-W45\",\"patient_ref\":\"pt_4b82d0c6\",\"program_id\":\"prog_demo_01\",\"record_id\":\"rec_7f3c9a1e\",\"schema_version\":\"1.0\",\"status\":\"completed\",\"symptoms\":[{\"known_side_effect\":true,\"onset\":\"1_3_days\",\"possible_link_flag\":true,\"severity\":\"moderate\",\"term_code\":\"SE_RASH\"},{\"known_side_effect\":true,\"onset\":\"4_7_days\",\"possible_link_flag\":false,\"severity\":\"mild\",\"term_code\":\"SE_PARONYCHIA\"}],\"unanswered_questions\":0}",
-      "sha256": "e674108caee64ec337369ce6f5259fcf481234bf9c103e9bdef52a0f7f649cd3"
+      "canonical": "{\"cohort_id\":\"cohort_B\",\"consent\":{\"care_team\":true,\"caregiver\":true},\"drug_version\":\"v2\",\"input_mode\":\"voice\",\"iso_week\":\"2026-W45\",\"patient_ref\":\"pt_4b82d0c6\",\"program_id\":\"prog_demo_01\",\"record_id\":\"rec_7f3c9a1e\",\"reporter\":\"self\",\"schema_version\":\"2.0\",\"status\":\"completed\",\"symptoms\":[{\"known_side_effect\":true,\"onset\":\"1_3_days\",\"possible_link_flag\":true,\"severity\":\"moderate\",\"term_code\":\"SE_RASH\"},{\"known_side_effect\":true,\"onset\":\"4_7_days\",\"possible_link_flag\":false,\"severity\":\"mild\",\"term_code\":\"SE_PARONYCHIA\"}],\"unanswered_questions\":0}",
+      "sha256": "a936cc2f68927e81d4076c59ecdb119f11fa0cf3c8e596e0f2d43517369bcc06"
     },
     {
       "name": "doctor_payload_example",
       "input": {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "patient_ref": "pt_4b82d0c6",
         "display_name": "Walter",
         "drug_name": "Tagrisso",
@@ -123,10 +125,12 @@
             "known_side_effect": true,
             "possible_link_flag": true
           }
-        ]
+        ],
+        "reporter": "self",
+        "age_years": 92
       },
-      "canonical": "{\"checkin_date\":\"2026-11-07\",\"display_name\":\"Walter\",\"drug_name\":\"Tagrisso\",\"drug_version\":\"v2\",\"patient_ref\":\"pt_4b82d0c6\",\"schema_version\":\"1.0\",\"status\":\"completed\",\"symptoms\":[{\"known_side_effect\":true,\"onset\":\"1_3_days\",\"possible_link_flag\":true,\"severity\":\"moderate\",\"term_code\":\"SE_RASH\"}],\"trend\":\"worse\"}",
-      "sha256": "18c93a20d798d1d26950b14d1dc661627552557d805a81d5a4f5c1f5a8768371"
+      "canonical": "{\"age_years\":92,\"checkin_date\":\"2026-11-07\",\"display_name\":\"Walter\",\"drug_name\":\"Tagrisso\",\"drug_version\":\"v2\",\"patient_ref\":\"pt_4b82d0c6\",\"reporter\":\"self\",\"schema_version\":\"2.0\",\"status\":\"completed\",\"symptoms\":[{\"known_side_effect\":true,\"onset\":\"1_3_days\",\"possible_link_flag\":true,\"severity\":\"moderate\",\"term_code\":\"SE_RASH\"}],\"trend\":\"worse\"}",
+      "sha256": "e75c48cd6a525c86b220fb9fa78970051e7929d8f652222b01d7f53ffe9d9de1"
     }
   ]
 }

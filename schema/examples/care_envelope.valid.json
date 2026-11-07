@@ -1,0 +1,8 @@
+{
+  "schema_version": "2.0",
+  "envelope_id": "env_91c2a7d4",
+  "org_id": "org_5e1a2b3c",
+  "patient_ref": "pt_4b82d0c6",
+  "ciphertext": "U0VBTEVELUJPWC1QTEFDRUhPTERFUi17ImFnZV95ZWFycyI6OTIsImNoZWNraW5fZGF0ZSI6IjIwMjYtMTEtMDciLCJkaXNwbGF5X25hbWUiOiJXYWx0ZXIiLCJkcnVnX25hbWUiOg==",
+  "payload_sha256": "e75c48cd6a525c86b220fb9fa78970051e7929d8f652222b01d7f53ffe9d9de1"
+}

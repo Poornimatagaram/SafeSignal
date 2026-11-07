@@ -1,4 +1,7 @@
 {
+  "schedule": {
+    "every_days": 1
+  },
   "questions": [
     {
       "question_id": "q1",
