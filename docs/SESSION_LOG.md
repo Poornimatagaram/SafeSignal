@@ -95,3 +95,37 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. SQLite store at `var/service/` replacing the stub; seed from `schema/demo_fixtures.json` plus 1,000 synthetic enrollments and history.
 2. `scripts/reset_all.sh`.
 3. Update `docs/INTEGRATION_STATUS.md` at the H3 switch-over.
+
+---
+
+## Session 004 — 2026-11-07 (Sat) · Push to the shared repo, conflict-proofing
+
+**Goal:** Push everything to `main` on `github.com/Poornimatagaram/SafeSignal` without conflicts, and make it hard for any person or agent to create conflicts later.
+
+**Findings**
+- Remote `main` had one commit (README "SafeSignal", MIT LICENSE, GitHub Python `.gitignore`), unrelated to our history. Repo is public; we have push, not admin; `main` is unprotected.
+- The template `.gitignore` ignores `lib/` at any depth, which would silently drop frontend `src/lib/` code.
+
+**Outputs**
+- Merge of the remote's initial commit with only the two add/add conflicts resolved (README, `.gitignore`), then a separate guard-rail commit: `.gitattributes`, `AGENTS.md` as plain files, `scripts/check_ownership.sh`, README git workflow, per-area `evals/` and `data/`, `CODEOWNERS` handle, instruction updates.
+- Pushed `main` to `origin` as a fast-forward (no force).
+
+**Verification**
+- `git check-ignore`: app source under `src/lib/`, `components/parts/` kept; `var/`, `.venv`, `node_modules`, `.env`, `keys/` ignored; no tracked file newly ignored.
+- `check_ownership.sh` in a scratch clone: doctor branch editing `apps/doctor-web` passes; editing `schema/` fails naming the file; patient writing `evals/patient/` passes.
+- Tests: contract-py 22, service 17, contract-ts 8/8 (see push step).
+- Process note: a first attempt bundled guard-rail edits into the merge commit (zsh does not word-split `$VAR`); it was local only, reset and redone so the merge commit holds only conflict resolutions.
+
+- `check_ownership.sh company` flagged that we were maintaining files inside teammates' folders → briefs moved to `docs/briefs/` and imported (D-047). The check still lists our bootstrap files in teammate folders for this first push (origin had none of our history); that is the one-time handover, after which those files are theirs.
+
+**Decisions:** D-040 to D-047 (D-045, D-046 open).
+
+**Open items**
+- D-045: ask the repo owner to protect `main` (no force push, no deletion).
+- D-046: patient and doctor GitHub handles for `CODEOWNERS`.
+- D-008, D-039 still open.
+
+**Next (Step 2)**
+1. SQLite store at `var/service/` replacing the stub; seed from `schema/demo_fixtures.json` plus 1,000 synthetic enrollments and history.
+2. `scripts/reset_all.sh`.
+3. Update `docs/INTEGRATION_STATUS.md` at the H3 switch-over.

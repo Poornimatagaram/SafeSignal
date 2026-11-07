@@ -1,6 +1,10 @@
-# Side-Effect Sentinel
+# SafeSignal
 
-Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.md`.
+Patients report side effects by voice; everything is processed on their device. Drug companies get minimal, structured side-effect data by drug version and cohort, and doctors get a consent-based symptom timeline before each visit. Built at HACK1984.
+
+Code and packages use the working name **Sentinel** (`sentinel_*`, `@sentinel/*`); see `docs/DECISIONS.md` D-040.
+
+Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.md`.
 
 **New here?** Open your app folder's `CLAUDE.md` (also `AGENTS.md`): it is the full brief for you and your coding agent. What the service does today: `docs/INTEGRATION_STATUS.md`. Demo IDs: `schema/demo_fixtures.json`.
 
@@ -16,8 +20,8 @@ Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `
 | `apps/patient-runtime/` | Python `sentinel_patient`: speech-to-text, model, filter, egress gate | Patient | 8001 | `var/patient/patient.db` |
 | `apps/patient-web/` | Patient screen (`@sentinel/patient-web`) | Patient | 5173 | — |
 | `apps/doctor-web/` | Doctor view (`@sentinel/doctor-web`) | Doctor | 5174 | IndexedDB `sentinel_doctor_view` |
-| `evals/` | Leakage, F1 and re-ask evaluations | Team | — | — |
-| `data/` | Public data (openFDA cache) and synthetic generators | Team | — | — |
+| `evals/<area>/` | Leakage, F1 and re-ask evaluations, one subfolder per area | Each area | — | — |
+| `data/<area>/` | Public data (openFDA cache) and synthetic generators, one subfolder per area | Each area | — | — |
 | `scripts/` | Shared tooling, incl. `send_demo_envelope.py` (fake Walter device for doctor-web testing) | Company | — | — |
 | `var/` | All runtime databases (gitignored) | — | — | — |
 
@@ -28,7 +32,19 @@ Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `
   - Python: `[tool.uv.sources] sentinel-contract = { path = "../../packages/contract-py", editable = true }`
   - JS: `"@sentinel/contract": "file:../../packages/contract-ts"`
 - Python packages are named `sentinel_<app>`; npm packages `@sentinel/<app>`; env vars `SENTINEL_*` (shared) or `SERVICE_*` / `PATIENT_*` / `DOCTOR_*` / `COMPANY_*`.
-- Branches: `<company|patient|doctor>/<topic>`, merged into `main`.
+
+## Git workflow (everyone, every time)
+Folders never overlap, so following this means no merge conflicts:
+```bash
+git switch main && git pull                         # 1. start from the latest main
+git switch -c <company|patient|doctor>/<topic>      # 2. work on your own branch
+# ... edit only your folders, commit ...
+scripts/check_ownership.sh                          # 3. fails if you touched someone else's folder
+git fetch origin && git rebase origin/main          # 4. replay your commits on the latest main
+git switch main && git pull && git merge --ff-only - && git push   # 5. or push the branch and open a PR
+```
+- Never `git push --force` to `main`, never commit `*.db`, `.env`, keys or audio.
+- Need a change in someone else's folder (including `schema/`)? Ask its owner; don't edit it.
 
 ## Run
 ```bash

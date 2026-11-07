@@ -1,22 +1,32 @@
 # Ownership by folder. Nobody edits another owner's folder; request changes from its owner.
-# GitHub handles to be filled in when the shared remote exists (see docs/DECISIONS.md D-026).
+# Shared folders evals/ and data/ are split by area subfolder. scripts/check_ownership.sh enforces the same map (D-044).
+# Patient and doctor handles: replace the placeholders when known (D-046).
 
 # Company side (pharma persona): contract, shared packages, service, company portal, shared tooling
-/schema/                    @COMPANY_OWNER
-/packages/                  @COMPANY_OWNER
-/apps/service/              @COMPANY_OWNER
-/apps/company-web/          @COMPANY_OWNER
-/scripts/                   @COMPANY_OWNER
-/CODEOWNERS                 @COMPANY_OWNER
-/docs/                      @COMPANY_OWNER
-/CLAUDE.md                  @COMPANY_OWNER
-/AGENTS.md                  @COMPANY_OWNER
-/CHANGELOG.md               @COMPANY_OWNER
-/README.md                  @COMPANY_OWNER
+/schema/                    @nkousik18
+/packages/                  @nkousik18
+/apps/service/              @nkousik18
+/apps/company-web/          @nkousik18
+/scripts/                   @nkousik18
+/evals/                     @nkousik18
+/data/                      @nkousik18
+/.gitignore                 @nkousik18
+/.gitattributes             @nkousik18
+/LICENSE                    @nkousik18
+/CODEOWNERS                 @nkousik18
+/docs/                      @nkousik18
+/CLAUDE.md                  @nkousik18
+/AGENTS.md                  @nkousik18
+/CHANGELOG.md               @nkousik18
+/README.md                  @nkousik18
 
 # Patient side
 /apps/patient-runtime/      @PATIENT_OWNER
 /apps/patient-web/          @PATIENT_OWNER
+/evals/patient/             @PATIENT_OWNER
+/data/patient/              @PATIENT_OWNER
 
 # Doctor side
 /apps/doctor-web/           @DOCTOR_OWNER
+/evals/doctor/               @DOCTOR_OWNER
+/data/doctor/                @DOCTOR_OWNER

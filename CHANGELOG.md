@@ -2,6 +2,24 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 004: shared GitHub repo (branch `company/shared-remote`)
+
+### Added
+- Remote `origin` = `https://github.com/Poornimatagaram/SafeSignal.git`; its initial commit merged (unrelated histories, no force push) (D-041).
+- `LICENSE` (MIT, from the repo owner's initial commit).
+- `.gitattributes`: LF line endings everywhere; generated files marked (D-042).
+- `scripts/check_ownership.sh`: fails if a branch changes files outside its area's folders (D-044).
+- README "Git workflow" section; `evals/<area>/` and `data/<area>/` split (D-044).
+- Decisions D-040 to D-047 (D-045, D-046 open).
+
+### Changed
+- `README.md`: SafeSignal title and description from the shared repo above our content (D-040).
+- `.gitignore`: merged with the shared repo's Python template; packaging folders anchored to the root so `src/lib/` and similar app code is never ignored (D-041).
+- `AGENTS.md` (root and 3 teammate apps): plain pointer files instead of symlinks (D-043).
+- `CODEOWNERS`: company entries → `@nkousik18`; added `evals/<area>`, `data/<area>`, `.gitignore`, `.gitattributes`, `LICENSE` (D-046).
+- Root `CLAUDE.md`, `docs/company/CLAUDE.md` and every teammate brief: git workflow rule and "`scripts/check_ownership.sh` passes" in Done when.
+- Teammate briefs moved `apps/<app>/CLAUDE.md` → `docs/briefs/<app>.md` (company-owned); each `apps/<app>/CLAUDE.md` is now the owner's file importing the brief with `@../../docs/briefs/<app>.md`; `AGENTS.md` points to both (D-047).
+
 ## 2026-11-07 — Session 003: teammate onboarding (branch `company/teammate-onboarding`)
 
 ### Added
