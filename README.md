@@ -1,6 +1,10 @@
-# Side-Effect Sentinel
+# SafeSignal
 
-Voice-first, private-by-architecture side-effect monitoring (HACK1984). Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.md`.
+Patients report side effects by voice; everything is processed on their device. Drug companies get minimal, structured side-effect data by drug version and cohort, and doctors get a consent-based symptom timeline before each visit. Built at HACK1984.
+
+Code and packages use the working name **Sentinel** (`sentinel_*`, `@sentinel/*`); see `docs/DECISIONS.md` D-040.
+
+Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.md`.
 
 **New here?** Open your app folder's `CLAUDE.md` (also `AGENTS.md`): it is the full brief for you and your coding agent. What the service does today: `docs/INTEGRATION_STATUS.md`. Demo IDs: `schema/demo_fixtures.json`.
 
