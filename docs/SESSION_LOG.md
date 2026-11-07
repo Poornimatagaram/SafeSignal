@@ -157,3 +157,33 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. SQLite store at `var/service/` replacing the stub; seed from `schema/demo_fixtures.json` plus 1,000 synthetic enrollments and history.
 2. `scripts/reset_all.sh`.
 3. Update `docs/INTEGRATION_STATUS.md` at the H3 switch-over.
+
+---
+
+## Session 006 — 2026-11-07 (Sat) · Step 2: SQLite service, seed, reset
+
+**Goal:** Merge PR #1, then deliver Step 2: persistent SQLite storage replacing the stub, a seed with realistic synthetic history, and `reset_all.sh`.
+
+**Outputs**
+- PR #1 squash-merged (`58b63be`); branch deleted.
+- Branch `company/feat/sqlite-store`: commits `feat(data)`, `feat(schema)`, `feat(service)`, `test(service)`, `feat(scripts)`, `build(contract)`, `docs(docs)`, `docs`.
+- Contract fix found while building (D-054): alerts paged on device time could be skipped; contract 1.1 pages on service `received_at`.
+
+**Verification**
+- Tests: contract-py 22, service 27 (API on SQLite plus full-scale seed: 1,000 patients, valid hashed records, v2 signal, no identifiers in `company.db`, restart safety), contract-ts 8/8.
+- Live: seed 1,000 patients / 25,990 check-ins / 8,506 symptom reports in under a second; `/healthz` seeded; cohort_B rash rises 16% → 21% of reporting patients over W42–W45 while other cohorts stay 7–14%; completion about 75%; a record POSTed before a restart returns 200 after it; service logs hold no patient content.
+- `reset_all.sh --seed` wipes `var/` and reseeds.
+
+**Findings**
+- openFDA reports for Tagrisso include dyspnoea (546) and cough (306), which `schema/terms.json` lists as Rybrevant-only. Seeded records therefore mark them `known_side_effect: false`. Label check of `terms.json` (task C2) is still needed.
+
+**Decisions:** D-053 to D-056 (D-020 superseded).
+
+**Open items**
+- Teammates: contract 1.1 changes the doctor alert cursor to `received_at` (brief updated).
+- D-008, D-039 open; D-045, D-046 need the repo owner and handles; C2 label check for `terms.json`.
+
+**Next (Step 3)** on `company/feat/missed-checkin-scheduler`:
+1. APScheduler job: for each active enrollment whose window closed today with no record, insert a `missed` scheduler record (D-003) and a relay `missed` alert routed by links; alert within 1 minute (AL-01).
+2. Demo control to set a patient's window so the missed alert fires on cue (Scoping Doc 21.3).
+3. Then Step 4: company portal (`apps/company-web`).

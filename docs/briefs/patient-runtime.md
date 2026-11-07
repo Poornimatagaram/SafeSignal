@@ -45,6 +45,7 @@ Use only `from sentinel_contract.client import SentinelClient, build_envelope` (
 - **`term_code`** must be one of `schema/enums.json` → `term_code`; anything unmapped is `SE_OTHER_REVIEW` (D-015).
 - **`patient_profile.drug_name`** is new; it feeds the doctor payload (D-010).
 - **Records must match the enrollment:** `program_id`, `cohort_id` and `drug_version` from the profile, and `patient_ref` = your actor ID; otherwise 422/403 (D-006).
+- **One record per check-in.** The seeded service already holds Walter's history up to yesterday; today's check-in is yours to send. `iso_week` is the current ISO week (`2026-W45` on demo day).
 - **Envelope retries:** store the built envelope in `outbox` and resend it unchanged; re-encrypting gives a new ciphertext and a 409 (D-021).
 - **Doctor key** returns 404 until the doctor has registered one; queue the envelope and retry later (D-025).
 - **Survey format:** `questions[] = {question_id, purpose, asks[3]}`; `asks[0]` first ask, `asks[1]` simpler, `asks[2]` choices or yes/no (D-017).

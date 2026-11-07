@@ -13,6 +13,12 @@ Severity = Literal["mild", "moderate", "severe"]
 AlertType = Literal["missed", "severe"]
 
 
+class Health(BaseModel):
+    status: Literal["ok"]
+    contract_version: str
+    seeded: bool
+
+
 class FieldError(BaseModel):
     field: str
     message: str
@@ -100,7 +106,8 @@ class DoctorAlert(BaseModel):
     alert_id: str
     patient_ref: str
     alert_type: AlertType
-    created_at: str
+    created_at: str   # event time (device or scheduler)
+    received_at: str  # service time; use this as the `since` cursor (D-054)
 
 
 class CaregiverAlert(BaseModel):
@@ -108,6 +115,7 @@ class CaregiverAlert(BaseModel):
     patient_ref: str
     alert_type: AlertType
     created_at: str
+    received_at: str
 
 
 class PublicKeyBody(BaseModel):

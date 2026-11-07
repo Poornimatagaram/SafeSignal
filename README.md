@@ -38,7 +38,10 @@ Branches, Conventional Commit messages and the pull-request flow are in `CONTRIB
 
 ## Run
 ```bash
-cd apps/service && uv sync && uv run uvicorn sentinel_service.main:app --port 8000   # API docs: http://127.0.0.1:8000/docs
+cd apps/service && uv sync
+uv run python -m sentinel_service.seed                       # once; safe to re-run
+uv run uvicorn sentinel_service.main:app --port 8000         # API docs: http://127.0.0.1:8000/docs
+scripts/reset_all.sh --seed                                  # from the repo root: wipe var/ and reseed
 ```
 
 ## Check

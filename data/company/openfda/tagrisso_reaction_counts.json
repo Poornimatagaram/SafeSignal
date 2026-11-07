@@ -1,0 +1,413 @@
+{
+  "source": "https://api.fda.gov/drug/event.json",
+  "query": {
+    "search": "patient.drug.medicinalproduct:\"TAGRISSO\"",
+    "count": "patient.reaction.reactionmeddrapt.exact",
+    "limit": 100
+  },
+  "fetched_at": "2026-11-07T22:55:47Z",
+  "openfda_last_updated": "2026-10-28",
+  "disclaimer": "Do not rely on openFDA to make decisions regarding medical care. While we make every effort to ensure that data is accurate, you should assume all results are unvalidated. We may limit or otherwise restrict your access to the API in line with our Terms of Service.",
+  "results": [
+    {
+      "term": "DEATH",
+      "count": 9587
+    },
+    {
+      "term": "MALIGNANT NEOPLASM PROGRESSION",
+      "count": 2018
+    },
+    {
+      "term": "DIARRHOEA",
+      "count": 1256
+    },
+    {
+      "term": "FATIGUE",
+      "count": 728
+    },
+    {
+      "term": "RASH",
+      "count": 693
+    },
+    {
+      "term": "DECREASED APPETITE",
+      "count": 625
+    },
+    {
+      "term": "DYSPNOEA",
+      "count": 546
+    },
+    {
+      "term": "INTERSTITIAL LUNG DISEASE",
+      "count": 512
+    },
+    {
+      "term": "NAUSEA",
+      "count": 512
+    },
+    {
+      "term": "DRUG INEFFECTIVE",
+      "count": 511
+    },
+    {
+      "term": "OFF LABEL USE",
+      "count": 481
+    },
+    {
+      "term": "METASTASES TO CENTRAL NERVOUS SYSTEM",
+      "count": 440
+    },
+    {
+      "term": "DISEASE PROGRESSION",
+      "count": 436
+    },
+    {
+      "term": "ASTHENIA",
+      "count": 407
+    },
+    {
+      "term": "PLEURAL EFFUSION",
+      "count": 381
+    },
+    {
+      "term": "WEIGHT DECREASED",
+      "count": 374
+    },
+    {
+      "term": "PNEUMONIA",
+      "count": 352
+    },
+    {
+      "term": "VOMITING",
+      "count": 317
+    },
+    {
+      "term": "MYELOSUPPRESSION",
+      "count": 316
+    },
+    {
+      "term": "PNEUMONITIS",
+      "count": 312
+    },
+    {
+      "term": "COUGH",
+      "count": 306
+    },
+    {
+      "term": "DRUG RESISTANCE",
+      "count": 298
+    },
+    {
+      "term": "DRY SKIN",
+      "count": 297
+    },
+    {
+      "term": "PAIN",
+      "count": 291
+    },
+    {
+      "term": "PLATELET COUNT DECREASED",
+      "count": 269
+    },
+    {
+      "term": "PYREXIA",
+      "count": 262
+    },
+    {
+      "term": "FALL",
+      "count": 252
+    },
+    {
+      "term": "PRURITUS",
+      "count": 251
+    },
+    {
+      "term": "MUSCLE SPASMS",
+      "count": 245
+    },
+    {
+      "term": "MALAISE",
+      "count": 237
+    },
+    {
+      "term": "STOMATITIS",
+      "count": 231
+    },
+    {
+      "term": "THROMBOSIS",
+      "count": 229
+    },
+    {
+      "term": "DIZZINESS",
+      "count": 225
+    },
+    {
+      "term": "LUNG DISORDER",
+      "count": 221
+    },
+    {
+      "term": "HEADACHE",
+      "count": 220
+    },
+    {
+      "term": "HEPATIC FUNCTION ABNORMAL",
+      "count": 217
+    },
+    {
+      "term": "METASTASES TO BONE",
+      "count": 217
+    },
+    {
+      "term": "CARDIAC FAILURE",
+      "count": 211
+    },
+    {
+      "term": "CEREBROVASCULAR ACCIDENT",
+      "count": 206
+    },
+    {
+      "term": "LUNG NEOPLASM MALIGNANT",
+      "count": 199
+    },
+    {
+      "term": "DEHYDRATION",
+      "count": 196
+    },
+    {
+      "term": "PULMONARY EMBOLISM",
+      "count": 195
+    },
+    {
+      "term": "ANAEMIA",
+      "count": 188
+    },
+    {
+      "term": "CONSTIPATION",
+      "count": 185
+    },
+    {
+      "term": "THROMBOCYTOPENIA",
+      "count": 182
+    },
+    {
+      "term": "PRODUCT DOSE OMISSION ISSUE",
+      "count": 181
+    },
+    {
+      "term": "ONYCHOCLASIS",
+      "count": 170
+    },
+    {
+      "term": "ALOPECIA",
+      "count": 158
+    },
+    {
+      "term": "ATRIAL FIBRILLATION",
+      "count": 158
+    },
+    {
+      "term": "DEEP VEIN THROMBOSIS",
+      "count": 158
+    },
+    {
+      "term": "PARONYCHIA",
+      "count": 158
+    },
+    {
+      "term": "ELECTROCARDIOGRAM QT PROLONGED",
+      "count": 153
+    },
+    {
+      "term": "NAIL DISORDER",
+      "count": 150
+    },
+    {
+      "term": "DYSPHAGIA",
+      "count": 148
+    },
+    {
+      "term": "RENAL IMPAIRMENT",
+      "count": 147
+    },
+    {
+      "term": "METASTASES TO MENINGES",
+      "count": 145
+    },
+    {
+      "term": "GAIT DISTURBANCE",
+      "count": 143
+    },
+    {
+      "term": "PERIPHERAL SWELLING",
+      "count": 143
+    },
+    {
+      "term": "CARDIAC DISORDER",
+      "count": 141
+    },
+    {
+      "term": "WHITE BLOOD CELL COUNT DECREASED",
+      "count": 140
+    },
+    {
+      "term": "PAIN IN EXTREMITY",
+      "count": 139
+    },
+    {
+      "term": "RESPIRATORY FAILURE",
+      "count": 138
+    },
+    {
+      "term": "ARTHRALGIA",
+      "count": 135
+    },
+    {
+      "term": "LIVER DISORDER",
+      "count": 131
+    },
+    {
+      "term": "GENERAL PHYSICAL HEALTH DETERIORATION",
+      "count": 127
+    },
+    {
+      "term": "BACK PAIN",
+      "count": 125
+    },
+    {
+      "term": "NEOPLASM MALIGNANT",
+      "count": 125
+    },
+    {
+      "term": "CONDITION AGGRAVATED",
+      "count": 121
+    },
+    {
+      "term": "ERYTHEMA",
+      "count": 116
+    },
+    {
+      "term": "METASTASES TO LIVER",
+      "count": 112
+    },
+    {
+      "term": "PRODUCT USE ISSUE",
+      "count": 112
+    },
+    {
+      "term": "SEIZURE",
+      "count": 112
+    },
+    {
+      "term": "CHEST PAIN",
+      "count": 111
+    },
+    {
+      "term": "TOXICITY TO VARIOUS AGENTS",
+      "count": 111
+    },
+    {
+      "term": "MYOCARDIAL INFARCTION",
+      "count": 110
+    },
+    {
+      "term": "INSOMNIA",
+      "count": 106
+    },
+    {
+      "term": "PULMONARY OEDEMA",
+      "count": 104
+    },
+    {
+      "term": "RENAL FAILURE",
+      "count": 103
+    },
+    {
+      "term": "SKIN DISORDER",
+      "count": 103
+    },
+    {
+      "term": "URINARY TRACT INFECTION",
+      "count": 100
+    },
+    {
+      "term": "COVID-19",
+      "count": 99
+    },
+    {
+      "term": "HYPOTENSION",
+      "count": 98
+    },
+    {
+      "term": "NEOPLASM PROGRESSION",
+      "count": 95
+    },
+    {
+      "term": "METASTASIS",
+      "count": 92
+    },
+    {
+      "term": "DRUG INTOLERANCE",
+      "count": 91
+    },
+    {
+      "term": "EJECTION FRACTION DECREASED",
+      "count": 91
+    },
+    {
+      "term": "ILLNESS",
+      "count": 89
+    },
+    {
+      "term": "INFECTION",
+      "count": 89
+    },
+    {
+      "term": "NEUTROPENIA",
+      "count": 89
+    },
+    {
+      "term": "ABDOMINAL DISCOMFORT",
+      "count": 88
+    },
+    {
+      "term": "MYALGIA",
+      "count": 87
+    },
+    {
+      "term": "NEUROPATHY PERIPHERAL",
+      "count": 87
+    },
+    {
+      "term": "PERICARDIAL EFFUSION",
+      "count": 87
+    },
+    {
+      "term": "ABDOMINAL PAIN UPPER",
+      "count": 84
+    },
+    {
+      "term": "FEEDING DISORDER",
+      "count": 84
+    },
+    {
+      "term": "VISUAL IMPAIRMENT",
+      "count": 84
+    },
+    {
+      "term": "ACUTE KIDNEY INJURY",
+      "count": 83
+    },
+    {
+      "term": "CEREBRAL INFARCTION",
+      "count": 83
+    },
+    {
+      "term": "METASTASES TO LUNG",
+      "count": 83
+    },
+    {
+      "term": "VISION BLURRED",
+      "count": 83
+    }
+  ]
+}

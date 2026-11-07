@@ -2,6 +2,14 @@
 
 Owner: company-side lead. Version rules (Scoping Doc 26.11): 1.x adds optional fields; 2.0 breaks existing payloads. The service accepts the old and new version until the next integration run.
 
+## 1.1 — 2026-11-07
+
+Additive; payloads unchanged (their `schema_version` stays `"1.0"`). Responses now carry `X-Schema-Version: 1.1`.
+
+- `relay.sql`: `alert.received_at` (service time). Doctor and caregiver alert responses include `received_at`, and `?since=` pages on it instead of the device's `created_at`, so alerts queued offline are never skipped (D-054).
+- Server timestamps use microseconds (`YYYY-MM-DDTHH:MM:SS.ffffffZ`); `?since=` accepts any ISO 8601 UTC time and is normalized (D-054).
+- New constant `CONTRACT_VERSION = "1.1"` in `sentinel_contract` and `@sentinel/contract`.
+
 ## 1.0 — 2026-11-07 (published for the H1 freeze; pending team sign-off)
 
 Initial contract, from Scoping Doc Section 26 with these changes (see `docs/DECISIONS.md`):
