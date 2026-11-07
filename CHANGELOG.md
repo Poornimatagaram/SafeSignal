@@ -2,6 +2,25 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-07 — Session 006: Step 2, SQLite service and seed (branch `company/feat/sqlite-store`)
+
+### Added
+- `apps/service/sentinel_service/store.py`, `db.py`, `common.py`: SQLite store for `company.db` and `relay.db` (D-055).
+- `apps/service/sentinel_service/seed.py`: `python -m sentinel_service.seed` with 1,000 enrollments and ~26,000 synthetic check-ins weighted by openFDA counts (D-053).
+- `data/company/fetch_openfda.py` and `data/company/openfda/tagrisso_reaction_counts.json`; `data/README.md` source table (D-053).
+- `scripts/reset_all.sh` (D-056).
+- `GET /healthz`.
+- Tests: `apps/service/tests/conftest.py`, `test_seed.py`; `test_stub_service.py` renamed `test_api.py` (27 service tests).
+- Decisions D-053 to D-056.
+
+### Changed
+- Contract 1.1: `alert.received_at` in `relay.sql`; alert responses include `received_at`; `since` pages on it; microsecond server timestamps; `CONTRACT_VERSION` in both contract packages; `schema/openapi.json` and `api.d.ts` regenerated (D-054).
+- `docs/INTEGRATION_STATUS.md` rewritten for the SQLite service; doctor and patient-runtime briefs, root and service READMEs updated.
+- D-020 superseded by D-055.
+
+### Removed
+- `apps/service/sentinel_service/stub_store.py`.
+
 ## 2026-11-07 — Session 005: Conventional Commits and pull-request workflow (branch `company/chore/git-workflow`)
 
 ### Added
