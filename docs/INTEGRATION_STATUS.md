@@ -2,49 +2,52 @@
 
 What the Sentinel service (`apps/service`) actually does today. Maintained by the company owner only; check it before debugging anything that touches the service.
 
-**Last updated:** 2026-11-07 · Session 006 · contract `1.1` (payload `schema_version` stays `1.0`)
+**Last updated:** 2026-11-07 · Session 008 · **contract `2.0`** (payload `schema_version` `"2.0"`; the service accepts only 2.0)
 
-## Current mode: SQLite (H3 switch-over done)
+## Contract 2.0 in one paragraph
 
-- **Data persists** in `var/service/company.db` and `var/service/relay.db` (gitignored) across restarts. Wipe with `scripts/reset_all.sh`.
+Records belong to a **hospital or clinic (organization)**, not to one doctor: patients seal envelopes to the organization's care-team key, and an admin gives member doctors that key. A new doctor reads the full history; a revoked doctor loses access. An **emergency hospital** the patient chose at setup can read the history only through **audited emergency access**. Missed check-ins **escalate** at 1, 2 and 3 consecutive misses; level 3 also reaches the user-defined emergency contacts (for example 911). Payloads gain `reporter` (self or a proxy), `input_mode` (voice or text) and, for doctors, `age_years`. Full design: `docs/design/contract-2.0.md`.
+
+## Current mode: SQLite
+
+- **Data persists** in `var/service/company.db` and `var/service/relay.db` (gitignored). Wipe with `scripts/reset_all.sh`.
 - **Seeded by** `python -m sentinel_service.seed` (safe to re-run; `--reset` starts over):
-  - Program `prog_demo_01` (Tagrisso), cohorts A–D = v1–v4, term list, survey v1 per cohort.
-  - 1,000 enrollments: Walter `pt_4b82d0c6` (cohort_B), Priya `pt_9c1d2e3f` (cohort_A) and 998 synthetic patients. IDs: `schema/demo_fixtures.json`.
+  - Program `prog_demo_01` (Tagrisso), cohorts A–D = v1–v4, term list, survey v1 per cohort with `schedule.every_days = 1`.
+  - 1,000 enrollments: Walter `pt_4b82d0c6` (cohort_B), Priya `pt_9c1d2e3f` (cohort_A) and 998 synthetic patients; about 15% of synthetic check-ins are answered by a caregiver; voice, text and mixed input.
   - About 26,000 daily check-ins from Monday of 2026-W42 through **yesterday**. Today is empty, so the live check-in is today's record.
-  - Dr. Shah `dr_3a7f10b2` linked to Walter and Priya with **no public key** until the doctor web app registers one. Anna `cg_7e21c9a4` linked to Walter (alerts only).
-  - A few historical relay alerts (missed or severe) for Walter and Priya only.
-- **Company views aggregate real records**, including records sent by the patient runtime. The synthetic story: rash and nail changes rise week over week in cohort_B (v2); fewer GI events in cohort_C; more fatigue in cohort_D.
-- **Rules enforced:** schema validation (422 names the field), role and actor checks (401/403), enrollment match (D-006), care-link and consent checks, idempotency (200 same ID and hash, 409 different), `since` paging.
-
-## Changes in contract 1.1 that affect you
-
-- **Doctor and caregiver alerts** now include `received_at` (service time). Use it as your `since` cursor for alerts, as you already do for envelopes. `created_at` is when the event happened on the device and can be older (offline queue) (D-054).
-- **Server timestamps** have microseconds: `2026-11-07T14:05:00.123456Z`. `?since=` accepts any ISO 8601 UTC time.
-- **`GET /healthz`** (no headers): `{"status", "contract_version", "seeded"}`. Use it to check the service is up and seeded.
+  - Organizations (all fictional): **Northgate Medical Center** `org_5e1a2b3c` is the care team for Walter and Priya (Dr. Shah attending, **Dr. Patel admin**); **Lakeside Emergency Hospital** `org_8f4d6a2e` is Walter's emergency hospital (**Dr. Okafor admin**). Dr. Rivera `dr_c71e0f9a` is registered but not a member (doctor-change demo).
+  - **No keys are seeded**: every doctor and organization key is generated in the doctor's browser.
+  - Anna `cg_7e21c9a4` is Walter's caregiver (alerts only). Walter's emergency contacts: 911 and Lakeside.
+  - Historical missed check-in alerts with escalation levels (Priya: levels 1 and 2), each with its delivery records.
+- **Company views aggregate real records**, including records sent by the patient runtime.
 
 ## Endpoints
 
 | Endpoint | Status | Notes |
 | --- | --- | --- |
-| `GET /healthz` | Real | No auth |
-| `GET /v1/survey`, `GET /v1/terms` | Real | Latest published survey version per cohort |
-| `POST /v1/records` | Real | Feeds the company views immediately |
-| `POST /v1/doctor-envelopes` | Real | 403 without an active care link |
-| `POST /v1/alerts` | Real | `severe` only from devices |
-| `PUT /v1/consent/{patient_ref}` | Real | Revoking stops new envelopes and hides undelivered ones (D-013) |
-| `PUT`/`GET /v1/doctors/{id}/public-key` | Real | GET is 404 until the key is registered (D-025); the key is lost on `reset_all.sh` |
-| `GET /v1/doctors/{id}/patients`, `/envelopes`, `/alerts`; `POST .../ack` | Real | |
-| `GET /v1/caregivers/{id}/alerts` | Real | `summary` detail level is the same as `alerts_only` (D-008 open) |
-| `/v1/company/*` | Real | Under-5 suppression applied (NF-03) |
-| Missed check-in scheduler | **Not built (H5)** | Only seeded history contains missed check-ins |
+| `GET /healthz` | Real | No auth; `contract_version` and `seeded` |
+| `GET /v1/survey`, `GET /v1/terms` | Real | Survey includes `schedule` |
+| `POST /v1/records` | Real | 2.0 record with `reporter` and `input_mode` |
+| `GET /v1/orgs/{org_id}/public-key` (patient) | Real | 404 until the org admin registers the care-team key |
+| `POST /v1/care-envelopes` | Real | 403 without an active care or emergency link |
+| `POST /v1/alerts` | Real | `severe` only from devices; delivered to caregiver and care team |
+| `PUT /v1/consent/{patient_ref}` | Real | Care team, caregiver, emergency organizations and contacts (with consent) |
+| Doctor: `/v1/doctors/{id}/public-key`, `/v1/doctors/{id}/orgs` | Real | |
+| Organization: `/public-key`, `/members/{doctor_id}`, `/key-grants` (admin) | Real | Revoking a member deletes their key grant |
+| Organization: `/key-grants/{doctor_id}`, `/patients`, `/envelopes`, `/ack`, `/alerts` (members) | Real | Routine access covers care-team patients only |
+| `POST /v1/orgs/{org_id}/emergency-access` | Real | Emergency organizations only; coded reason; logged; notifies caregiver and care team |
+| `GET /v1/caregivers/{id}/alerts` | Real | Includes `escalation_level` and `emergency_access` alerts |
+| `/v1/company/*` | Real | Export includes `reporter` and `input_mode` |
+| Missed check-in scheduler (live escalation) | **Not built yet (next)** | Only seeded history contains missed check-ins |
 
-## Switch-over plan (Scoping Doc 26.11)
+## Switch-over plan
 
 | When | Becomes real | What teammates do |
 | --- | --- | --- |
-| H3 | **Done:** SQLite store, seed, company views on real records | Nothing changes in your code; data now survives restarts |
-| H5 | Missed check-in scheduler | Doctor and caregiver views see new `missed` alerts within 1 minute |
-| H6 | Integration run on the team hotspot | Run the Scoping Doc 26.15 checklist together |
+| H3 | **Done:** SQLite store, seed | — |
+| Now | **Done:** contract 2.0 | Build against 2.0 (briefs updated); there is no 1.x compatibility |
+| Next | Missed check-in scheduler with the 3-level escalation | Doctor and caregiver views see new `missed` alerts within 1 minute |
+| Then | Integration run on the team hotspot | Run the Scoping Doc 26.15 checklist together |
 
 ## Running it for your app
 
@@ -56,8 +59,8 @@ SENTINEL_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://loca
 ```
 
 - Browser apps need their origin in `SENTINEL_ALLOWED_ORIGINS`; without it the service sends no CORS headers and browser calls fail.
-- Doctor side, to get test data before the patient runtime exists: register your key from the doctor web app, then run `uv run --project packages/contract-py python scripts/send_demo_envelope.py --alert` from the repo root.
-- Start clean: `scripts/reset_all.sh --seed` (stop the service first).
+- Doctor side, to get test data before the patient runtime exists: as Dr. Patel, register Northgate's care-team key (and grant it to yourself), then run `uv run --project packages/contract-py python scripts/send_demo_envelope.py --alert` from the repo root. Register Lakeside's key as Dr. Okafor to also receive Walter's emergency envelope.
+- Start clean: `scripts/reset_all.sh --seed` (stop the service first; also clear the doctor browser's site data, which holds the keys).
 
 ## Reporting a problem
 
