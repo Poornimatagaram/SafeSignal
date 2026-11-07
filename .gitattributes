@@ -1,0 +1,14 @@
+# Same line endings on every OS, so nobody's commit rewrites lines they didn't touch (D-042).
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary
+
+# Generated files: collapsed in GitHub diffs; regenerate instead of hand-merging.
+uv.lock               linguist-generated=true
+package-lock.json     linguist-generated=true
+schema/openapi.json   linguist-generated=true
+schema/examples/*.json linguist-generated=true
+packages/contract-ts/src/api.d.ts linguist-generated=true
