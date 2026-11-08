@@ -4,7 +4,7 @@ This repository is shared by three owners (company, patient, doctor) and their c
 
 ## 1. Ownership
 
-Edit only the folders your area owns (`CODEOWNERS`, `README.md`). `schema/` and `packages/` are the shared contract: changes go through the company owner. In `evals/` and `data/`, write only inside your area's subfolder.
+Edit only the folders your area owns (`CODEOWNERS`). `schema/` and `packages/` are the shared contract: changes go through the company owner. In `evals/` and `data/`, write only inside your area's subfolder.
 
 ## 2. Branches
 
