@@ -33,6 +33,13 @@ Keys and history (off camera, or on camera for the privacy story):
 4. Terminal: `uv run --project packages/contract-py python data/doctor/send_demo_history.py` (3 weeks for Walter and Priya; also sealed to Lakeside).
 5. B: **Sync now**. Walter and Priya appear.
 
+### Hosted variant (Render)
+- Open `https://safesignal-service.onrender.com/healthz` a minute before (wakes the free service), and check `"seeded": true`.
+- Every window opens `https://safesignal-doctor.onrender.com` (caregiver: `/#/caregiver`), each in its own Chrome profile: A Patel, B Shah, C Okafor, D Rivera, E Anna.
+- Do the key setup above after the service's last restart or deploy (a restart resets its data), then send the history to the hosted service:
+  `uv run --project packages/contract-py python data/doctor/send_demo_history.py --base-url https://safesignal-service.onrender.com`
+- Live alert: `scripts/send_demo_envelope.py --alert --base-url https://safesignal-service.onrender.com`.
+
 ## 2. Script (on camera)
 
 | Time | Show | Say |

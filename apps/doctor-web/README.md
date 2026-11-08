@@ -6,6 +6,7 @@ The doctor's side of SafeSignal. A care team reads its patients' side-effect che
 |---|---|
 | **Owner** | Doctor side (`CODEOWNERS`: `apps/doctor-web/`, `evals/doctor/`, `data/doctor/`) |
 | **Package** | `@sentinel/doctor-web` · Vite, React 19, TypeScript, Tailwind 3 |
+| **Live** | `https://safesignal-doctor.onrender.com` (Render static site, built from `main`) |
 | **Port** | 5174 (`http://127.0.0.1:5174` and `http://localhost:5174`) |
 | **Contract** | 2.2, read-only from `schema/` and `packages/contract-ts`; never edit them |
 | **Crypto** | `libsodium-wrappers` sealed boxes (X25519), keys in standard base64 |
@@ -19,7 +20,7 @@ All patients, doctors and records are synthetic.
 ---
 
 ## Contents
-1. [Run it](#1-run-it)
+1. [Run it](#1-run-it) · [Deployed on Render](#deployed-on-render)
 2. [Where it sits in SafeSignal](#2-where-it-sits-in-safesignal)
 3. [The privacy line](#3-the-privacy-line)
 4. [From a spoken check-in to the doctor's screen](#4-from-a-spoken-check-in-to-the-doctors-screen)
@@ -65,6 +66,36 @@ npm run dev -- --host 127.0.0.1 # http://127.0.0.1:5174
 Each browser profile holds one doctor (DW-19). For the demo, use a separate Chrome profile per doctor (`DEMO.md`).
 
 Changed `tailwind.config.js`? Restart `npm run dev`; the dev server does not reload it.
+
+### Deployed on Render
+
+```mermaid
+flowchart LR
+  GH["GitHub main<br/>apps/doctor-web · packages/contract-ts · schema"] -->|"commit in those paths"| BUILD["Render build<br/>npm ci && npm run build"]
+  BUILD --> SITE["Static site<br/>safesignal-doctor.onrender.com"]
+  SITE -->|"API calls (CORS: origin must be allowed)"| SVC["safesignal-service.onrender.com<br/>company-owned"]
+  P1["Chrome profile: Dr. Patel"] & P2["Chrome profile: Dr. Shah"] & P3["Chrome profile: Dr. Okafor"] & P4["Chrome profile: Dr. Rivera"] --> SITE
+```
+
+| Render setting | Value |
+|---|---|
+| Type | Static Site, repo `Poornimatagaram/SafeSignal`, branch `main` |
+| Root directory | `apps/doctor-web` |
+| Build command | `npm ci && npm run build` (includes the secrets check) |
+| Publish directory | `dist` |
+| Environment | `VITE_DOCTOR_SERVICE_URL=https://safesignal-service.onrender.com` (no trailing slash) · `NODE_VERSION=22` |
+| Build filters | `apps/doctor-web/**`, `packages/contract-ts/**`, `schema/**` |
+| Rewrite | `/*` → `/index.html` |
+
+- **One address, many doctors:** each doctor uses a separate Chrome profile on the same address; browser storage, and so the keys, is per profile (DW-19, DW-33).
+- **Allowed origin:** the company owner lists `https://safesignal-doctor.onrender.com` in the service's `SENTINEL_ALLOWED_ORIGINS` (`docs/DEPLOY.md`). Check it with:
+  ```bash
+  curl -si -X OPTIONS https://safesignal-service.onrender.com/v1/terms \
+    -H "Origin: https://safesignal-doctor.onrender.com" -H "Access-Control-Request-Method: GET" | grep -i access-control-allow-origin
+  ```
+- **`VITE_*` values are baked in at build time:** after changing one, use **Manual Deploy → Deploy latest commit**, not a restart.
+- **Free tier:** the service sleeps after 15 idle minutes (the first call takes about 50 s; open `/healthz` a minute before a demo). Every service restart or deploy resets its data, so each doctor profile then uses **Reset this browser** and redoes the key setup.
+- **Demo day:** set Auto-Deploy to **Off** so the site can't change mid-demo, and merge nothing to `main` in the last hour.
 
 ---
 
