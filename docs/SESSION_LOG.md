@@ -360,3 +360,19 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Company portal (`apps/company-web`) on the 2.2 endpoints.
 2. Ask the repo owner to protect `main`.
 
+## Session 013 — 2026-11-08 (Sun) · End-to-end check across personas
+
+**Goal:** connect the three personas through the service and prove each sees its intended slice of the same check-in.
+
+**Outputs**
+- `scripts/e2e_check.py` (D-083) and a CI step that runs it.
+- Findings while building it: envelope IDs must be `env_` + 8 hex, so each organization's envelope needs its own random ID; cohort views stay empty with fewer than 5 patients per term, so the check seeds 40 per cohort.
+
+**Verification:** `uv run --project apps/service python scripts/e2e_check.py` → 58 passed, 0 failed on contract 2.2 (about 1 s). `ruff` clean. Service tests pass.
+
+**Status of the other personas** (main at #13): the patient runtime has voice check-in, filter and extraction, but `egress_gate.py` is still a stub, so no live check-in reaches the service yet; doctor-web has its data layer but no screens; patient-web is not started; the company portal is on `company/feat/company-portal` (Session 014).
+
+**Next**
+1. Point the patient owner at `scripts/e2e_check.py` as the reference for the egress gate's calls.
+2. Not automated yet in 26.15: network-off check-in, leakage evaluation, patient receipt on screen.
+
