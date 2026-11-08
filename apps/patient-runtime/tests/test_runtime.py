@@ -113,7 +113,10 @@ def test_cors_allows_patient_web_only(client):
 
 
 NETWORK_MODULES = {"sentinel_contract.client", "httpx", "requests", "urllib", "urllib3", "http.client",
-                   "aiohttp", "socket", "websockets"}
+                   "aiohttp", "socket", "websockets", "huggingface_hub", "ollama"}
+# egress_gate.py is the one path off the device. extract.py may reach only the local model server (Ollama on
+# loopback; extract.py refuses any other host), so it may import the ollama client and nothing else on this list.
+ALLOWED = {"egress_gate.py": NETWORK_MODULES, "extract.py": {"ollama"}}
 
 
 def _imports(path: Path) -> set[str]:
@@ -130,9 +133,8 @@ def _imports(path: Path) -> set[str]:
 def test_only_egress_gate_imports_network_code():
     offenders = {}
     for path in PACKAGE.rglob("*.py"):
-        if path.name == "egress_gate.py":
-            continue
-        bad = {m for m in _imports(path) for n in NETWORK_MODULES if m == n or m.startswith(n + ".")}
+        forbidden = NETWORK_MODULES - ALLOWED.get(path.name, set())
+        bad = {m for m in _imports(path) for n in forbidden if m == n or m.startswith(n + ".")}
         if bad:
             offenders[path.name] = sorted(bad)
     assert offenders == {}
