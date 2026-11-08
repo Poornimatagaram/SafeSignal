@@ -362,6 +362,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/company/programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The company, its programs and cohorts, with the real trial each is grounded in (2.2) */
+        get: operations["company_programs_v1_company_programs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trial protocol, statistical analysis plan and FDA label per program, with public source links (2.2) */
+        get: operations["company_documents_v1_company_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/company/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Term list for a program, for labelling dashboard rows (2.2) */
+        get: operations["company_terms_v1_company_terms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/company/cohorts/{cohort_id}/survey": {
         parameters: {
             query?: never;
@@ -369,7 +420,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Current survey version for a cohort, for the survey editor (2.2) */
+        get: operations["company_survey_v1_company_cohorts__cohort_id__survey_get"];
         /** Publish a survey version (schema/survey_config.json) */
         put: operations["publish_survey_v1_company_cohorts__cohort_id__survey_put"];
         post?: never;
@@ -427,6 +479,21 @@ export interface components {
             /** Routed Caregiver */
             routed_caregiver: boolean;
         };
+        /** CohortInfo */
+        CohortInfo: {
+            /** Cohort Id */
+            cohort_id: string;
+            /** Drug Version */
+            drug_version: string;
+            /** Label */
+            label: string;
+            /** Target Size */
+            target_size: number | null;
+            /** Source Arm */
+            source_arm: string | null;
+            /** Enrolled */
+            enrolled: number;
+        };
         /** CohortWeeklyRow */
         CohortWeeklyRow: {
             /** Program Id */
@@ -446,6 +513,15 @@ export interface components {
             /** Reporting Patients */
             reporting_patients: number;
         };
+        /** Company */
+        Company: {
+            /** Company Id */
+            company_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Note */
+            note: string | null;
+        };
         /** CompletionRow */
         CompletionRow: {
             /** Program Id */
@@ -464,6 +540,12 @@ export interface components {
             completion_rate: number;
             /** Missed Rate */
             missed_rate: number;
+            /** Voice Records */
+            voice_records: number;
+            /** Text Records */
+            text_records: number;
+            /** Mixed Records */
+            mixed_records: number;
         };
         /** ConsentState */
         ConsentState: {
@@ -490,6 +572,25 @@ export interface components {
             emergency_contact_count: number;
             /** Updated At */
             updated_at: string;
+        };
+        /** Document */
+        Document: {
+            /** Doc Id */
+            doc_id: string;
+            /** Program Id */
+            program_id: string | null;
+            /** Kind */
+            kind: ("protocol" | "sap" | "label") | null;
+            /** Title */
+            title: string;
+            /** Source Url */
+            source_url: string;
+            /** Version */
+            version: string;
+            /** Approved By */
+            approved_by: string;
+            /** Approved At */
+            approved_at: string;
         };
         /** EmergencyAccessBody */
         EmergencyAccessBody: {
@@ -718,6 +819,29 @@ export interface components {
             org_key_registered: boolean;
             /** Has Key Grant */
             has_key_grant: boolean;
+        };
+        /** ProgramInfo */
+        ProgramInfo: {
+            /** Program Id */
+            program_id: string;
+            /** Drug Name */
+            drug_name: string;
+            /** Label */
+            label: string | null;
+            /** Population */
+            population: string | null;
+            /** Source Trial */
+            source_trial: string | null;
+            /** Source Url */
+            source_url: string | null;
+            /** Cohorts */
+            cohorts: components["schemas"]["CohortInfo"][];
+        };
+        /** ProgramsResponse */
+        ProgramsResponse: {
+            company: components["schemas"]["Company"] | null;
+            /** Programs */
+            programs: components["schemas"]["ProgramInfo"][];
         };
         /** PublicKeyBody */
         PublicKeyBody: {
@@ -2230,6 +2354,272 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompletionRow"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    company_programs_v1_company_programs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    company_documents_v1_company_documents_get: {
+        parameters: {
+            query?: {
+                program_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Document"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    company_terms_v1_company_terms_get: {
+        parameters: {
+            query: {
+                program_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TermsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    company_survey_v1_company_cohorts__cohort_id__survey_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cohort_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyResponse"];
                 };
             };
             /** @description Unauthorized */
