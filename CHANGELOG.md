@@ -2,6 +2,28 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 012: real-data seed, contract 2.2 (branch `company/feat/real-data-seed`)
+
+### Added
+- Fictional sponsor Halvaren Therapeutics (D-078).
+- Two more programs: Rybrevant (MARIPOSA arms) and Beyfortus for infants (MELODY arms, parent-answered, parent survey) (D-081).
+- `data/company/`:
+  - ClinicalTrials.gov extracts and FDA label caches, with fetch scripts.
+  - `trial_map.json`.
+  - A PDF fetcher into gitignored `documents/` (D-080).
+- Company endpoints `GET /v1/company/programs`, `/documents`, `/terms` and `/cohorts/{cohort_id}/survey`.
+- Completion rows gain `voice_records`, `text_records` and `mixed_records`.
+- Tests: `test_terms_labels.py`, plus real-rate, documents, migration and second-program tests.
+
+### Changed
+- Contract 2.2 (additive): `cohort_id` is a pattern, and there are 6 new term codes (D-079, D-081).
+- `terms.json` `drug_scope` is verified against the FDA labels; this closes task C2.
+- Seed: cohorts are sampled from real trial-arm rates. The invented story and openFDA weights are removed (D-053 superseded).
+  - Walter's cohort_B is FLAURA's osimertinib arm; cohort labels name the real arms.
+- `db.py` adds new nullable columns to existing databases (D-082).
+- `.gitignore`: trial PDFs.
+- Updated docs: `data/README.md`, integration status, briefs, schema changelog.
+
 ## 2026-11-08 — Session 011: CODEOWNERS handles (branch `company/chore/codeowners-handles`)
 
 ### Changed

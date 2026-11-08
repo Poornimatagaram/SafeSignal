@@ -1,6 +1,6 @@
 # Dataset research: authentic data for SafeSignal
 
-**Date:** 2026-11-07 · **Owner:** company side · **Status:** research complete; adoption decisions in `docs/DECISIONS.md` (D-057 onward)
+**Date:** 2026-11-07 · **Owner:** company side · **Status:** research complete; ClinicalTrials.gov rates and documents and FDA labels adopted in contract 2.2 (D-079 to D-081); patient-wording and speech datasets not yet used
 
 The demo currently runs on synthetic data. Real-world data is messy, and a demo built on it is more convincing. This document lists public datasets that match our use case, what each one covers, how messy it is, and whether we may use and publish it.
 
