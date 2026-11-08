@@ -35,8 +35,8 @@ Records belong to a **hospital or clinic (organization)**, not to one doctor: pa
 | `POST /v1/records` | Real | 2.0 record with `reporter` and `input_mode` |
 | `GET /v1/orgs/{org_id}/public-key` (patient) | Real | 404 until the org admin registers the care-team key |
 | `POST /v1/care-envelopes` | Real | 403 without an active care or emergency link |
-| `POST /v1/alerts` | Real | `severe` only from devices; delivered to caregiver and care team |
-| `PUT /v1/consent/{patient_ref}` | Real | Care team, caregiver, emergency organizations and contacts (with consent) |
+| `POST /v1/alerts` | Real | `severe` only from devices; delivered to caregiver and care team; reply carries `payload_sha256` (2.3) |
+| `PUT /v1/consent/{patient_ref}` | Real | Care team, caregiver, emergency organizations and contacts (with consent); reply carries `payload_sha256` (2.3) |
 | Doctor: `/v1/doctors/{id}/public-key`, `/v1/doctors/{id}/orgs` | Real | |
 | Organization: `/public-key`, `/members/{doctor_id}`, `/key-grants` (admin) | Real | Revoking a member deletes their key grant |
 | Organization: `/key-grants/{doctor_id}`, `/patients`, `/envelopes`, `/ack`, `/alerts` (members) | Real | Routine access covers care-team patients only |

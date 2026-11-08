@@ -2,6 +2,14 @@
 
 Owner: company-side lead. Version rules (Scoping Doc 26.11): 1.x adds optional fields; 2.0 breaks existing payloads. The service accepts the old and new version until the next integration run.
 
+## 2.3 — 2026-11-08
+
+Additive; payloads unchanged (`schema_version` stays `"2.0"`). Responses carry `X-Schema-Version: 2.3`.
+
+- API (`openapi.json`): `POST /v1/alerts` and `PUT /v1/consent/{patient_ref}` replies carry `payload_sha256` (hash of the received payload, 26.13), like `/v1/records` and `/v1/care-envelopes`, so every send has a receipt hash to compare (D-088).
+- `patient.sql`: `egress_log.outbox_id` is nullable and `egress_log.kind` (`send` or `config_fetch`) is new, so configuration fetches are logged without an outbox row (PV-06, D-088). Existing patient databases need `ALTER TABLE egress_log ADD COLUMN kind ...` or a recreate.
+- `sentinel_contract.client.SentinelClient`: optional `on_fetch` callback receives a `SendResult` for each configuration fetch (survey, terms, org key); its hash and field names describe the request parameters.
+
 ## 2.2 — 2026-11-08
 
 Additive; payloads unchanged (`schema_version` stays `"2.0"`; every 2.1 payload is still valid). Responses carry `X-Schema-Version: 2.2`.
