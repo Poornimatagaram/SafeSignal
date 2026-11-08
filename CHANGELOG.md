@@ -2,6 +2,13 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 021: company portal in the SafeSignal look
+
+### Changed
+- `apps/company-web`: restyled to match the doctor and patient apps (D-090, supersedes D-086). Warm paper and coral theme with light, dark and system modes; bundled Fredoka, DM Sans and DM Mono; floating pill nav with program picker, appearance menu and Refresh; hero with a "this week" panel (patients reporting, check-in completion, off-label terms); hash-routed pill tabs; rounded cards and tables; privacy strip; toast. Data, endpoints and roles unchanged.
+- `docs/design/company-web-ui.md`: marked superseded by D-090.
+- `apps/company-web`: professional look on the same layout (D-091). Inter and IBM Plex Mono replace Fredoka, DM Sans and DM Mono; cool slate and clinical-blue palette in light and dark; hairline borders, quiet shadows, flat logo, calmer motion; more space between KPI tiles, cards and privacy tiles. Pill controls, rounding, nav and tabs unchanged.
+
 ## 2026-11-08 — Session 020: patient brief and data licence (branch `company/docs/patient-brief-loopback`)
 
 ### Changed

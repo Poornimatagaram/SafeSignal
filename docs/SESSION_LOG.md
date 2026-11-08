@@ -508,3 +508,23 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 **Next**
 1. Landing page and portal redesign in `apps/company-web` (`docs/design/company-web-ui.md`).
+
+## Session 021 — 2026-11-08 (Sun) · Company portal in the SafeSignal look
+
+**Goal:** Give the company portal the same UI as the doctor portal and patient app (product owner request).
+
+**Outputs**
+- `apps/company-web` restyled with the doctor view's theme and shell (D-090, supersedes D-086): `src/styles.css`, `src/App.tsx`, new `src/components/Nav.tsx`, `src/components/icons.tsx`, `src/lib/theme.ts`; `@fontsource` fonts added.
+- Then a professional look on the same layout (D-091): Inter / IBM Plex Mono, slate and clinical-blue tokens (`--accent*` replaces `--coral*`), hairline borders, quiet shadows, flat logo, wider tile and card spacing.
+
+**Verification**
+- `npm run lint` and `npm run build` pass in `apps/company-web`.
+- Checked in Chrome against the seeded local service: all four tabs in light and dark; 390 px width has no horizontal scroll.
+
+**Open items**
+- The landing page from the old spec is not built; decide whether it is still wanted.
+- Role-gated actions still fail on click instead of showing disabled with a reason.
+
+**Next**
+1. Saved on branch `company/feat/company-web-professional-look`; PR on request.
+

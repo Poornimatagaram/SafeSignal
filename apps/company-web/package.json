@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
     "@sentinel/contract": "file:../../packages/contract-ts",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
