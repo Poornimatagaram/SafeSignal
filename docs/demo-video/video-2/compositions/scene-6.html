@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-6-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #e9eff4; }
+        #scene-6-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s6-layer { position: absolute; inset: 0; }
+        .s6-layer svg { width: 100%; height: 100%; display: block; }
+        #s6-back { left: -400px; right: -400px; }
+        #s6-cover { background: #f6f8fa; }
+        #s6-tag {
+          position: absolute; left: 120px; top: 108px; display: flex; align-items: center; gap: 22px;
+          padding: 22px 42px 22px 32px; background: #fff; border: 4px solid #13233a; border-radius: 22px;
+          box-shadow: 8px 10px 0 rgba(19, 35, 58, 0.18);
+        }
+        #s6-tag .s6-dot { display: block; width: 26px; height: 26px; border-radius: 50%; background: #0e7c7b; }
+        #s6-tag .s6-name { display: block; font-size: 60px; font-weight: 700; letter-spacing: -0.01em; color: #13233a; line-height: 1; }
+      </style>
+      <div id="scene-6-root" data-composition-id="scene-6" data-width="1920" data-height="1080">
+        <div id="s6-cam" class="s6-layer">
+          <div id="s6-back" class="s6-layer">
+            <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+              <rect x="-400" y="-400" width="2720" height="1200" fill="#e9eff4" />
+              <rect x="-400" y="800" width="2720" height="280" fill="#dde5ec" />
+              <rect x="-400" y="792" width="2720" height="14" fill="#cfd8e3" />
+              <ellipse cx="960" cy="880" rx="860" ry="40" fill="#13233a" opacity="0.10" />
+              <!-- dashboard on the wall -->
+              <g id="s6-dash">
+                <rect x="940" y="140" width="860" height="560" rx="20" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                <rect x="940" y="140" width="860" height="68" rx="20" fill="#13233a" />
+                <rect x="940" y="186" width="860" height="22" fill="#13233a" />
+                <text id="s6-title" x="980" y="188" font-family="Montserrat, sans-serif" font-weight="700" font-size="32" fill="#f6f8fa">Halvaren Therapeutics</text>
+                <text x="980" y="262" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70">Rash reports by week</text>
+                <line x1="990" y1="600" x2="1520" y2="600" stroke="#cfd8e3" stroke-width="6" stroke-linecap="round" />
+                <line x1="990" y1="440" x2="1520" y2="440" stroke="#eef2f6" stroke-width="4" />
+                <line x1="990" y1="520" x2="1520" y2="520" stroke="#eef2f6" stroke-width="4" />
+                <line x1="990" y1="360" x2="1520" y2="360" stroke="#eef2f6" stroke-width="4" />
+                <g id="s6-bars" fill="#0e7c7b" stroke="#13233a" stroke-width="4">
+                  <rect id="s6-bar0" x="1020" y="530" width="60" height="70" rx="6" />
+                  <rect id="s6-bar1" x="1110" y="500" width="60" height="100" rx="6" />
+                  <rect id="s6-bar2" x="1200" y="460" width="60" height="140" rx="6" />
+                  <rect id="s6-bar3" x="1290" y="430" width="60" height="170" rx="6" />
+                  <rect id="s6-bar4" x="1380" y="385" width="60" height="215" rx="6" />
+                  <rect id="s6-bar5" x="1470" y="340" width="60" height="260" rx="6" />
+                </g>
+                <g font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70" text-anchor="middle">
+                  <text x="1050" y="646">W40</text><text x="1140" y="646">W41</text><text x="1230" y="646">W42</text>
+                  <text x="1320" y="646">W43</text><text x="1410" y="646">W44</text><text x="1500" y="646">W45</text>
+                </g>
+                <path id="s6-trend" d="M1050 506 C1170 500 1330 440 1500 316" fill="none" stroke="#13233a" stroke-width="8" stroke-linecap="round" stroke-dasharray="700" stroke-dashoffset="700" />
+                <!-- cohort tiles -->
+                <g id="s6-tiles">
+                  <g id="s6-tile0">
+                    <rect x="1560" y="250" width="210" height="116" rx="18" fill="#fbf0cf" stroke="#13233a" stroke-width="5" />
+                    <text x="1665" y="292" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70">Cohort A</text>
+                    <text x="1665" y="344" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="46" fill="#13233a">23</text>
+                  </g>
+                  <g id="s6-tile1">
+                    <rect x="1560" y="388" width="210" height="116" rx="18" fill="#fbf0cf" stroke="#13233a" stroke-width="5" />
+                    <text x="1665" y="430" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70">Cohort B</text>
+                    <text x="1665" y="482" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="46" fill="#13233a">31</text>
+                  </g>
+                  <g id="s6-tile2">
+                    <g id="s6-tile2open">
+                      <rect x="1560" y="526" width="210" height="130" rx="18" fill="#fbf0cf" stroke="#13233a" stroke-width="5" />
+                      <text x="1665" y="570" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70">Cohort C</text>
+                      <text x="1665" y="626" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="46" fill="#13233a">3</text>
+                    </g>
+                    <g id="s6-tile2hidden">
+                      <rect x="1560" y="526" width="210" height="130" rx="18" fill="#e3e9f0" stroke="#4a5a70" stroke-width="5" stroke-dasharray="14 10" />
+                      <text x="1665" y="580" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="30" fill="#4a5a70">Under 5</text>
+                      <text x="1665" y="622" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="30" fill="#4a5a70">hidden</text>
+                    </g>
+                  </g>
+                </g>
+              </g>
+              <!-- desk for Dr. Lee -->
+            </svg>
+          </div>
+          <div id="s6-mid" class="s6-layer">
+            <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+              <!-- Dr. Lee, watching the dashboard -->
+              <g id="s6-lTorso">
+                <rect x="500" y="440" width="200" height="300" rx="56" fill="#2b3a52" stroke="#13233a" stroke-width="6" />
+                <rect x="580" y="418" width="40" height="44" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+                <polygon points="570,446 600,500 630,446" fill="#f6f8fa" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                <line x1="600" y1="500" x2="600" y2="740" stroke="#13233a" stroke-width="4" opacity="0.5" />
+              </g>
+              <g id="s6-lHead">
+                <circle cx="600" cy="352" r="70" fill="#e3b896" stroke="#13233a" stroke-width="6" />
+                <path d="M530 346 Q520 270 600 266 Q680 270 670 346 Q652 304 600 306 Q548 304 530 346 Z" fill="#3a2a22" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                <circle cx="600" cy="262" r="26" fill="#3a2a22" stroke="#13233a" stroke-width="5" />
+                <circle id="s6-lEyeL" cx="582" cy="353" r="4.5" fill="#13233a" />
+                <circle id="s6-lEyeR" cx="618" cy="353" r="4.5" fill="#13233a" />
+                <path id="s6-lMouth" d="M586 388 Q600 384 614 388" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                <path id="s6-lSmile" d="M582 380 Q600 400 618 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+              </g>
+              <rect x="350" y="728" width="560" height="170" fill="#c8b184" stroke="#13233a" stroke-width="5" />
+              <rect x="330" y="700" width="600" height="30" rx="7" fill="#d8c39a" stroke="#13233a" stroke-width="6" />
+              <rect x="712" y="608" width="130" height="84" rx="9" fill="#cfd8e3" stroke="#13233a" stroke-width="5" />
+              <rect x="696" y="690" width="162" height="12" rx="5" fill="#cfd8e3" stroke="#13233a" stroke-width="4" />
+              <path d="M514 484 Q496 590 548 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+              <path d="M514 484 Q496 590 548 688" stroke="#2b3a52" stroke-width="38" stroke-linecap="round" fill="none" />
+              <path d="M686 484 Q704 590 650 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+              <path d="M686 484 Q704 590 650 688" stroke="#2b3a52" stroke-width="38" stroke-linecap="round" fill="none" />
+              <circle cx="552" cy="694" r="22" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+              <circle cx="646" cy="694" r="22" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+
+              <!-- the coded record arrives from the phone -->
+              <g id="s6-pkt">
+                <rect x="-60" y="-44" width="120" height="88" rx="16" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                <text x="0" y="14" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="44" fill="#0e7c7b">{ }</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div id="s6-cover" class="s6-layer"></div>
+        <div id="s6-tag"><span class="s6-dot"></span><span class="s6-name">Patterns, not people</span></div>
+        <audio id="s6-narration" src="assets/audio/s6-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s6-narration
+          const N = window.NARRATION_S6.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 6.1;
+          if (L + window.NARRATION_S6.duration > SCENE_LEN) {
+            console.warn("scene 6 narration is longer than the scene: raise its data-duration in index.html");
+          }
+
+          const cam = (px, py, s) => ({ x: 960 - s * px, y: 540 - s * py, scale: s });
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s6-cam", { transformOrigin: "0 0", ...cam(960, 540, 1.0) });
+          tl.to("#s6-cam", { ...cam(1020, 520, 1.05), duration: SCENE_LEN - 0.4, ease: "sine.inOut" }, 0.2);
+          tl.fromTo("#s6-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          // breathing and blinks
+          gsap.set("#s6-lTorso", { svgOrigin: "600 740" });
+          tl.fromTo("#s6-lTorso", { scaleY: 1 }, { scaleY: 1.012, duration: 1.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+          gsap.set(["#s6-lEyeL", "#s6-lEyeR"], { svgOrigin: "600 353" });
+          tl.to(["#s6-lEyeL", "#s6-lEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 2.6);
+          gsap.set("#s6-lHead", { svgOrigin: "600 430" });
+          gsap.set("#s6-lSmile", { opacity: 0 });
+
+          // "The company sees patterns, never people.": the coded record flies in, the dashboard lights up, bars grow week by week
+          gsap.set("#s6-dash", { svgOrigin: "1370 420", opacity: 0, y: 30 });
+          tl.to("#s6-dash", { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.25);
+          gsap.set("#s6-pkt", { x: 780, y: 250, scale: 1, opacity: 0 });
+          tl.to("#s6-pkt", { opacity: 1, duration: 0.2 }, t(0) - 0.1);
+          tl.to("#s6-pkt", { x: 1360, duration: 0.8, ease: "power2.inOut" }, t(0) - 0.1);
+          tl.to("#s6-pkt", { y: 190, duration: 0.4, ease: "power2.out", yoyo: true, repeat: 1 }, t(0) - 0.1);
+          tl.to("#s6-pkt", { scale: 0.3, opacity: 0, duration: 0.25, ease: "power2.in" }, t(0) + 0.65);
+          gsap.set("#s6-title", { opacity: 1 });
+          tl.fromTo("#s6-title", { x: 0 }, { x: 6, duration: 0.08, yoyo: true, repeat: 3, ease: "none", immediateRender: false }, t(0) + 0.85);
+          for (let i = 0; i < 6; i++) {
+            const y0 = [530, 500, 460, 430, 385, 340][i], h0 = 600 - y0, cx = 1050 + i * 90;
+            gsap.set("#s6-bar" + i, { svgOrigin: cx + " 600", scaleY: 0 });
+            tl.to("#s6-bar" + i, { scaleY: 1, duration: 0.4, ease: "back.out(1.3)" }, t(0) + 0.9 + i * 0.25);
+          }
+          tl.to("#s6-trend", { strokeDashoffset: 0, duration: 1.1, ease: "power2.inOut" }, t(0) + 1.6);
+          gsap.set(["#s6-tile0", "#s6-tile1", "#s6-tile2"], { opacity: 0, x: 24 });
+          tl.to("#s6-tile0", { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, t(0) + 1.4);
+          tl.to("#s6-tile1", { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, t(0) + 1.6);
+          tl.to("#s6-tile2", { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, t(0) + 1.8);
+          gsap.set("#s6-tile2hidden", { opacity: 0 });
+
+          // "Groups under five are hidden.": the small cohort greys out
+          tl.to("#s6-tile2open", { opacity: 0, duration: 0.35 }, t(1) + 0.55);
+          gsap.set("#s6-tile2hidden", { svgOrigin: "1665 590", scale: 0.9 });
+          tl.to("#s6-tile2hidden", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.6)" }, t(1) + 0.55);
+
+          // Dr. Lee nods and smiles
+          const nod = e(1) - 0.5;
+          tl.fromTo("#s6-lHead", { y: 0 }, { y: 9, duration: 0.25, ease: "power2.inOut", yoyo: true, repeat: 3, immediateRender: false }, nod - 0.4);
+          tl.to("#s6-lMouth", { opacity: 0, duration: 0.15 }, nod);
+          tl.to("#s6-lSmile", { opacity: 1, duration: 0.3 }, nod);
+
+          tl.fromTo("#s6-tag", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: "back.out(1.5)" }, t(0) + 0.1);
+
+          window.__timelines["scene-6"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

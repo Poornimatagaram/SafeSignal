@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-1-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #e9eff4; }
+        #scene-1-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s1-layer { position: absolute; inset: 0; }
+        .s1-layer svg { width: 100%; height: 100%; display: block; }
+        #s1-back { left: -400px; right: -400px; }
+        #s1-fg { filter: blur(5px); }
+        #s1-cover { background: #f6f8fa; }
+        #s1-tag {
+          position: absolute; left: 120px; top: 108px; display: flex; align-items: center; gap: 22px;
+          padding: 22px 42px 22px 32px; background: #fff; border: 4px solid #13233a; border-radius: 22px;
+          box-shadow: 8px 10px 0 rgba(19, 35, 58, 0.18);
+        }
+        #s1-tag .s1-dot { display: block; width: 26px; height: 26px; border-radius: 50%; background: #0e7c7b; }
+        #s1-tag .s1-name { display: block; font-size: 60px; font-weight: 700; letter-spacing: -0.01em; color: #13233a; line-height: 1; }
+      </style>
+      <div id="scene-1-root" data-composition-id="scene-1" data-width="1920" data-height="1080">
+        <div id="s1-cam" class="s1-layer">
+          <div id="s1-back" class="s1-layer">
+            <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <clipPath id="s1-winClip"><rect x="216" y="266" width="388" height="348" /></clipPath>
+              </defs>
+              <rect x="-400" y="-400" width="2720" height="1200" fill="#e9eff4" />
+              <rect id="s1-warm" x="-400" y="-400" width="2720" height="1200" fill="#fbf0cf" />
+              <rect x="-400" y="800" width="2720" height="280" fill="#dde5ec" />
+              <rect x="-400" y="792" width="2720" height="14" fill="#cfd8e3" />
+              <ellipse cx="960" cy="880" rx="900" ry="40" fill="#13233a" opacity="0.10" />
+              <!-- window with the sunrise -->
+              <g transform="translate(430 -40)">
+              <rect x="200" y="250" width="420" height="380" rx="10" fill="#cfd8e3" stroke="#13233a" stroke-width="6" />
+              <g clip-path="url(#s1-winClip)">
+                <rect x="216" y="266" width="388" height="348" fill="#bcc9d8" />
+                <rect id="s1-sky" x="216" y="266" width="388" height="348" fill="#ffe3a0" />
+                <circle id="s1-sun" cx="410" cy="560" r="96" fill="#fff4cf" />
+                <rect x="216" y="560" width="388" height="54" fill="#9fb3c4" />
+              </g>
+              <line x1="410" y1="266" x2="410" y2="614" stroke="#13233a" stroke-width="6" />
+              <line x1="216" y1="440" x2="604" y2="440" stroke="#13233a" stroke-width="6" />
+              <rect x="186" y="626" width="448" height="22" rx="8" fill="#d8c39a" stroke="#13233a" stroke-width="5" />
+              </g>
+              <!-- wall clock -->
+              <g id="s1-clock">
+                <circle cx="1500" cy="250" r="104" fill="#ffffff" stroke="#13233a" stroke-width="7" />
+                <g stroke="#13233a" stroke-width="5" stroke-linecap="round">
+                  <line x1="1500" y1="160" x2="1500" y2="178" /><line x1="1500" y1="322" x2="1500" y2="340" />
+                  <line x1="1410" y1="250" x2="1428" y2="250" /><line x1="1572" y1="250" x2="1590" y2="250" />
+                </g>
+                <line id="s1-hourHand" x1="1500" y1="250" x2="1500" y2="196" stroke="#13233a" stroke-width="9" stroke-linecap="round" />
+                <line id="s1-minHand" x1="1500" y1="250" x2="1500" y2="172" stroke="#0e7c7b" stroke-width="6" stroke-linecap="round" />
+                <circle cx="1500" cy="250" r="9" fill="#13233a" />
+              </g>
+              <!-- bed -->
+              <rect x="130" y="420" width="70" height="420" rx="20" fill="#b89f72" stroke="#13233a" stroke-width="6" />
+              <rect x="180" y="800" width="740" height="40" fill="#8c7650" stroke="#13233a" stroke-width="5" />
+            </svg>
+          </div>
+          <div id="s1-mid" class="s1-layer">
+            <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+              <!-- pillow -->
+              <rect x="360" y="440" width="280" height="190" rx="60" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+              <!-- Walter, sitting up in bed -->
+              <g id="s1-wTorso">
+                <rect x="400" y="462" width="200" height="290" rx="64" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+                <line x1="500" y1="504" x2="500" y2="740" stroke="#0a5e5d" stroke-width="5" />
+                <circle cx="518" cy="560" r="7" fill="#0a5e5d" />
+                <circle cx="518" cy="620" r="7" fill="#0a5e5d" />
+                <rect x="480" y="434" width="40" height="42" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                <polygon points="466,456 500,508 534,456" fill="#ffffff" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+              </g>
+              <g id="s1-wHead">
+                <circle cx="500" cy="345" r="76" fill="#f2d6c0" stroke="#13233a" stroke-width="6" />
+                <path d="M426 330 Q420 270 470 262 Q500 254 530 262 Q580 270 574 330 Q556 302 536 308 Q518 292 500 306 Q482 292 464 308 Q444 302 426 330 Z" fill="#c9d2dc" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                <circle cx="472" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                <circle cx="528" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                <line x1="494" y1="346" x2="506" y2="346" stroke="#13233a" stroke-width="4" />
+                <circle id="s1-wEyeL" cx="474" cy="348" r="5" fill="#13233a" />
+                <circle id="s1-wEyeR" cx="530" cy="348" r="5" fill="#13233a" />
+                <path d="M456 326 Q472 322 488 328 M512 328 Q528 322 544 326" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                <path id="s1-mouthFlat" d="M486 388 Q500 384 514 388" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                <path id="s1-mouthSmile" d="M476 380 Q500 408 524 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                <g id="s1-cheeks"><circle cx="458" cy="378" r="9" fill="#e9a08c" opacity="0.55" /><circle cx="542" cy="378" r="9" fill="#e9a08c" opacity="0.55" /></g>
+              </g>
+              <!-- blanket over his lap -->
+              <rect x="190" y="640" width="720" height="170" rx="34" fill="#bfe0df" stroke="#13233a" stroke-width="6" />
+              <path d="M214 700 H886 M214 750 H886" stroke="#0e7c7b" stroke-width="6" stroke-linecap="round" opacity="0.55" />
+              <!-- arms resting on the blanket -->
+              <path d="M414 504 Q392 590 436 650" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+              <path d="M414 504 Q392 590 436 650" stroke="#0e7c7b" stroke-width="38" stroke-linecap="round" fill="none" />
+              <circle cx="440" cy="660" r="22" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+              <path d="M586 504 Q608 590 564 650" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+              <path d="M586 504 Q608 590 564 650" stroke="#0e7c7b" stroke-width="38" stroke-linecap="round" fill="none" />
+              <circle cx="560" cy="660" r="22" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+              <!-- bedside table and phone -->
+              <rect x="1030" y="740" width="230" height="130" fill="#c8b184" stroke="#13233a" stroke-width="5" />
+              <rect x="1010" y="716" width="270" height="28" rx="7" fill="#d8c39a" stroke="#13233a" stroke-width="6" />
+              <ellipse id="s1-glow" cx="1145" cy="610" rx="170" ry="150" fill="#0e7c7b" opacity="0" />
+              <g id="s1-phone">
+                <rect x="1070" y="530" width="150" height="186" rx="22" fill="#13233a" />
+                <rect id="s1-screen" x="1080" y="542" width="130" height="162" rx="14" fill="#2b3a52" />
+                <g id="s1-screenOn">
+                  <rect x="1080" y="542" width="130" height="162" rx="14" fill="#f6f8fa" />
+                  <text x="1145" y="610" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="40" fill="#13233a">9:00</text>
+                  <circle cx="1145" cy="662" r="22" fill="#0e7c7b" />
+                  <path d="M1134 662 L1142 671 L1157 653" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+                </g>
+              </g>
+              <!-- notification card -->
+              <g id="s1-note">
+                <polygon points="1262,520 1232,560 1262,580" fill="#ffffff" stroke="#13233a" stroke-width="6" stroke-linejoin="round" />
+                <rect x="1260" y="440" width="580" height="190" rx="28" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                <rect x="1264" y="526" width="8" height="40" fill="#ffffff" />
+                <circle cx="1322" cy="535" r="36" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                <path d="M1306 536 L1318 549 L1340 521" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+                <text x="1382" y="522" font-family="Montserrat, sans-serif" font-weight="700" font-size="32" fill="#13233a">Good morning, Walter.</text>
+                <text x="1382" y="574" font-family="Montserrat, sans-serif" font-weight="600" font-size="28" fill="#4a5a70">Time for today's check-in.</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div id="s1-fg" class="s1-layer">
+          <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <g fill="#0a5e5d">
+              <path d="M-40 1100 C20 900 120 780 260 720 C240 840 180 980 90 1100 Z" />
+              <path d="M40 1100 C140 960 280 900 420 900 C340 980 250 1060 190 1100 Z" opacity="0.92" />
+              <path d="M-40 1100 C-30 960 -10 860 40 780 C100 880 110 1000 90 1100 Z" fill="#0e7c7b" />
+            </g>
+          </svg>
+        </div>
+        <div id="s1-cover" class="s1-layer"></div>
+        <div id="s1-tag"><span class="s1-dot"></span><span class="s1-name">9:00 AM</span></div>
+        <audio id="s1-narration" src="assets/audio/s1-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s1-narration
+          const N = window.NARRATION_S1.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 6.2;
+          if (L + window.NARRATION_S1.duration > SCENE_LEN) {
+            console.warn("scene 1 narration is longer than the scene: raise its data-duration in index.html");
+          }
+
+          const cam = (px, py, s) => ({ x: 960 - s * px, y: 540 - s * py, scale: s });
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s1-cam", { transformOrigin: "0 0", ...cam(960, 540, 1.0) });
+          tl.to("#s1-cam", { ...cam(1000, 520, 1.06), duration: SCENE_LEN - 0.4, ease: "sine.inOut" }, 0.2);
+          tl.fromTo("#s1-fg", { x: 0 }, { x: -40, duration: SCENE_LEN, ease: "none" }, 0);
+          tl.fromTo("#s1-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          // sunrise: the room starts cool and dim, the sun climbs, the wall warms
+          gsap.set("#s1-warm", { opacity: 0 });
+          tl.to("#s1-warm", { opacity: 1, duration: 2.2, ease: "power1.inOut" }, 0.2);
+          gsap.set("#s1-sky", { opacity: 0 });
+          tl.to("#s1-sky", { opacity: 1, duration: 2.0, ease: "power1.inOut" }, 0.2);
+          tl.fromTo("#s1-sun", { attr: { cy: 700 } }, { attr: { cy: 500 }, duration: 2.2, ease: "power1.out" }, 0.2);
+
+          // "Nine in the morning.": the clock hands sweep to 9:00
+          gsap.set("#s1-minHand", { svgOrigin: "1500 250", rotation: -70 });
+          gsap.set("#s1-hourHand", { svgOrigin: "1500 250", rotation: 265 });
+          tl.to("#s1-minHand", { rotation: 0, duration: e(0) - t(0) + 0.1, ease: "power2.inOut" }, t(0));
+          tl.to("#s1-hourHand", { rotation: 270, duration: e(0) - t(0) + 0.1, ease: "power2.inOut" }, t(0));
+
+          // breathing, blinks, a slow turn of the head
+          gsap.set("#s1-wTorso", { svgOrigin: "500 750" });
+          tl.fromTo("#s1-wTorso", { scaleY: 1 }, { scaleY: 1.012, duration: 1.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+          gsap.set(["#s1-wEyeL", "#s1-wEyeR"], { svgOrigin: "500 348" });
+          tl.to(["#s1-wEyeL", "#s1-wEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 1.8);
+          gsap.set("#s1-wHead", { svgOrigin: "500 430" });
+          tl.fromTo("#s1-wHead", { rotation: -1 }, { rotation: 1, duration: 3, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0);
+
+          // "Walter's phone says it's time...": the screen lights, the phone buzzes, the card pops out
+          gsap.set("#s1-screenOn", { opacity: 0 });
+          gsap.set("#s1-phone", { svgOrigin: "1145 716" });
+          tl.to("#s1-screenOn", { opacity: 1, duration: 0.2 }, t(1));
+          tl.to("#s1-glow", { opacity: 0.28, duration: 0.5, ease: "power2.out" }, t(1));
+          tl.fromTo("#s1-phone", { rotation: -2.5 }, { rotation: 2.5, duration: 0.07, yoyo: true, repeat: 5, ease: "none", immediateRender: false }, t(1));
+          tl.to("#s1-phone", { rotation: 0, duration: 0.1 }, t(1) + 0.5);
+          gsap.set("#s1-note", { svgOrigin: "1232 560", scale: 0.4, opacity: 0 });
+          tl.to("#s1-note", { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.6)" }, t(1) + 0.15);
+
+          // Walter notices and smiles
+          gsap.set(["#s1-mouthSmile", "#s1-cheeks"], { opacity: 0 });
+          tl.to("#s1-mouthFlat", { opacity: 0, duration: 0.15 }, t(1) + 1.6);
+          tl.to(["#s1-mouthSmile", "#s1-cheeks"], { opacity: 1, duration: 0.3 }, t(1) + 1.6);
+
+          tl.fromTo("#s1-tag", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: "back.out(1.5)" }, t(0) + 0.1);
+
+          window.__timelines["scene-1"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

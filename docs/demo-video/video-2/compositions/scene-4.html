@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-4-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #e9eff4; }
+        #scene-4-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s4-layer { position: absolute; inset: 0; }
+        .s4-layer svg { width: 100%; height: 100%; display: block; }
+        #s4-back { left: -400px; right: -400px; }
+        #s4-cover { background: #f6f8fa; }
+        #s4-tag {
+          position: absolute; left: 120px; top: 108px; display: flex; align-items: center; gap: 22px;
+          padding: 22px 42px 22px 32px; background: #fff; border: 4px solid #13233a; border-radius: 22px;
+          box-shadow: 8px 10px 0 rgba(19, 35, 58, 0.18);
+        }
+        #s4-tag .s4-dot { display: block; width: 26px; height: 26px; border-radius: 50%; background: #0e7c7b; }
+        #s4-tag .s4-name { display: block; font-size: 60px; font-weight: 700; letter-spacing: -0.01em; color: #13233a; line-height: 1; }
+      </style>
+      <div id="scene-4-root" data-composition-id="scene-4" data-width="1920" data-height="1080">
+        <div id="s4-cam" class="s4-layer">
+          <div id="s4-back" class="s4-layer">
+            <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+              <rect x="-400" y="-400" width="2720" height="1200" fill="#fbf0cf" />
+              <ellipse cx="1440" cy="520" rx="640" ry="520" fill="#fff4cf" opacity="0.75" />
+              <rect x="-400" y="800" width="2720" height="280" fill="#dde5ec" />
+              <rect x="-400" y="792" width="2720" height="14" fill="#cfd8e3" />
+              <ellipse cx="480" cy="880" rx="420" ry="38" fill="#13233a" opacity="0.13" />
+            </svg>
+          </div>
+          <div id="s4-mid" class="s4-layer">
+            <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+                            <!-- LEFT: Walter, seated, speaking -->
+              <g id="s4-walter">
+                <g transform="translate(480 800) scale(1.15) translate(-500 -800)">
+                  <rect x="340" y="728" width="300" height="140" fill="#c8b184" stroke="#13233a" stroke-width="5" />
+                  <g id="s4-wTorso">
+                    <rect x="400" y="462" width="200" height="290" rx="64" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+                    <line x1="500" y1="504" x2="500" y2="740" stroke="#0a5e5d" stroke-width="5" />
+                    <circle cx="518" cy="560" r="7" fill="#0a5e5d" />
+                    <circle cx="518" cy="620" r="7" fill="#0a5e5d" />
+                    <rect x="480" y="434" width="40" height="42" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                    <polygon points="466,456 500,508 534,456" fill="#ffffff" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  </g>
+                  <g id="s4-wHead">
+                    <circle cx="500" cy="345" r="76" fill="#f2d6c0" stroke="#13233a" stroke-width="6" />
+                    <path d="M426 330 Q420 270 470 262 Q500 254 530 262 Q580 270 574 330 Q556 302 536 308 Q518 292 500 306 Q482 292 464 308 Q444 302 426 330 Z" fill="#c9d2dc" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                    <circle cx="472" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                    <circle cx="528" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                    <line x1="494" y1="346" x2="506" y2="346" stroke="#13233a" stroke-width="4" />
+                    <circle id="s4-wEyeL" cx="474" cy="348" r="5" fill="#13233a" />
+                    <circle id="s4-wEyeR" cx="530" cy="348" r="5" fill="#13233a" />
+                    <path d="M456 326 Q472 322 488 328 M512 328 Q528 322 544 326" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <path id="s4-mouthFlat" d="M486 388 Q500 384 514 388" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <path id="s4-mouthSmile" d="M476 380 Q500 408 524 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                  </g>
+                  <!-- arms resting -->
+                  <path d="M414 504 Q392 600 440 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+                  <path d="M414 504 Q392 600 440 688" stroke="#0e7c7b" stroke-width="38" stroke-linecap="round" fill="none" />
+                  <circle cx="444" cy="694" r="22" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                  <path d="M586 504 Q608 600 560 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+                  <path d="M586 504 Q608 600 560 688" stroke="#0e7c7b" stroke-width="38" stroke-linecap="round" fill="none" />
+                  <circle cx="556" cy="694" r="22" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                </g>
+              </g>
+
+              <!-- RIGHT: his phone, large -->
+              <g id="s4-phoneWrap">
+                <ellipse cx="1440" cy="960" rx="300" ry="26" fill="#13233a" opacity="0.14" />
+                <rect id="s4-outline" x="1156" y="146" width="568" height="812" rx="72" fill="none" stroke="#0e7c7b" stroke-width="6" stroke-dasharray="16 14" opacity="0" />
+                <rect x="1180" y="170" width="520" height="770" rx="56" fill="#13233a" />
+                <rect x="1194" y="184" width="492" height="742" rx="44" fill="#f6f8fa" />
+                <text x="1440" y="248" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#4a5a70">Daily check-in</text>
+                <!-- question card -->
+                <g id="s4-q">
+                  <rect x="1220" y="276" width="440" height="148" rx="26" fill="#0e7c7b" />
+                  <text x="1250" y="338" font-family="Montserrat, sans-serif" font-weight="700" font-size="32" fill="#ffffff">Have you noticed any</text>
+                  <text x="1250" y="386" font-family="Montserrat, sans-serif" font-weight="700" font-size="32" fill="#ffffff">new symptoms?</text>
+                </g>
+                <!-- transcript -->
+                <g id="s4-tr">
+                <rect x="1220" y="446" width="440" height="244" rx="22" fill="#ffffff" stroke="#cfd8e3" stroke-width="4" />
+                <g font-family="Montserrat, sans-serif" font-weight="600" font-size="30" fill="#13233a">
+                  <text x="1244" y="506">A rash on my arm since</text>
+                  <text x="1244" y="554">Tuesday. My daughter</text>
+                  <text x="1244" y="602">Anna drove me to</text>
+                  <text x="1244" y="650">Oakfield to see it.</text>
+                </g>
+                <rect id="s4-blockA" x="1240" y="568" width="80" height="38" rx="8" fill="#13233a" />
+                <rect id="s4-blockB" x="1240" y="616" width="130" height="38" rx="8" fill="#13233a" />
+                <rect id="s4-sweep" x="1222" y="448" width="436" height="8" rx="4" fill="#0e7c7b" opacity="0" />
+                </g>
+                <!-- summary and Share -->
+                <g id="s4-sum">
+                  <rect x="1220" y="544" width="440" height="198" rx="26" fill="#fbf0cf" stroke="#0e7c7b" stroke-width="5" />
+                  <text x="1246" y="592" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#0e7c7b">What would be shared</text>
+                  <text x="1246" y="650" font-family="Montserrat, sans-serif" font-weight="700" font-size="34" fill="#13233a">Rash, moderate,</text>
+                  <text x="1246" y="700" font-family="Montserrat, sans-serif" font-weight="700" font-size="34" fill="#13233a">1-3 days ago</text>
+                </g>
+                <g id="s4-share">
+                  <rect id="s4-shareBtn" x="1220" y="768" width="440" height="100" rx="32" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                  <text x="1440" y="834" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="44" fill="#ffffff">Share</text>
+                  <circle id="s4-ripple" cx="1440" cy="818" r="24" fill="none" stroke="#ffffff" stroke-width="6" opacity="0" />
+                </g>
+                <g id="s4-ok"><circle cx="1650" cy="768" r="34" fill="#ffffff" stroke="#13233a" stroke-width="5" /><path d="M1634 769 L1646 782 L1668 754" fill="none" stroke="#0e7c7b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" /></g>
+                <!-- lock chip -->
+                <g id="s4-lockChip">
+                  <rect x="1220" y="724" width="440" height="112" rx="26" fill="#fbf0cf" stroke="#13233a" stroke-width="5" />
+                  <g id="s4-lock">
+                    <path id="s4-shackle" d="M1262 770 V756 Q1262 738 1280 738 Q1298 738 1298 756 V770" fill="none" stroke="#13233a" stroke-width="7" stroke-linecap="round" />
+                    <rect x="1248" y="768" width="64" height="48" rx="10" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                    <circle cx="1280" cy="790" r="6" fill="#ffffff" />
+                  </g>
+                  <text x="1340" y="790" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#13233a">Stays on</text>
+                  <text x="1340" y="826" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#13233a">this phone</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div id="s4-cover" class="s4-layer"></div>
+        <div id="s4-tag"><span class="s4-dot"></span><span class="s4-name">He approves every send</span></div>
+        <audio id="s4-narration" src="assets/audio/s4-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s4-narration
+          const N = window.NARRATION_S4.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 8.0;
+          if (L + window.NARRATION_S4.duration > SCENE_LEN) {
+            console.warn("scene 3 narration is longer than the scene: raise its data-duration in index.html");
+          }
+
+          const cam = (px, py, s) => ({ x: 960 - s * px, y: 540 - s * py, scale: s });
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s4-cam", { transformOrigin: "0 0", ...cam(1120, 470, 1.06) });
+          tl.to("#s4-cam", { ...cam(1120, 470, 1.06), duration: SCENE_LEN - 0.4, ease: "none" }, 0.2);
+          tl.fromTo("#s4-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          // breathing and blinks
+          gsap.set("#s4-wTorso", { svgOrigin: "480 743" });
+          tl.fromTo("#s4-wTorso", { scaleY: 1 }, { scaleY: 1.012, duration: 1.5, ease: "sine.inOut", yoyo: true, repeat: 4 }, 0);
+          gsap.set(["#s4-wEyeL", "#s4-wEyeR"], { svgOrigin: "480 280" });
+          tl.to(["#s4-wEyeL", "#s4-wEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 2.2);
+          tl.to(["#s4-wEyeL", "#s4-wEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 5.0);
+
+          // the scene opens on the end of scene 3: question card, transcript, padlock chip, dashed outline
+          gsap.set("#s4-mouthSmile", { opacity: 0 });
+          gsap.set("#s4-outline", { opacity: 0.9 });
+          gsap.set("#s4-walter", { opacity: 1 });
+          gsap.set(["#s4-sum", "#s4-share", "#s4-ok"], { opacity: 0 });
+          gsap.set(["#s4-blockA", "#s4-blockB"], { opacity: 0 });
+          gsap.set("#s4-lockChip", { opacity: 1 });
+
+          // "Names and details are stripped out on the device.": the card steps aside, a scan passes over the words, two words become blocks
+          tl.to("#s4-q", { opacity: 0, y: -30, duration: 0.35, ease: "power2.in" }, t(0) + 0.1);
+          tl.to("#s4-lockChip", { opacity: 0, y: 30, duration: 0.35, ease: "power2.in" }, t(0) + 0.1);
+          tl.to("#s4-tr", { y: -170, duration: 0.6, ease: "power2.inOut" }, t(0) + 0.35);
+          gsap.set("#s4-sweep", { y: 0 });
+          tl.fromTo("#s4-sweep", { opacity: 0, y: 0 }, { opacity: 0.9, y: 232, duration: 0.9, ease: "sine.inOut", immediateRender: false }, t(0) + 1.1);
+          tl.to("#s4-sweep", { opacity: 0, duration: 0.2 }, t(0) + 2.0);
+          gsap.set("#s4-blockA", { svgOrigin: "1240 587" });
+          gsap.set("#s4-blockB", { svgOrigin: "1240 635" });
+          tl.fromTo("#s4-blockA", { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.3, ease: "power3.out", immediateRender: false }, t(0) + 1.7);
+          tl.fromTo("#s4-blockB", { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.3, ease: "power3.out", immediateRender: false }, t(0) + 2.05);
+          gsap.set(["#s4-blockA", "#s4-blockB"], { scaleX: 0, opacity: 1 });
+
+          // "Walter reads what would be shared...": the plain-words summary and Share button appear; his eyes follow
+          gsap.set("#s4-sum", { svgOrigin: "1440 640", scale: 0.85 });
+          tl.to("#s4-sum", { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.5)" }, t(1) + 0.05);
+          gsap.set("#s4-share", { svgOrigin: "1440 818", scale: 0.9 });
+          tl.to("#s4-share", { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.5)" }, t(1) + 0.5);
+          tl.to(["#s4-wEyeL", "#s4-wEyeR"], { x: 5, duration: 0.3 }, t(1) + 0.1);
+
+          // "...and he approves it.": the tap, a check, the corner label, a smile
+          const tap = t(1) + 2.0;
+          tl.to("#s4-share", { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1, ease: "power2.out" }, tap);
+          gsap.set("#s4-ripple", { svgOrigin: "1440 818", scale: 0.5, opacity: 0 });
+          tl.fromTo("#s4-ripple", { scale: 0.5, opacity: 0.9 }, { scale: 3, opacity: 0, duration: 0.5, ease: "power2.out", immediateRender: false }, tap);
+          gsap.set("#s4-ok", { svgOrigin: "1650 768", scale: 0 });
+          tl.to("#s4-ok", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2.4)" }, tap + 0.1);
+          gsap.set("#s4-wHead", { svgOrigin: "480 430" });
+          tl.fromTo("#s4-wHead", { y: 0 }, { y: -9, duration: 0.25, ease: "power2.out", yoyo: true, repeat: 1, immediateRender: false }, tap + 0.1);
+          tl.to("#s4-mouthFlat", { opacity: 0, duration: 0.15 }, tap + 0.2);
+          tl.to("#s4-mouthSmile", { opacity: 1, duration: 0.3 }, tap + 0.2);
+          tl.fromTo("#s4-tag", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: "back.out(1.5)" }, tap - 0.2);
+
+          window.__timelines["scene-4"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>SafeSignal Video 2</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <script src="assets/audio/s1-narration.cues.js"></script>
+    <script src="assets/audio/s2-narration.cues.js"></script>
+    <script src="assets/audio/s3-narration.cues.js"></script>
+    <script src="assets/audio/s4-narration.cues.js"></script>
+    <script src="assets/audio/s5-narration.cues.js"></script>
+    <script src="assets/audio/s6-narration.cues.js"></script>
+    <script src="assets/audio/s7-narration.cues.js"></script>
+    <script src="assets/audio/s8-narration.cues.js"></script>
+    <script src="assets/audio/s9-narration.cues.js"></script>
+    <script src="assets/audio/s10-narration.cues.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #e9eff4; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <!-- Scene lengths follow the narration: scene 1 is 6.2 s, scene 2 is 4.4 s, scene 3 is 9.2 s, scene 4 is 8.0 s, scene 5 is 11.4 s, scene 6 is 6.1 s, scene 7 is 12.1 s, scene 8 is 3.6 s, scene 9 is 7.1 s, scene 10 is 5.0 s. Total 73.1 s. -->
+    <div id="root" data-composition-id="main" data-start="0" data-duration="73.1" data-width="1920" data-height="1080">
+      <div id="scene-1-host" data-composition-id="scene-1" data-composition-src="compositions/scene-1.html" data-start="0" data-duration="6.2" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-2-host" data-composition-id="scene-2" data-composition-src="compositions/scene-2.html" data-start="6.2" data-duration="4.4" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-3-host" data-composition-id="scene-3" data-composition-src="compositions/scene-3.html" data-start="10.6" data-duration="9.2" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-4-host" data-composition-id="scene-4" data-composition-src="compositions/scene-4.html" data-start="19.8" data-duration="8" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-5-host" data-composition-id="scene-5" data-composition-src="compositions/scene-5.html" data-start="27.8" data-duration="11.4" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-6-host" data-composition-id="scene-6" data-composition-src="compositions/scene-6.html" data-start="39.2" data-duration="6.1" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-7-host" data-composition-id="scene-7" data-composition-src="compositions/scene-7.html" data-start="45.3" data-duration="12.1" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-8-host" data-composition-id="scene-8" data-composition-src="compositions/scene-8.html" data-start="57.4" data-duration="3.6" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-9-host" data-composition-id="scene-9" data-composition-src="compositions/scene-9.html" data-start="61" data-duration="7.1" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="scene-10-host" data-composition-id="scene-10" data-composition-src="compositions/scene-10.html" data-start="68.1" data-duration="5" data-track-index="0" data-width="1920" data-height="1080"></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

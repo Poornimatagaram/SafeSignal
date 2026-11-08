@@ -1,0 +1,15 @@
+{
+  "voice": "heart_nicole",
+  "speed": 0.95,
+  "pause_scale": 1.0,
+  "split": "sentence",
+  "duration": 2.236,
+  "sentences": [
+    {
+      "i": 0,
+      "text": "Walter feels looked after.",
+      "start": 0.0,
+      "end": 1.636
+    }
+  ]
+}

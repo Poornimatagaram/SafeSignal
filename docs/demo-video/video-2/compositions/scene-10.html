@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-10-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #fbf0cf; }
+        #scene-10-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s10-layer { position: absolute; inset: 0; }
+        .s10-layer svg { width: 100%; height: 100%; display: block; }
+        #s10-cover { background: #f6f8fa; }
+      </style>
+      <div id="scene-10-root" data-composition-id="scene-10" data-width="1920" data-height="1080">
+        <div id="s10-cam" class="s10-layer">
+          <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <clipPath id="s10-clipW"><circle cx="0" cy="0" r="90" /></clipPath>
+              <clipPath id="s10-clipD"><circle cx="0" cy="0" r="90" /></clipPath>
+              <clipPath id="s10-clipL"><circle cx="0" cy="0" r="90" /></clipPath>
+            </defs>
+            <rect width="1920" height="1080" fill="#fbf0cf" />
+            <circle id="s10-sun" cx="960" cy="520" r="470" fill="#ffe9a8" opacity="0.85" />
+            <rect y="990" width="1920" height="90" fill="#f3e3b5" />
+            <!-- ring that joins the three people -->
+            <ellipse id="s10-ring" cx="960" cy="540" rx="620" ry="400" fill="none" stroke="#0e7c7b" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 18" opacity="0.7" />
+
+            <!-- Dr. Shah, upper left -->
+            <g id="s10-avD" transform="translate(423 340)">
+              <circle r="96" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+              <g clip-path="url(#s10-clipD)">
+                <g transform="translate(0 6) scale(0.8) translate(-600 -352)">
+                  <rect x="500" y="440" width="200" height="300" rx="56" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                  <rect x="580" y="418" width="40" height="44" fill="#d9a98a" stroke="#13233a" stroke-width="5" />
+                  <polygon points="570,446 600,506 630,446" fill="#0e7c7b" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <circle cx="600" cy="352" r="70" fill="#d9a98a" stroke="#13233a" stroke-width="6" />
+                  <path d="M532 342 Q526 282 600 272 Q674 282 668 342 Q648 310 600 312 Q552 310 532 342 Z" fill="#2b2f3a" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <rect x="566" y="340" width="30" height="24" rx="7" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                  <rect x="604" y="340" width="30" height="24" rx="7" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                  <line x1="596" y1="351" x2="604" y2="351" stroke="#13233a" stroke-width="4" />
+                  <circle cx="582" cy="353" r="4.5" fill="#13233a" /><circle cx="618" cy="353" r="4.5" fill="#13233a" />
+                  <path d="M578 380 Q600 408 622 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                </g>
+              </g>
+            </g>
+            <!-- Dr. Lee, upper right -->
+            <g id="s10-avL" transform="translate(1497 340)">
+              <circle r="96" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+              <g clip-path="url(#s10-clipL)">
+                <g transform="translate(0 6) scale(0.8) translate(-600 -352)">
+                  <rect x="500" y="440" width="200" height="300" rx="56" fill="#2b3a52" stroke="#13233a" stroke-width="6" />
+                  <rect x="580" y="418" width="40" height="44" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+                  <polygon points="570,446 600,500 630,446" fill="#f6f8fa" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <circle cx="600" cy="262" r="26" fill="#3a2a22" stroke="#13233a" stroke-width="5" />
+                  <circle cx="600" cy="352" r="70" fill="#e3b896" stroke="#13233a" stroke-width="6" />
+                  <path d="M530 346 Q520 270 600 266 Q680 270 670 346 Q652 304 600 306 Q548 304 530 346 Z" fill="#3a2a22" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <circle cx="582" cy="353" r="4.5" fill="#13233a" /><circle cx="618" cy="353" r="4.5" fill="#13233a" />
+                  <path d="M582 380 Q600 400 618 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                </g>
+              </g>
+            </g>
+            <!-- Walter, bottom centre -->
+            <g id="s10-avW" transform="translate(960 900)">
+              <circle r="96" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+              <g clip-path="url(#s10-clipW)">
+                <g transform="translate(0 6) scale(0.8) translate(-500 -345)">
+                  <rect x="400" y="462" width="200" height="400" rx="64" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                  <rect x="480" y="434" width="40" height="42" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                  <polygon points="466,456 500,508 534,456" fill="#ffffff" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <circle cx="500" cy="345" r="76" fill="#f2d6c0" stroke="#13233a" stroke-width="6" />
+                  <path d="M426 330 Q420 270 470 262 Q500 254 530 262 Q580 270 574 330 Q556 302 536 308 Q518 292 500 306 Q482 292 464 308 Q444 302 426 330 Z" fill="#c9d2dc" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <circle cx="472" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                  <circle cx="528" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                  <line x1="494" y1="346" x2="506" y2="346" stroke="#13233a" stroke-width="4" />
+                  <circle cx="474" cy="348" r="5" fill="#13233a" /><circle cx="530" cy="348" r="5" fill="#13233a" />
+                  <path d="M476 380 Q500 408 524 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                  <g><circle cx="458" cy="378" r="9" fill="#e9a08c" opacity="0.55" /><circle cx="542" cy="378" r="9" fill="#e9a08c" opacity="0.55" /></g>
+                </g>
+              </g>
+            </g>
+
+            <!-- title card -->
+            <g id="s10-mark">
+              <circle cx="960" cy="380" r="58" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+              <path id="s10-pulse" d="M928 382 L944 382 L953 354 L968 406 L977 382 L992 382" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+            </g>
+            <text id="s10-word" x="960" y="560" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="150" letter-spacing="-2" fill="#13233a">SafeSignal</text>
+            <text id="s10-line" x="960" y="650" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="600" font-size="50" fill="#0a5e5d">Someone is looking out for you.</text>
+          </svg>
+        </div>
+        <div id="s10-cover" class="s10-layer"></div>
+        <audio id="s10-narration" src="assets/audio/s10-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s10-narration
+          const N = window.NARRATION_S10.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 5.0;
+          if (L + window.NARRATION_S10.duration > SCENE_LEN) {
+            console.warn("scene 10 narration is longer than the scene: raise its data-duration in index.html");
+          }
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s10-cam", { transformOrigin: "50% 50%" });
+          tl.fromTo("#s10-cam", { scale: 1.0 }, { scale: 1.03, duration: SCENE_LEN, ease: "none" }, 0);
+          tl.fromTo("#s10-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          gsap.set("#s10-sun", { svgOrigin: "960 520", scale: 0.7, opacity: 0 });
+          tl.to("#s10-sun", { scale: 1, opacity: 0.85, duration: 1.6, ease: "power1.out" }, 0);
+
+          // "SafeSignal.": the mark pulses in, the name rises
+          gsap.set("#s10-mark", { svgOrigin: "960 380", scale: 0, opacity: 0 });
+          tl.to("#s10-mark", { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)" }, t(0));
+          const pulse = document.getElementById("s10-pulse");
+          const plen = pulse.getTotalLength();
+          gsap.set(pulse, { strokeDasharray: plen, strokeDashoffset: plen });
+          tl.to(pulse, { strokeDashoffset: 0, duration: 0.5, ease: "power1.inOut" }, t(0) + 0.25);
+          gsap.set("#s10-word", { y: 40, opacity: 0 });
+          tl.to("#s10-word", { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" }, t(0) + 0.05);
+
+          // the people who look out for him come in around it
+          [["#s10-avW", 960, 900], ["#s10-avD", 423, 340], ["#s10-avL", 1497, 340]].forEach(([id, x, y], i) => {
+            gsap.set(id, { svgOrigin: x + " " + y, scale: 0, opacity: 0 });
+            tl.to(id, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(1.8)" }, t(0) + 0.35 + i * 0.18);
+          });
+          // "Someone is looking out for you.": the line fades in and the ring draws round them
+          gsap.set("#s10-line", { y: 24, opacity: 0 });
+          tl.to("#s10-line", { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, t(1));
+          const ring = document.getElementById("s10-ring");
+          gsap.set(ring, { opacity: 0 });
+          tl.to(ring, { opacity: 0.7, duration: 0.8, ease: "power1.inOut" }, t(1) + 0.1);
+
+          window.__timelines["scene-10"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

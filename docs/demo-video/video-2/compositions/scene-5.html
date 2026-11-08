@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-5-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #e9eff4; }
+        #scene-5-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s5-layer { position: absolute; inset: 0; }
+        .s5-layer svg { width: 100%; height: 100%; display: block; }
+        #s5-back { left: -400px; right: -400px; }
+        #s5-cover { background: #f6f8fa; }
+      </style>
+      <div id="scene-5-root" data-composition-id="scene-5" data-width="1920" data-height="1080">
+        <div id="s5-cam" class="s5-layer">
+          <div id="s5-back" class="s5-layer">
+            <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+              <rect x="-400" y="-400" width="2720" height="1500" fill="#fbf0cf" />
+              <ellipse cx="960" cy="520" rx="900" ry="560" fill="#fff4cf" opacity="0.7" />
+            </svg>
+          </div>
+          <div id="s5-mid" class="s5-layer">
+            <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+              <defs><clipPath id="s5-rclip"><rect id="s5-rclipR" x="1000" y="640" width="600" height="0" /></clipPath></defs>
+              <!-- RIGHT: receipt, printed downwards from a slot under the card -->
+              <g clip-path="url(#s5-rclip)"><g id="s5-receipt" transform="translate(0 50)">
+                <path d="M1030 590 H1550 V900 L1524 916 L1498 900 L1472 916 L1446 900 L1420 916 L1394 900 L1368 916 L1342 900 L1316 916 L1290 900 L1264 916 L1238 900 L1212 916 L1186 900 L1160 916 L1134 900 L1108 916 L1082 900 L1056 916 L1030 900 Z" fill="#ffffff" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                <text x="1070" y="656" font-family="Montserrat, sans-serif" font-weight="800" font-size="36" fill="#13233a">Receipt</text>
+                <line x1="1070" y1="680" x2="1510" y2="680" stroke="#cfd8e3" stroke-width="4" stroke-dasharray="10 8" />
+                <text x="1070" y="734" font-family="Montserrat, sans-serif" font-weight="600" font-size="30" fill="#13233a">Sent: coded fields only</text>
+                <text x="1070" y="788" font-family="Montserrat, sans-serif" font-weight="600" font-size="30" fill="#4a5a70">Hash 0e98…ee66</text>
+                <g id="s5-rcheck"><circle cx="1488" cy="840" r="30" fill="#0e7c7b" stroke="#13233a" stroke-width="5" /><path d="M1474 841 L1484 852 L1503 828" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" /></g>
+                <text x="1070" y="852" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#0e7c7b">Matches company copy</text>
+              </g></g>
+
+              <!-- LEFT: his phone -->
+              <g id="s5-phoneWrap">
+                <ellipse cx="560" cy="950" rx="290" ry="24" fill="#13233a" opacity="0.14" />
+                <rect x="330" y="170" width="460" height="750" rx="54" fill="#13233a" />
+                <rect x="342" y="182" width="436" height="726" rx="44" fill="#f6f8fa" />
+                <text x="560" y="236" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70">Daily check-in</text>
+                <!-- what stays: the mic and the transcript -->
+                <g id="s5-stay">
+                  <rect x="362" y="262" width="396" height="240" rx="22" fill="#ffffff" stroke="#cfd8e3" stroke-width="4" />
+                  <circle cx="730" cy="290" r="0" fill="#0e7c7b" />
+                  <g font-family="Montserrat, sans-serif" font-weight="600" font-size="28" fill="#13233a">
+                    <text x="382" y="316">A rash on my arm since</text>
+                    <text x="382" y="360">Tuesday. My daughter</text>
+                    <text x="450" y="404">drove me to</text>
+                    <text x="500" y="448">to see it.</text>
+                  </g>
+                  <rect x="380" y="380" width="62" height="34" rx="8" fill="#13233a" />
+                  <rect x="380" y="424" width="112" height="34" rx="8" fill="#13233a" />
+                  <circle cx="722" cy="470" r="22" fill="#0e7c7b" />
+                  <rect x="715" y="456" width="14" height="22" rx="7" fill="#ffffff" />
+                  <path d="M709 472 Q709 488 722 488 Q735 488 735 472" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" />
+                </g>
+                <!-- the padlock closes over it -->
+                <g id="s5-seal">
+                  <rect x="352" y="252" width="416" height="260" rx="28" fill="#13233a" opacity="0.5" />
+                  <rect x="352" y="252" width="416" height="260" rx="28" fill="none" stroke="#13233a" stroke-width="6" />
+                  <path id="s5-shackle" d="M526 352 V330 Q526 296 560 296 Q594 296 594 330 V352" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+                  <rect id="s5-lockBody" x="506" y="350" width="108" height="86" rx="16" fill="#0e7c7b" stroke="#ffffff" stroke-width="8" />
+                  <circle cx="560" cy="392" r="10" fill="#ffffff" />
+                </g>
+                <!-- summary and Share, as at the end of scene 4 -->
+                <g id="s5-sum">
+                  <rect x="362" y="528" width="396" height="196" rx="26" fill="#fbf0cf" stroke="#0e7c7b" stroke-width="5" />
+                  <text x="384" y="576" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#0e7c7b">What would be shared</text>
+                  <text x="384" y="634" font-family="Montserrat, sans-serif" font-weight="700" font-size="34" fill="#13233a">Rash, moderate,</text>
+                  <text x="384" y="684" font-family="Montserrat, sans-serif" font-weight="700" font-size="34" fill="#13233a">1-3 days ago</text>
+                </g>
+                <g id="s5-share">
+                  <rect x="362" y="750" width="396" height="100" rx="32" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                  <text x="560" y="816" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="44" fill="#ffffff">Share</text>
+                </g>
+              </g>
+              <!-- label: what stays -->
+              <g id="s5-stayLbl">
+                <rect x="290" y="944" width="540" height="76" rx="22" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                <text x="560" y="996" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="32" fill="#13233a">Stays: everything he said</text>
+              </g>
+
+              <!-- RIGHT: the coded card that leaves -->
+              <g id="s5-leaveLbl">
+                <rect x="980" y="130" width="460" height="72" rx="22" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                <text x="1210" y="180" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="32" fill="#ffffff">Leaves: coded fields</text>
+              </g>
+              <g id="s5-card">
+                <rect x="980" y="226" width="620" height="396" rx="30" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                <rect id="s5-hl0" x="1000" y="298" width="580" height="44" rx="10" fill="#0e7c7b" opacity="0" />
+                <rect id="s5-hl1" x="1000" y="342" width="580" height="44" rx="10" fill="#0e7c7b" opacity="0" />
+                <rect id="s5-hl2" x="1000" y="430" width="580" height="44" rx="10" fill="#0e7c7b" opacity="0" />
+                <g font-family="Montserrat, sans-serif" font-weight="600" font-size="30" fill="#13233a">
+                  <text x="1020" y="270">{</text>
+                  <text x="1050" y="330">"term_code": "SE_RASH",</text>
+                  <text x="1050" y="374">"severity": "moderate",</text>
+                  <text x="1050" y="418">"onset": "1_3_days",</text>
+                  <text x="1050" y="462" id="s5-wk">"iso_week": "2026-W45",</text>
+                  <text x="1050" y="506">"cohort_id": "cohort_B",</text>
+                  <text x="1050" y="550">"patient_ref": "pt_4b82d0c6"</text>
+                  <text x="1020" y="598">}</text>
+                </g>
+              </g>
+
+              <!-- crossed-out chips -->
+              <g id="s5-chips">
+                <g id="s5-chip0">
+                  <rect x="980" y="672" width="196" height="96" rx="22" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                  <circle cx="1022" cy="720" r="20" fill="#13233a" />
+                  <rect x="1016" y="706" width="12" height="20" rx="6" fill="#ffffff" />
+                  <path d="M1011 722 Q1011 735 1022 735 Q1033 735 1033 722" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" />
+                  <text x="1056" y="731" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#13233a">audio</text>
+                  <line id="s5-strike0" x1="992" y1="758" x2="1164" y2="682" stroke="#13233a" stroke-width="9" stroke-linecap="round" />
+                </g>
+                <g id="s5-chip1">
+                  <rect x="1200" y="672" width="196" height="96" rx="22" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                  <path d="M1222 702 H1262 Q1268 702 1268 708 V728 Q1268 734 1262 734 H1244 L1232 746 V734 H1228 Q1222 734 1222 728 Z" fill="#13233a" />
+                  <text x="1282" y="731" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#13233a">words</text>
+                  <line id="s5-strike1" x1="1212" y1="758" x2="1384" y2="682" stroke="#13233a" stroke-width="9" stroke-linecap="round" />
+                </g>
+                <g id="s5-chip2">
+                  <rect x="1420" y="672" width="196" height="96" rx="22" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                  <circle cx="1456" cy="712" r="11" fill="#13233a" />
+                  <path d="M1436 744 Q1436 726 1456 726 Q1476 726 1476 744 Z" fill="#13233a" />
+                  <text x="1490" y="731" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#13233a">name</text>
+                  <line id="s5-strike2" x1="1432" y1="758" x2="1604" y2="682" stroke="#13233a" stroke-width="9" stroke-linecap="round" />
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <div id="s5-cover" class="s5-layer"></div>
+        <audio id="s5-narration" src="assets/audio/s5-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s5-narration
+          const N = window.NARRATION_S5.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 11.4;
+          if (L + window.NARRATION_S5.duration > SCENE_LEN) {
+            console.warn("scene 5 narration is longer than the scene: raise its data-duration in index.html");
+          }
+          const span0 = e(0) - t(0);
+          const at0 = (f) => t(0) + f * span0;
+
+          const cam = (px, py, s) => ({ x: 960 - s * px, y: 540 - s * py, scale: s });
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s5-cam", { transformOrigin: "0 0", ...cam(960, 540, 1.0) });
+          tl.to("#s5-cam", { ...cam(985, 530, 1.03), duration: SCENE_LEN - 0.4, ease: "sine.inOut" }, 0.2);
+          tl.fromTo("#s5-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          // opening state: the phone as it ended scene 4
+          gsap.set("#s5-phoneWrap", { svgOrigin: "560 545", scale: 0.95, opacity: 0 });
+          tl.to("#s5-phoneWrap", { scale: 1, opacity: 1, duration: 0.45, ease: "power2.out" }, 0.2);
+          gsap.set(["#s5-seal", "#s5-stayLbl", "#s5-leaveLbl", "#s5-card", "#s5-chip0", "#s5-chip1", "#s5-chip2"], { opacity: 0 });
+                    gsap.set(["#s5-strike0", "#s5-strike1", "#s5-strike2"], { opacity: 0 });
+          gsap.set("#s5-rcheck", { opacity: 0 });
+
+          // "Only coded fields leave...": the padlock closes over the transcript and mic; the summary becomes a small coded card that flies out
+          gsap.set("#s5-seal", { svgOrigin: "560 382", scale: 0.8 });
+          tl.to("#s5-seal", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(1.6)" }, t(0) + 0.2);
+          gsap.set("#s5-shackle", { y: -16 });
+          tl.to("#s5-shackle", { y: 0, duration: 0.35, ease: "bounce.out" }, t(0) + 0.45);
+          tl.to("#s5-share", { opacity: 0, duration: 0.3 }, t(0) + 0.2);
+          tl.fromTo("#s5-stayLbl", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "back.out(1.6)" }, t(0) + 0.7);
+          // the summary lifts away, the card takes its place and travels right
+          tl.to("#s5-sum", { y: -16, duration: 0.25, ease: "power2.out" }, t(0) + 1.0);
+          tl.to("#s5-sum", { opacity: 0, duration: 0.2 }, t(0) + 1.2);
+          gsap.set("#s5-card", { svgOrigin: "1290 424", x: -730, y: 198, scale: 0.4 });
+          tl.set("#s5-card", { opacity: 1 }, t(0) + 1.15);
+          tl.to("#s5-card", { x: 0, scale: 1, duration: 0.9, ease: "power2.out" }, t(0) + 1.15);
+          tl.to("#s5-card", { y: 0, duration: 0.9, ease: "power2.inOut" }, t(0) + 1.15);
+          tl.fromTo("#s5-leaveLbl", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: "back.out(1.6)" }, t(0) + 1.9);
+          // "symptom, severity, week": the three fields light up in turn
+          const hl = (id, f) => tl.to(id, { opacity: 0.22, duration: 0.25 }, at0(f));
+          hl("#s5-hl0", 0.56);
+          hl("#s5-hl1", 0.72);
+          hl("#s5-hl2", 0.9);
+
+          // "No audio. No words. No name.": three chips, each struck out
+          [0, 1, 2].forEach((i) => {
+            const c = t(i + 1);
+            gsap.set("#s5-chip" + i, { svgOrigin: (1078 + i * 220) + " 720", scale: 0.7 });
+            tl.to("#s5-chip" + i, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.8)" }, c);
+            gsap.set("#s5-strike" + i, { svgOrigin: (1078 + i * 220) + " 720", scaleX: 0 });
+            tl.to("#s5-strike" + i, { opacity: 1, scaleX: 1, duration: 0.25, ease: "power3.out" }, c + 0.35);
+          });
+
+          // "And he gets a receipt.": the chips clear, a receipt prints out from under the card with a short hash and a check
+          tl.to("#s5-chips", { opacity: 0, duration: 0.25 }, t(4) - 0.05);
+          tl.to("#s5-rclipR", { attr: { height: 340 }, duration: 0.9, ease: "steps(14)" }, t(4) + 0.1);
+          tl.to("#s5-rcheck", { opacity: 1, duration: 0.01 }, t(4) + 1.0);
+          gsap.set("#s5-rcheck", { svgOrigin: "1488 840", scale: 0 });
+          tl.to("#s5-rcheck", { scale: 1, duration: 0.4, ease: "back.out(2.4)" }, t(4) + 1.0);
+
+          window.__timelines["scene-5"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>
