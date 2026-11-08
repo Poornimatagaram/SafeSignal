@@ -1,6 +1,6 @@
 # Ownership by folder. Nobody edits another owner's folder; request changes from its owner.
 # Shared folders evals/ and data/ are split by area subfolder. scripts/check_ownership.sh enforces the same map (D-044).
-# Patient and doctor handles: replace the placeholders when known (D-046).
+# Handles confirmed from merged pull requests #7-#10 (D-046, D-077).
 
 # Company side (pharma persona): contract, shared packages, service, company portal, shared tooling
 /schema/                    @nkousik18
@@ -21,12 +21,12 @@
 /README.md                  @nkousik18
 
 # Patient side
-/apps/patient-runtime/      @PATIENT_OWNER
-/apps/patient-web/          @PATIENT_OWNER
-/evals/patient/             @PATIENT_OWNER
-/data/patient/              @PATIENT_OWNER
+/apps/patient-runtime/      @Poornimatagaram
+/apps/patient-web/          @Poornimatagaram
+/evals/patient/             @Poornimatagaram
+/data/patient/              @Poornimatagaram
 
 # Doctor side
-/apps/doctor-web/           @DOCTOR_OWNER
-/evals/doctor/               @DOCTOR_OWNER
-/data/doctor/                @DOCTOR_OWNER
+/apps/doctor-web/           @Swetha-Jalluri
+/evals/doctor/               @Swetha-Jalluri
+/data/doctor/                @Swetha-Jalluri
