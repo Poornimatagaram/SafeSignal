@@ -2,6 +2,12 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 022: centered company portal (branch `company/feat/company-web-centered-redesign`)
+
+### Changed
+- `apps/company-web`: centered product-page layout (D-092): thin frosted top bar, centered hero with drug name and one blue action, this week's three figures, sticky centered section switcher, centered section headings over borderless rounded tiles, centered privacy close. System SF face with Inter fallback; light, dark and system. Section links scroll to their section. Data, endpoints and roles unchanged.
+- `apps/company-web/PRODUCT.md`: product context for design work.
+
 ## 2026-11-08 — Session 021: company portal in the SafeSignal look
 
 ### Changed

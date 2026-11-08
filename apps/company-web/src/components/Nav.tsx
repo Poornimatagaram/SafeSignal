@@ -1,4 +1,4 @@
-// Floating top bar in the doctor view's style: brand, program picker, appearance, Refresh.
+// Thin frosted top bar (D-092): brand, company, program picker, appearance and Refresh.
 import { useEffect, useRef, useState } from 'react'
 import type { ProgramInfo } from '../lib/api'
 import { config } from '../lib/config'
@@ -6,7 +6,7 @@ import { THEME_LABEL, useTheme, type ThemeMode } from '../lib/theme'
 import { Chevron, Logo, Monitor, Moon, Sun, SyncIcon } from './icons'
 
 const THEME_ICON: Record<ThemeMode, React.ReactNode> = { light: <Sun />, dark: <Moon />, system: <Monitor /> }
-const THEME_HINT: Record<ThemeMode, string> = { light: 'Warm paper, for daylight', dark: 'Low glare, for late reviews', system: 'Follows your device setting' }
+const THEME_HINT: Record<ThemeMode, string> = { light: 'Bright, for daylight and projectors', dark: 'Low glare, for dim rooms', system: 'Follows your device setting' }
 const MODES: ThemeMode[] = ['light', 'dark', 'system']
 
 export function Nav(props: {
@@ -39,18 +39,18 @@ export function Nav(props: {
   const current = props.programs.find((p) => p.program_id === props.programId)
 
   return (
-    <div className="nav-shell" ref={wrap}>
+    <div className={`nav-shell ${scrolled ? 'scrolled' : ''}`} ref={wrap}>
       <div className="wrap">
-        <header className={`nav ${scrolled ? 'scrolled' : ''}`}>
-          <a className="brand" href="#/signals" aria-label="SafeSignal, company portal" onClick={() => scrollTo({ top: 0 })}>
-            <Logo />
-            <span>Safe<b>Signal</b></span>
+        <header className="nav">
+          <a className="brand" href="#top" aria-label="SafeSignal, back to top" onClick={(e) => { e.preventDefault(); scrollTo({ top: 0, behavior: "smooth" }) }}>
+            <Logo size={22} />
+            <span>SafeSignal</span>
           </a>
           <span className="who">{props.company ?? 'Company portal'}</span>
           <div className="nav-right">
             <div className="org">
               <button type="button" className="org-btn" aria-haspopup="menu" aria-expanded={open === 'program'} onClick={() => setOpen(open === 'program' ? null : 'program')}>
-                <span className="dot" />
+                
                 <span className="org-name" title={current?.label ?? props.programId}>{current?.drug_name ?? 'Program'}</span>
                 <Chevron />
               </button>
@@ -87,7 +87,7 @@ export function Nav(props: {
                 </div>
               )}
             </div>
-            <button type="button" className={`btn btn-dark sync ${props.loading ? 'spinning' : ''}`} onClick={props.onRefresh} disabled={props.loading}>
+            <button type="button" className={`btn sm sync ${props.loading ? 'spinning' : ''}`} onClick={props.onRefresh} disabled={props.loading}>
               <SyncIcon />
               <span className="sync-label">{props.loading ? 'Loading…' : 'Refresh'}</span>
             </button>

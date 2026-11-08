@@ -74,7 +74,7 @@ export default function Survey({ versions }: { versions: Version[] }) {
 
   return (
     <div className="stack">
-      <div className="row">
+      <div className="row center">
         <label className="small muted" htmlFor="cohort">Cohort</label>
         <select id="cohort" value={cohort} onChange={(e) => setCohort(e.target.value)}>
           {versions.map((v) => <option key={v.cohort_id} value={v.cohort_id}>{versionLabel(v)}</option>)}

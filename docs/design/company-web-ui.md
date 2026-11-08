@@ -1,6 +1,6 @@
 # Company UI brief: Halvaren landing page and safety portal
 
-**Status:** superseded by D-090 and D-091 (the portal uses the doctor view's layout with a professional slate and clinical-blue look); kept for the content and product truths in sections 2–3 · **Date:** 2026-11-08 · **Owner:** company side
+**Status:** superseded by D-092 (centered product-page layout; see `apps/company-web/PRODUCT.md`); kept for the content and product truths in sections 2–3 · **Date:** 2026-11-08 · **Owner:** company side
 **Builds in:** `apps/company-web` only (React 19, Vite, TypeScript, Recharts, port 5175)
 **For:** the agent who builds it. Read this whole page, then `docs/company/company-side-overview.md`.
 

@@ -1,21 +1,26 @@
 // Company portal: reads the service's company endpoints only. Each program's data loads on selection.
-// Layout follows the doctor view (floating pill nav, hero with a live panel, pill tabs, rounded cards); the look is the company's own (D-091).
+// Layout (D-092): thin top bar, centered statement and this week's figures, a sticky centered section switcher,
+// and each section as a centered heading over rounded tiles.
 import { useEffect, useMemo, useState } from 'react'
 import { api, type CohortWeeklyRow, type CompletionRow, type Document, type ProgramsResponse, type TermsResponse } from './lib/api'
 import { config } from './lib/config'
 import { pct, weeksOf } from './lib/data'
 import { Nav } from './components/Nav'
-import { Check, ClipboardCheck, Label, Pulse, Shield } from './components/icons'
+import { Check, ChevronRight, Group, Lock, NoMic, NoText } from './components/icons'
 import Signals from './views/Signals'
 import Completion from './views/Completion'
 import Survey from './views/Survey'
 import Program from './views/Program'
 
 const TABS = [
-  { id: 'signals', label: 'Side effects', role: 'reader' },
-  { id: 'completion', label: 'Check-ins', role: 'reader' },
-  { id: 'survey', label: 'Survey', role: 'admin' },
-  { id: 'program', label: 'Program & export', role: 'safety' },
+  { id: 'signals', label: 'Side effects', title: 'Side effects by cohort.',
+    blurb: 'The share of reporting patients with each side effect, against the week before.', role: 'Any company role' },
+  { id: 'completion', label: 'Check-ins', title: 'Check-ins.',
+    blurb: 'How many due check-ins patients completed, and how they answered.', role: 'Any company role' },
+  { id: 'survey', label: 'Survey', title: 'Survey.',
+    blurb: 'Questions and cadence for each cohort. Devices use a new version from their next check-in.', role: 'Publishing needs company_admin' },
+  { id: 'program', label: 'Program & export', title: 'Program and export.',
+    blurb: 'Cohorts and the trials behind them, public documents and pseudonymized exports.', role: 'Export needs company_safety' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 const tabFromHash = (h: string): Tab => (TABS.find((t) => `#/${t.id}` === h)?.id ?? 'signals')
@@ -51,9 +56,16 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
-    const on = () => setTab(tabFromHash(location.hash))
+    // A section link always lands on the section, even when it is already the current one.
+    const show = () => document.getElementById('content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const on = () => { setTab(tabFromHash(location.hash)); requestAnimationFrame(show) }
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element).closest?.('a[href^="#/"]')
+      if (a && a.getAttribute('href') === location.hash) show()
+    }
     addEventListener('hashchange', on)
-    return () => removeEventListener('hashchange', on)
+    document.addEventListener('click', onClick)
+    return () => { removeEventListener('hashchange', on); document.removeEventListener('click', onClick) }
   }, [])
   useEffect(() => {
     if (!toast) return
@@ -94,66 +106,70 @@ export default function App() {
         onToast={setToast}
       />
 
-      <section className="wrap hero">
-        <div>
-          <p className="kicker">{programs?.company?.display_name ?? 'Company portal'} · side-effect monitoring</p>
-          <h1>
-            <span>Every side effect.</span>
-            <span>By drug version.</span>
-            <span className="accent">Week over week.</span>
-          </h1>
-          <p className="lede">
+      <header className="hero">
+        <div className="wrap hero-inner">
+          <h1 className="hero-title">{program?.drug_name ?? 'Company portal'}</h1>
+          <p className="hero-tagline">Every side effect. By drug version. Week over week.</p>
+          <p className="hero-lede">
             Patients check in by voice at home. Their device codes what they say into label terms, and you get counts by cohort.
             You never see names, words or audio.
           </p>
+          <div className="hero-actions">
+            <a className="btn primary lg" href="#/signals">View side effects</a>
+            <a className="more" href="#/program">Program and export<ChevronRight /></a>
+          </div>
           {program && (
-            <div className="chips">
-              <span className="chip"><b>{program.drug_name}</b></span>
-              <span className="chip">{versions.length} cohorts · {enrolled.toLocaleString()} enrolled</span>
-              {program.source_trial && <span className="chip">Grounded in {program.source_trial}</span>}
-            </div>
+            <p className="hero-meta">
+              {versions.length} cohorts · {enrolled.toLocaleString()} enrolled
+              {program.source_trial && <> · Grounded in {program.source_trial}</>}
+            </p>
           )}
         </div>
 
-        <aside className="panel week-panel" aria-label="This week">
-          <div className="panel-head">
-            <h3>{sum?.week ? `This week · ${sum.week}` : 'This week'}</h3>
-            <span className="live"><i />Live</span>
-          </div>
+        <section className="wrap week" aria-label="This week">
+          <p className="week-head"><span className="live"><i />Live</span>{sum?.week ? `This week · ${sum.week}` : 'This week'}</p>
           {sum ? (
-            <>
-              <a className="stat" href="#/signals">
-                <span className="ic" style={{ background: 'var(--accent-tint)', color: 'var(--accent-ink)' }}><Pulse /></span>
-                <span><small>Patients reporting</small><b>{sum.reporting.toLocaleString()}</b></span>
+            <div className="figures">
+              <a className="figure" href="#/signals">
+                <span className="figure-value">{sum.reporting.toLocaleString()}</span>
+                <span className="figure-label">patients reporting</span>
               </a>
-              <a className="stat" href="#/completion">
-                <span className="ic" style={{ background: 'var(--good-tint)', color: 'var(--good)' }}><ClipboardCheck /></span>
-                <span><small>Check-in completion</small><b>{pct(sum.completion)}</b></span>
+              <a className="figure" href="#/completion">
+                <span className="figure-value">{pct(sum.completion)}</span>
+                <span className="figure-label">check-in completion</span>
               </a>
-              <a className="stat" href="#/signals">
-                <span className="ic" style={{ background: 'var(--review-tint)', color: 'var(--review)' }}><Label /></span>
-                <span><small>Reported but not on the label</small><b>{sum.offLabel ? `${sum.offLabel} term${sum.offLabel > 1 ? 's' : ''}` : 'None'}</b></span>
+              <a className="figure" href="#/signals">
+                <span className="figure-value">{sum.offLabel || 'None'}</span>
+                <span className="figure-label">{sum.offLabel ? `${sum.offLabel === 1 ? 'side effect' : 'side effects'} reported but not on the label` : 'side effects outside the label'}</span>
               </a>
-            </>
+            </div>
           ) : (
-            <p className="empty-ok">{error ? 'No data while the service is unreachable.' : 'Loading…'}</p>
+            <p className="figures-empty">{error ? 'No data while the service is unreachable.' : 'Loading this week…'}</p>
           )}
-        </aside>
-      </section>
+        </section>
+      </header>
 
-      <div className="wrap tab-bar">
-        <nav className="tabs" aria-label="Sections">
+      <div className="switcher">
+        <nav className="seg seg-lg" aria-label="Sections">
           {TABS.map((t) => (
-            <a key={t.id} href={`#/${t.id}`} aria-current={tab === t.id ? 'page' : undefined}>
-              {t.label}<span className="role">{t.role}</span>
-            </a>
+            <a key={t.id} href={`#/${t.id}`} aria-current={tab === t.id ? 'page' : undefined}>{t.label}</a>
           ))}
         </nav>
       </div>
 
-      <main className="wrap body">
+      <main className="wrap body" id="content">
+        {(() => {
+          const t = TABS.find((x) => x.id === tab)!
+          return (
+            <div className="section-head">
+              <h2>{t.title}</h2>
+              <p>{t.blurb}</p>
+              <p className="role">{t.role}</p>
+            </div>
+          )
+        })()}
         {error && <div className="banner" role="alert">{error}</div>}
-        {loading && <p className="small">Loading…</p>}
+        {loading && !error && <div className="skeleton" aria-label="Loading" />}
         {data && program && (
           <div key={`${programId}-${tab}`} className="tab-body">
             {tab === 'signals' && <Signals rows={data.weekly} versions={versions} terms={data.terms} />}
@@ -162,23 +178,23 @@ export default function App() {
             {tab === 'program' && <Program program={program} documents={data.documents} />}
           </div>
         )}
-
-        <section className="guarantee">
-          <span className="ck"><Shield /></span>
-          <div>
-            <h3>What this portal can never see.</h3>
-            <div className="tiles">
-              <span className="tile"><Check />No names, contact details or free text</span>
-              <span className="tile"><Check />No transcripts or audio</span>
-              <span className="tile"><Check />No group smaller than 5 patients</span>
-              <span className="tile"><Check />Coded, pseudonymized records only</span>
-            </div>
-          </div>
-        </section>
       </main>
 
+      <section className="guarantee" aria-labelledby="never">
+        <div className="wrap">
+          <h2 id="never">What this portal can never see.</h2>
+          <p className="guarantee-lede">Records are coded on the patient's device before anything is sent. The company receives counts, not people.</p>
+          <ul className="tiles">
+            <li className="tile"><NoText /><span>No names, contact details or free text</span></li>
+            <li className="tile"><NoMic /><span>No transcripts or audio</span></li>
+            <li className="tile"><Group /><span>No group smaller than 5 patients</span></li>
+            <li className="tile"><Lock /><span>Coded, pseudonymized records only</span></li>
+          </ul>
+        </div>
+      </section>
+
       <footer className="wrap foot">
-        <span className="brand-sm">Safe<b>Signal</b></span>
+        <span className="brand-sm">SafeSignal</span>
         <span>{programs?.company?.note ?? ''}</span>
         <span className="mono">{config.baseUrl}</span>
       </footer>

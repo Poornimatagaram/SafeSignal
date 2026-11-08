@@ -528,3 +528,21 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Saved on branch `company/feat/company-web-professional-look`; PR on request.
 
+## Session 022 — 2026-11-08 (Sun) · Centered company portal
+
+**Goal:** Product owner found the D-091 look still AI-generated; wanted the feel and button placement of Apple and Samsung product pages, center-aligned. Keep the previous look on its own branch.
+
+**Outputs**
+- Previous look committed on `company/feat/company-web-professional-look` (724590d), so it can be restored.
+- `apps/company-web` redesigned on `company/feat/company-web-centered-redesign` (D-092): `src/App.tsx`, `src/styles.css`, `src/components/Nav.tsx`, `src/components/icons.tsx`, `src/views/Signals.tsx`, `src/views/Survey.tsx`; `apps/company-web/PRODUCT.md`; design brief in `.impeccable/surfaces/` (local only, gitignored).
+
+**Verification**
+- `tsc -b` and `eslint` pass; Impeccable design detector reports no findings.
+- Checked in Chrome against the seeded local service: desktop light and dark, all sections, section links scroll to content; 390 px frames have no horizontal scroll.
+
+**Open items**
+- Impeccable finish review and DESIGN.md not run yet.
+- Role-gated actions still fail on click instead of showing disabled with a reason.
+
+**Next**
+1. Product owner picks a branch; push and open a PR on request.

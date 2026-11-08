@@ -8,7 +8,7 @@
 - **Brief:** Scoping Doc 12.6 (CO-01 to CO-07) and 26.8 (company layer).
 
 ## Look
-Same layout and controls as the doctor view (D-090) with a professional look of its own (D-091): Inter and IBM Plex Mono, slate and clinical blue, light / dark / system, bundled fonts. Tabs are hash routes: `#/signals`, `#/completion`, `#/survey`, `#/program`.
+Centered product-page layout (D-092): frosted top bar, centered hero and weekly figures, a sticky section switcher, borderless rounded tiles; system SF face with bundled Inter fallback; light / dark / system. Tabs are hash routes: `#/signals`, `#/completion`, `#/survey`, `#/program`.
 
 ## What it shows
 

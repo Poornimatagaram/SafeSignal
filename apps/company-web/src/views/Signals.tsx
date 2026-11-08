@@ -53,7 +53,7 @@ export default function Signals({ rows, versions, terms }: Props) {
 
   return (
     <div className="stack">
-      <div className="row">
+      <div className="row center">
         <label className="small muted" htmlFor="week">Week</label>
         <select id="week" value={week} onChange={(e) => setWeek(e.target.value)}>
           {weeks.map((w) => <option key={w}>{w}</option>)}
@@ -65,13 +65,13 @@ export default function Signals({ rows, versions, terms }: Props) {
         <div className="kpi"><div className="label">Patients reporting, {week}</div><div className="value">{reporting.toLocaleString()}</div></div>
         <div className="kpi">
           <div className="label">Largest weekly rise</div>
-          <div className="value" style={{ fontSize: 16 }}>
+          <div className="value text">
             {top && top.d > 0 ? <>{label(top.t)} · {top.v.drug_version} <span className="up small">▲ {(top.d * 100).toFixed(1)} pp</span></> : '—'}
           </div>
         </div>
         <div className="kpi">
           <div className="label">Reported but not on the label</div>
-          <div className="value" style={{ fontSize: 16 }}>{unlisted.length ? unlisted.map(label).join(', ') : 'None'}</div>
+          <div className="value text">{unlisted.length ? unlisted.map(label).join(', ') : 'None'}</div>
         </div>
       </div>
 
