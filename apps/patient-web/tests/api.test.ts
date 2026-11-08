@@ -1,13 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createRuntimeClient, RuntimeError, type FetchLike } from '../src/api.ts'
+import { createRuntimeClient, readAlert, RuntimeError, type FetchLike } from '../src/api.ts'
 import { DEFAULT_RUNTIME_URL, resolveRuntimeUrl } from '../src/runtimeUrl.ts'
 import {
+  ALERT_QUEUED,
+  ALERT_SENT,
   BASE,
   json,
   RECEIPT_FAILED,
   RECEIPT_QUEUED,
   RECEIPT_SENT,
   SID,
+  SUMMARY_CORRECTED,
   SUMMARY_EMPTY,
   SUMMARY_NEEDS_SEVERITY,
   SUMMARY_READY,
@@ -30,7 +33,7 @@ const TURN = {
 }
 
 /** What an older runtime's turn reads as: a complete answer, then move on. */
-const OLD_RUNTIME_DEFAULTS = { rating: 'complete', next: { action: 'next', unanswered: false } }
+const OLD_RUNTIME_DEFAULTS = { rating: 'complete', next: { action: 'next', unanswered: false }, command: null }
 
 function mockFetch(response: Response | (() => Promise<Response>)) {
   return vi.fn<FetchLike>(typeof response === 'function' ? response : async () => response)
@@ -358,5 +361,165 @@ describe('approve', () => {
   it('rejects a receipt with an unknown status', async () => {
     const client = createRuntimeClient(BASE, mockFetch(json({ ...RECEIPT_SENT, status: 'maybe' })))
     await expect(client.approve(SID, {})).rejects.toMatchObject({ kind: 'bad-response' })
+  })
+})
+
+describe('voice commands in a turn (VC-07)', () => {
+  const audio = () => new Blob(['a'], { type: 'audio/webm' })
+
+  it.each([
+    ['repeat', { action: 'repeat', ask: 1 }],
+    ['slower', { action: 'slower', ask: 1 }],
+  ] as const)('reads "%s" as a command, not an answer', async (command, next) => {
+    const body = { transcript: 'say that again', symptoms: [], extraction: 'ok', rating: null, command, next }
+    const result = await createRuntimeClient(BASE, mockFetch(json(body))).postTurn(SID, 'q1', 1, audio())
+    expect(result.command).toBe(command)
+    expect(result.next).toEqual({ action: command, ask: 1 })
+    expect(result.rating).toBe('complete')
+  })
+
+  it('keeps the ask that was sent, whatever next.ask says', async () => {
+    const body = { ...TURN, command: 'repeat', next: { action: 'repeat', ask: 2 } }
+    const result = await createRuntimeClient(BASE, mockFetch(json(body))).postTurn(SID, 'q1', 0, audio())
+    expect(result.next).toEqual({ action: 'repeat', ask: 0 })
+  })
+
+  it('reads a repeat/slower next with no command field as the command', async () => {
+    const body = { ...TURN, next: { action: 'slower' } }
+    const result = await createRuntimeClient(BASE, mockFetch(json(body))).postTurn(SID, 'q1', 1, audio())
+    expect(result.command).toBe('slower')
+    expect(result.next).toEqual({ action: 'slower', ask: 1 })
+  })
+
+  it.each([
+    ['null', { command: null }],
+    ['missing', {}],
+    ['unknown', { command: 'dance' }],
+  ])('reads a %s command as a normal answer', async (_name, extra) => {
+    const result = await createRuntimeClient(BASE, mockFetch(json({ ...TURN, ...extra }))).postTurn(SID, 'q1', 0, audio())
+    expect(result.command).toBeNull()
+    expect(result.next).toEqual({ action: 'next', unanswered: false })
+  })
+})
+
+describe('summary voice and correction fields (VC-08)', () => {
+  it('reads spoken and correction_used', async () => {
+    const summary = await createRuntimeClient(BASE, mockFetch(json(SUMMARY_READY))).getSummary(SID)
+    expect(summary.spoken).toBe(SUMMARY_READY.spoken)
+    expect(summary.correction_used).toBe(false)
+  })
+
+  it.each([
+    ['missing', {}],
+    ['null', { spoken: null, correction_used: null }],
+    ['empty or wrong type', { spoken: '  ', correction_used: 'yes' }],
+  ])('reads %s spoken/correction_used as null/false', async (_name, extra) => {
+    const { spoken: _s, correction_used: _c, ...older } = SUMMARY_READY
+    const summary = await createRuntimeClient(BASE, mockFetch(json({ ...older, ...extra }))).getSummary(SID)
+    expect(summary.spoken).toBeNull()
+    expect(summary.correction_used).toBe(false)
+  })
+
+  it('GETs the spoken summary audio, normal and slow', async () => {
+    const fetchMock = mockFetch(() => Promise.resolve(new Response(new Blob(['wav']), { status: 200 })))
+    const client = createRuntimeClient(BASE, fetchMock)
+    expect((await client.getSummaryAudio(SID)).size).toBe(3)
+    expect(lastCall(fetchMock).url).toBe(`${BASE}/checkin/sessions/${SID}/summary/audio?slow=false`)
+    await client.getSummaryAudio(SID, true)
+    expect(lastCall(fetchMock).url).toBe(`${BASE}/checkin/sessions/${SID}/summary/audio?slow=true`)
+    expect(lastCall(fetchMock).init.method).toBe('GET')
+  })
+
+  it('reports summary audio that is not available (503)', async () => {
+    const client = createRuntimeClient(BASE, mockFetch(json({ detail: 'tts down' }, 503)))
+    await expect(client.getSummaryAudio(SID)).rejects.toMatchObject({ kind: 'speech-unavailable' })
+  })
+})
+
+describe('correct', () => {
+  it.each([
+    [{ term_code: 'SE_RASH', severity: 'mild' }],
+    [{ term_code: 'SE_RASH', onset: 'today' }],
+    [{ term_code: 'SE_RASH', remove: true }],
+  ] as const)('POSTs a tapped change %j as JSON and returns the updated summary', async (change) => {
+    const fetchMock = mockFetch(json(SUMMARY_CORRECTED))
+    const summary = await createRuntimeClient(BASE, fetchMock).correct(SID, change)
+    expect(summary).toEqual(SUMMARY_CORRECTED)
+    const { url, init } = lastCall(fetchMock)
+    expect(url).toBe(`${BASE}/checkin/sessions/${SID}/correction`)
+    expect(init.method).toBe('POST')
+    expect(new Headers(init.headers).get('Content-Type')).toBe('application/json')
+    expect(JSON.parse(String(init.body))).toEqual(change)
+  })
+
+  it('POSTs the spoken change as the raw recording', async () => {
+    const recording = new Blob([new Uint8Array(16)], { type: 'audio/webm;codecs=opus' })
+    const fetchMock = mockFetch(json(SUMMARY_CORRECTED))
+    await createRuntimeClient(BASE, fetchMock).correct(SID, recording)
+    const { init } = lastCall(fetchMock)
+    expect(new Headers(init.headers).get('Content-Type')).toBe('audio/webm;codecs=opus')
+    expect(init.body).toBe(recording)
+  })
+
+  it('never sends an empty recording', async () => {
+    const fetchMock = mockFetch(json(SUMMARY_CORRECTED))
+    await expect(createRuntimeClient(BASE, fetchMock).correct(SID, new Blob([]))).rejects.toMatchObject({
+      kind: 'empty-audio',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [422, { detail: { message: 'not understood', understood: false } }, 'correction-not-understood'],
+    [409, { detail: 'correction already used' }, 'correction-used'],
+    [404, { detail: 'unknown session' }, 'session-not-found'],
+    [503, { detail: 'speech down' }, 'speech-unavailable'],
+  ])('maps HTTP %i to its kind', async (status, body, kind) => {
+    const client = createRuntimeClient(BASE, mockFetch(json(body, status)))
+    await expect(client.correct(SID, { term_code: 'SE_RASH', remove: true })).rejects.toMatchObject({ kind, status })
+  })
+})
+
+describe('receipts with alerts, and getReceipt (PV-07, AL-02)', () => {
+  it('reads an alert', async () => {
+    for (const alert of [ALERT_SENT, ALERT_QUEUED, { ...ALERT_SENT, status: 'failed' }]) {
+      const client = createRuntimeClient(BASE, mockFetch(json({ ...RECEIPT_SENT, alert })))
+      await expect(client.approve(SID, {})).resolves.toEqual({ ...RECEIPT_SENT, alert })
+    }
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['null', null],
+    ['unreadable', { status: 'maybe', alert_id: 'alt_1' }],
+    ['without an id', { status: 'sent' }],
+  ])('reads a %s alert as null, keeping the receipt', async (_name, alert) => {
+    const { alert: _a, ...older } = RECEIPT_SENT
+    const body = alert === undefined ? older : { ...older, alert }
+    const receipt = await createRuntimeClient(BASE, mockFetch(json(body))).approve(SID, {})
+    expect(receipt).toEqual({ ...RECEIPT_SENT, alert: null })
+  })
+
+  it('reads an alert with no sent_at as not yet sent', () => {
+    expect(readAlert({ status: 'queued', alert_id: 'alt_1' })).toEqual({ status: 'queued', alert_id: 'alt_1', sent_at: null })
+  })
+
+  it('GETs the current receipt', async () => {
+    const fetchMock = mockFetch(json({ ...RECEIPT_QUEUED, alert: ALERT_QUEUED }))
+    const receipt = await createRuntimeClient(BASE, fetchMock).getReceipt(SID)
+    expect(receipt).toEqual({ ...RECEIPT_QUEUED, alert: ALERT_QUEUED })
+    const { url, init } = lastCall(fetchMock)
+    expect(url).toBe(`${BASE}/checkin/sessions/${SID}/receipt`)
+    expect(init.method).toBe('GET')
+    expect(init.body).toBeUndefined()
+  })
+
+  it('reports an unknown session, and rejects a body that is not a receipt', async () => {
+    await expect(
+      createRuntimeClient(BASE, mockFetch(json({ detail: 'x' }, 404))).getReceipt(SID),
+    ).rejects.toMatchObject({ kind: 'session-not-found' })
+    await expect(createRuntimeClient(BASE, mockFetch(json({ status: 'sent' }))).getReceipt(SID)).rejects.toMatchObject({
+      kind: 'bad-response',
+    })
   })
 })

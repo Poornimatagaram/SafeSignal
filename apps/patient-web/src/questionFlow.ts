@@ -2,7 +2,10 @@
 //
 // After each answer the runtime says what comes next: ask the SAME question again in simpler words (ask 1), then
 // as choices or yes/no (ask 2), or move on. The screen trusts it, but never asks one question more than twice again.
-import { MAX_ASK, type Question, type RuntimeClient, type TurnResult } from './api.ts'
+//
+// A voice command (VC-07: "say that again", "slower") is not an answer: the same wording is said again, slowly for
+// "slower", and the screen waits for the answer with the same `ask`. It never counts as a re-ask.
+import { MAX_ASK, type Question, type RuntimeClient, type TurnResult, type VoiceCommand } from './api.ts'
 
 export type AfterTurn =
   /** Ask the same question again: show "Let me ask that more simply." and speak `question` right away (no tap). */
@@ -11,6 +14,8 @@ export type AfterTurn =
   | { kind: 'answered' }
   /** Given up after the re-asks: "That's okay, let's move on.", then the next question. */
   | { kind: 'move-on' }
+  /** A voice command: say `question` (unchanged, same ask) again, slowly when `slow`, then wait for the answer. */
+  | { kind: 'command'; command: VoiceCommand; slow: boolean; question: Question }
 
 export function afterTurn(question: Question, result: TurnResult): AfterTurn {
   const next = result.next
@@ -19,7 +24,9 @@ export function afterTurn(question: Question, result: TurnResult): AfterTurn {
     if (question.ask >= MAX_ASK || next.ask <= question.ask || next.ask > MAX_ASK) return { kind: 'move-on' }
     return { kind: 'reask', question: { ...question, ask: next.ask, text: next.text } }
   }
-  return next.unanswered ? { kind: 'move-on' } : { kind: 'answered' }
+  if (next.action === 'next') return next.unanswered ? { kind: 'move-on' } : { kind: 'answered' }
+  // "Say that again" / "Slower": the same wording at the same ask; never counted as a re-ask.
+  return { kind: 'command', command: next.action, slow: next.action === 'slower', question }
 }
 
 export interface QuestionVoice {

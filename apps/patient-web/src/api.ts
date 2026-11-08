@@ -25,12 +25,18 @@ export type TurnRating = (typeof TURN_RATINGS)[number]
 /** Most re-asks of one question: ask 1 = simpler wording, ask 2 = choices or yes/no. */
 export const MAX_ASK = 2
 
-/** What the runtime wants next (VC-05). */
+/** A spoken voice command instead of an answer (VC-07): "say that again" or "slower, please". */
+export const VOICE_COMMANDS = ['repeat', 'slower'] as const
+export type VoiceCommand = (typeof VOICE_COMMANDS)[number]
+
+/** What the runtime wants next (VC-05, VC-07). */
 export type TurnNext =
   /** Ask the SAME question again with `ask`, worded as `text`. */
   | { action: 'reask'; ask: number; text: string }
   /** Move on to the next question; `unanswered` when it was given up after the re-asks. */
   | { action: 'next'; unanswered: boolean }
+  /** A voice command, not an answer: say the same wording again (slowly for "slower") and wait with the same `ask`. */
+  | { action: VoiceCommand; ask: number }
 
 export interface TurnResult {
   transcript: string
@@ -41,6 +47,8 @@ export interface TurnResult {
   rating: TurnRating
   /** Always set: a missing or unreadable `next` (older runtimes) reads as "move on". */
   next: TurnNext
+  /** The voice command heard instead of an answer; null for a normal answer (and for older runtimes). */
+  command: VoiceCommand | null
 }
 
 /** One check-in, opened by "Start check-in". Every answer and the approval belong to it. */
@@ -82,7 +90,28 @@ export interface CheckinSummary {
   needs_severity: string[]
   unanswered_questions: number
   text: string
+  /** What the runtime reads out loud ("Here is what I heard. ..."); null from older runtimes. */
+  spoken: string | null
+  /** True once the one correction before sharing was used (VC-08); a missing value reads as false. */
+  correction_used: boolean
   share: SharePreview
+}
+
+/** Onset choices for a tapped correction, in the order they are offered. */
+export const ONSETS = ['today', '1_3_days', '4_7_days', 'over_7_days', 'unknown'] as const
+export type Onset = (typeof ONSETS)[number]
+
+/** One tapped change to one summary item (VC-08). The spoken change is sent as a recording instead. */
+export type CorrectionChange =
+  | { term_code: string; severity: Severity }
+  | { term_code: string; onset: Onset }
+  | { term_code: string; remove: true }
+
+/** A severe symptom told to the care team and caregiver (AL-02), within consent. Never carries symptom details. */
+export interface ReceiptAlert {
+  status: ReceiptStatus
+  alert_id: string
+  sent_at: string | null
 }
 
 export type ReceiptStatus = 'sent' | 'queued' | 'failed'
@@ -101,6 +130,8 @@ export interface EgressReceipt {
   sent_at: string | null
   /** The service's HTTP status; null while queued. */
   response_code: number | null
+  /** The severe-symptom alert, or null when there was none (also when missing or unreadable). */
+  alert: ReceiptAlert | null
 }
 
 export type RuntimeErrorKind =
@@ -115,6 +146,8 @@ export type RuntimeErrorKind =
   | 'too-large' // 413
   | 'bad-format' // 415
   | 'not-understood' // 422
+  | 'correction-not-understood' // 422 on a spoken correction: not understood; the correction is NOT used up
+  | 'correction-used' // 409 on a correction: the one correction was already used, or the check-in was shared
   | 'speech-unavailable' // 503
   | 'questions-missing' // 503 on start or a question: today's questions were never downloaded to this device
   | 'bad-response' // 2xx with a body we cannot read
@@ -175,6 +208,15 @@ export interface RuntimeClient {
    * Call ONLY from the "Share this" tap (PV-04). Calling it again returns the same receipt; it never sends twice.
    */
   approve(sessionId: string, severities: Readonly<Record<string, Severity>>): Promise<EgressReceipt>
+  /** The summary read out loud by the runtime's local text-to-speech, as a WAV blob. */
+  getSummaryAudio(sessionId: string, slow?: boolean): Promise<Blob>
+  /**
+   * The one correction before sharing (VC-08): a tapped change (JSON) or the recording of the patient saying it.
+   * Returns the updated summary. 422 = spoken change not understood (not used up); 409 = already used or shared.
+   */
+  correct(sessionId: string, change: CorrectionChange | Blob): Promise<CheckinSummary>
+  /** The current receipt of a shared check-in, so a queued record can be watched until it is sent. */
+  getReceipt(sessionId: string): Promise<EgressReceipt>
 }
 
 type StatusKinds = Partial<Record<number, RuntimeErrorKind>>
@@ -249,7 +291,10 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
       if (!res.ok) throw failure(res, { 404: 'session-not-found', 409: 'already-shared' })
       const body = await readJson(res)
       if (!isTurnResult(body)) throw new RuntimeError('bad-response', res.status)
-      return { ...body, rating: readRating(body.rating), next: readNext(body.next) }
+      const command = readCommand(body.command, body.next)
+      // A command always replays the wording being asked now, whatever `next.ask` says.
+      const next: TurnNext = command ? { action: command, ask } : readNext(body.next)
+      return { ...body, rating: readRating(body.rating), next, command }
     },
 
     async getSummary(sessionId) {
@@ -257,7 +302,7 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
       if (!res.ok) throw failure(res, { 404: 'session-not-found' })
       const body = await readJson(res)
       if (!isCheckinSummary(body)) throw new RuntimeError('bad-response', res.status)
-      return body
+      return readSummary(body)
     },
 
     async approve(sessionId, severities) {
@@ -278,7 +323,40 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
       if (!res.ok) throw failure(res, { 404: 'session-not-found', 422: 'record-refused' })
       const body = await readJson(res)
       if (!isEgressReceipt(body)) throw new RuntimeError('bad-response', res.status)
-      return body
+      return readReceipt(body)
+    },
+
+    async getSummaryAudio(sessionId, slow = false) {
+      const query = new URLSearchParams({ slow: String(slow) })
+      const res = await send(`${sessionPath(sessionId)}/summary/audio?${query}`, { method: 'GET' })
+      if (!res.ok) throw failure(res, { 404: 'session-not-found' })
+      return res.blob()
+    },
+
+    async correct(sessionId, change) {
+      let init: RequestInit
+      if (change instanceof Blob) {
+        if (change.size === 0) throw new RuntimeError('empty-audio')
+        init = { method: 'POST', headers: { 'Content-Type': change.type || 'application/octet-stream' }, body: change }
+      } else {
+        init = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(change) }
+      }
+      const res = await send(`${sessionPath(sessionId)}/correction`, init)
+      if (!res.ok) {
+        // The runtime's 422 message is not shown: the screen has its own plain words, and it may echo what was said.
+        throw failure(res, { 404: 'session-not-found', 409: 'correction-used', 422: 'correction-not-understood' })
+      }
+      const body = await readJson(res)
+      if (!isCheckinSummary(body)) throw new RuntimeError('bad-response', res.status)
+      return readSummary(body)
+    },
+
+    async getReceipt(sessionId) {
+      const res = await send(`${sessionPath(sessionId)}/receipt`, { method: 'GET' })
+      if (!res.ok) throw failure(res, { 404: 'session-not-found' })
+      const body = await readJson(res)
+      if (!isEgressReceipt(body)) throw new RuntimeError('bad-response', res.status)
+      return readReceipt(body)
     },
   }
 }
@@ -338,7 +416,9 @@ function isSharePreview(value: unknown): value is SharePreview {
   )
 }
 
-function isCheckinSummary(value: unknown): value is CheckinSummary {
+type RawSummary = Omit<CheckinSummary, 'spoken' | 'correction_used'> & { spoken?: unknown; correction_used?: unknown }
+
+function isCheckinSummary(value: unknown): value is RawSummary {
   return (
     isRecord(value) &&
     typeof value.session_id === 'string' &&
@@ -351,7 +431,15 @@ function isCheckinSummary(value: unknown): value is CheckinSummary {
   )
 }
 
-function isEgressReceipt(value: unknown): value is EgressReceipt {
+/** `spoken` missing or not text reads as null; `correction_used` missing or not true reads as false. */
+function readSummary(body: RawSummary): CheckinSummary {
+  const spoken = typeof body.spoken === 'string' && body.spoken.trim() !== '' ? body.spoken : null
+  return { ...body, spoken, correction_used: body.correction_used === true }
+}
+
+type RawReceipt = Omit<EgressReceipt, 'alert'> & { alert?: unknown }
+
+function isEgressReceipt(value: unknown): value is RawReceipt {
   return (
     isRecord(value) &&
     (value.status === 'sent' || value.status === 'queued' || value.status === 'failed') &&
@@ -364,6 +452,30 @@ function isEgressReceipt(value: unknown): value is EgressReceipt {
     isNullableString(value.sent_at) &&
     (value.response_code === null || typeof value.response_code === 'number')
   )
+}
+
+/** A missing, null or unreadable alert reads as null: the receipt itself is never lost over it. */
+export function readAlert(value: unknown): ReceiptAlert | null {
+  if (
+    isRecord(value) &&
+    (value.status === 'sent' || value.status === 'queued' || value.status === 'failed') &&
+    typeof value.alert_id === 'string' &&
+    (value.sent_at === undefined || isNullableString(value.sent_at))
+  ) {
+    return { status: value.status, alert_id: value.alert_id, sent_at: (value.sent_at as string | null | undefined) ?? null }
+  }
+  return null
+}
+
+function readReceipt(body: RawReceipt): EgressReceipt {
+  return { ...body, alert: readAlert(body.alert) }
+}
+
+/** The voice command in a turn: `command`, or a repeat/slower `next.action`; null for a normal answer. */
+export function readCommand(command: unknown, next: unknown): VoiceCommand | null {
+  const fromCommand = VOICE_COMMANDS.find((c) => c === command)
+  if (fromCommand) return fromCommand
+  return (isRecord(next) && VOICE_COMMANDS.find((c) => c === next.action)) || null
 }
 
 /** A missing, null or unknown rating reads as "complete" (older runtimes send none). */
@@ -386,7 +498,9 @@ export function readNext(value: unknown): TurnNext {
   return { action: 'next', unanswered: isRecord(value) && value.action === 'next' && value.unanswered === true }
 }
 
-function isTurnResult(value: unknown): value is Omit<TurnResult, 'rating' | 'next'> & { rating?: unknown; next?: unknown } {
+function isTurnResult(
+  value: unknown,
+): value is Omit<TurnResult, 'rating' | 'next' | 'command'> & { rating?: unknown; next?: unknown; command?: unknown } {
   return (
     isRecord(value) &&
     typeof value.transcript === 'string' &&

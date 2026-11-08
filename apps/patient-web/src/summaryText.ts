@@ -1,6 +1,6 @@
 // Plain words for the summary, the "what will be shared" box and the egress receipt.
 // Symptoms are always "for review", never described as caused by anything.
-import type { ReceiptStatus, Severity, SummaryItem } from './api.ts'
+import type { Onset, ReceiptAlert, ReceiptStatus, Severity, SummaryItem } from './api.ts'
 
 const ONSET_WORDS: Record<string, string> = {
   today: 'today',
@@ -73,7 +73,7 @@ export function receiptStatusText(status: ReceiptStatus): string {
     case 'sent':
       return 'Shared'
     case 'queued':
-      return 'Saved on this device; it will be sent when you are back online'
+      return 'Saved on this computer.'
     case 'failed':
       return 'Not accepted'
   }
@@ -92,4 +92,28 @@ export function formatLocalTime(iso: string, locale?: string, timeZone?: string)
     minute: '2-digit',
     timeZone,
   })
+}
+
+/** Said under the queued heading (PV-07). */
+export const QUEUED_EXPLANATION = 'It will be sent automatically when the connection is back.'
+
+/** The severe-symptom alert line (AL-02). Never names the symptom or any detail of it. */
+export function alertText(alert: ReceiptAlert): string {
+  switch (alert.status) {
+    case 'sent':
+      return 'Your care team was told about the severe symptom.'
+    case 'queued':
+      return 'Your care team will be told about the severe symptom when the connection is back.'
+    case 'failed':
+      return 'I could not tell your care team about the severe symptom. Please call them, or tell your helper.'
+  }
+}
+
+/** The onset choices for a tapped correction, in plain words. */
+export const ONSET_CHOICES: Record<Onset, string> = {
+  today: 'Today',
+  '1_3_days': '1 to 3 days ago',
+  '4_7_days': '4 to 7 days ago',
+  over_7_days: 'More than a week ago',
+  unknown: 'Not sure',
 }

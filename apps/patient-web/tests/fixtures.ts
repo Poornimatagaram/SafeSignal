@@ -59,6 +59,8 @@ export const SUMMARY_READY: CheckinSummary = {
   needs_severity: [],
   unanswered_questions: 0,
   text: 'You told me about: rash, moderate, started 1 to 3 days ago.',
+  spoken: 'Here is what I heard. You have a rash. It is moderate. It started 1 to 3 days ago.',
+  correction_used: false,
   share: { ...SHARE, record: RECORD },
 }
 
@@ -93,6 +95,7 @@ export const RECEIPT_SENT: EgressReceipt = {
   payload_sha256: '3f2a9c0b7d1e4f5a6b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c',
   sent_at: '2026-11-08T14:03:12Z',
   response_code: 201,
+  alert: null,
 }
 
 export const RECEIPT_QUEUED: EgressReceipt = { ...RECEIPT_SENT, status: 'queued', sent_at: null, response_code: null }
@@ -101,4 +104,17 @@ export const RECEIPT_FAILED: EgressReceipt = { ...RECEIPT_SENT, status: 'failed'
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+/** A severe rash: the care team and caregiver were told (AL-02). */
+export const ALERT_SENT = { status: 'sent', alert_id: 'alt_5d0e2b7c', sent_at: '2026-11-08T14:03:13Z' } as const
+export const ALERT_QUEUED = { status: 'queued', alert_id: 'alt_5d0e2b7c', sent_at: null } as const
+
+/** The summary after the one correction: the rash is now mild. */
+export const SUMMARY_CORRECTED: CheckinSummary = {
+  ...SUMMARY_READY,
+  items: [{ ...SUMMARY_READY.items[0], severity: 'mild' }],
+  text: 'You told me about: rash, mild, started 1 to 3 days ago.',
+  spoken: 'Here is what I heard. You have a rash. It is mild. It started 1 to 3 days ago.',
+  correction_used: true,
 }
