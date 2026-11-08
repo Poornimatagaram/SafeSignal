@@ -1,18 +1,24 @@
 {
-  "schema_version": "1.0",
-  "status": "draft: from Scoping Doc 25.3; every row to be verified against cached openFDA label text (task C2)",
+  "schema_version": "2.2",
+  "status": "drug_scope verified against the FDA label adverse-reaction sections cached in data/company/labels/ (openFDA label API; task C2, D-079). apps/service/tests/test_terms_labels.py re-checks every row.",
   "terms": [
-    { "term_code": "SE_RASH", "label_term": "Rash", "everyday_words": ["rash", "spots", "red skin", "itchy bumps"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
-    { "term_code": "SE_DRY_SKIN", "label_term": "Dry skin", "everyday_words": ["dry", "flaky", "cracked skin"], "drug_scope": ["Tagrisso"], "severe_trigger": false },
+    { "term_code": "SE_RASH", "label_term": "Rash", "everyday_words": ["rash", "spots", "red skin", "itchy bumps", "acne", "pimples", "nappy rash"], "drug_scope": ["Tagrisso", "Rybrevant", "Beyfortus"], "severe_trigger": false },
+    { "term_code": "SE_DRY_SKIN", "label_term": "Dry skin", "everyday_words": ["dry", "flaky", "cracked skin"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
     { "term_code": "SE_PARONYCHIA", "label_term": "Nail infection or nail changes", "everyday_words": ["sore nails", "cracked nails", "swollen fingertips"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
-    { "term_code": "SE_DIARRHEA", "label_term": "Diarrhea", "everyday_words": ["loose stools", "runny tummy"], "drug_scope": ["Tagrisso"], "severe_trigger": false },
+    { "term_code": "SE_DIARRHEA", "label_term": "Diarrhea", "everyday_words": ["loose stools", "runny tummy", "runny poo"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
     { "term_code": "SE_STOMATITIS", "label_term": "Mouth sores", "everyday_words": ["mouth ulcers", "sore mouth"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
-    { "term_code": "SE_FATIGUE", "label_term": "Fatigue", "everyday_words": ["tired", "worn out", "no energy"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
-    { "term_code": "SE_DECREASED_APPETITE", "label_term": "Decreased appetite", "everyday_words": ["not hungry", "off my food"], "drug_scope": ["Tagrisso"], "severe_trigger": false },
+    { "term_code": "SE_FATIGUE", "label_term": "Fatigue", "everyday_words": ["tired", "worn out", "no energy", "weak"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_DECREASED_APPETITE", "label_term": "Decreased appetite", "everyday_words": ["not hungry", "off my food", "not feeding well"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
     { "term_code": "SE_INFUSION_REACTION", "label_term": "Infusion-related reaction", "everyday_words": ["felt sick during the drip", "chills at infusion"], "drug_scope": ["Rybrevant"], "severe_trigger": false },
-    { "term_code": "SE_DYSPNEA", "label_term": "Shortness of breath", "everyday_words": ["out of breath", "can't catch my breath"], "drug_scope": ["Rybrevant"], "severe_trigger": true },
-    { "term_code": "SE_COUGH", "label_term": "Cough", "everyday_words": ["coughing", "chesty"], "drug_scope": ["Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_DYSPNEA", "label_term": "Shortness of breath", "everyday_words": ["out of breath", "can't catch my breath", "breathing fast"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": true },
+    { "term_code": "SE_COUGH", "label_term": "Cough", "everyday_words": ["coughing", "chesty"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
     { "term_code": "SE_EDEMA", "label_term": "Swelling", "everyday_words": ["swollen ankles", "puffy legs"], "drug_scope": ["Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_NAUSEA", "label_term": "Nausea", "everyday_words": ["feel sick", "queasy", "sick to my stomach"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_VOMITING", "label_term": "Vomiting", "everyday_words": ["threw up", "being sick", "spitting up a lot"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_FEVER", "label_term": "Fever", "everyday_words": ["temperature", "hot to the touch", "feverish"], "drug_scope": ["Tagrisso", "Rybrevant"], "severe_trigger": false },
+    { "term_code": "SE_NASAL", "label_term": "Runny or blocked nose", "everyday_words": ["runny nose", "stuffy nose", "snuffly", "blocked nose"], "drug_scope": [], "severe_trigger": false },
+    { "term_code": "SE_IRRITABILITY", "label_term": "Irritability", "everyday_words": ["fussy", "cranky", "crying more", "won't settle"], "drug_scope": [], "severe_trigger": false },
+    { "term_code": "SE_INJECTION_SITE", "label_term": "Injection site reaction", "everyday_words": ["sore where the jab was", "red at the injection", "swollen leg after the shot"], "drug_scope": ["Beyfortus"], "severe_trigger": false },
     { "term_code": "SE_OTHER_REVIEW", "label_term": "Other, needs review", "everyday_words": [], "drug_scope": [], "severe_trigger": false }
   ]
 }

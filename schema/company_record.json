@@ -37,12 +37,9 @@
       "pattern": "^prog_[a-z0-9_]{1,24}$"
     },
     "cohort_id": {
-      "enum": [
-        "cohort_A",
-        "cohort_B",
-        "cohort_C",
-        "cohort_D"
-      ]
+      "type": "string",
+      "pattern": "^cohort_[A-Za-z0-9_]{1,24}$",
+      "description": "Cohort ID from the program's enrollment; unique across programs (2.2, D-081)"
     },
     "drug_version": {
       "enum": [
@@ -90,6 +87,12 @@
               "SE_DYSPNEA",
               "SE_COUGH",
               "SE_EDEMA",
+              "SE_NAUSEA",
+              "SE_VOMITING",
+              "SE_FEVER",
+              "SE_NASAL",
+              "SE_IRRITABILITY",
+              "SE_INJECTION_SITE",
               "SE_OTHER_REVIEW"
             ]
           },

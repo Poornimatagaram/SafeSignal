@@ -1,31 +1,125 @@
 {
   "schema_version": "2.0",
-  "note": "Synthetic demo data only (Scoping Doc 3, 21.3; D-023, D-033). Single source for demo IDs across all apps. Organizations and people are fictional. 'device_profiles' seed patient.db on the patient's device; their names, birth dates, phones and contact labels never leave the device (emergency contact phones leave only with emergency consent, D-067).",
+  "note": "Synthetic demo data only (Scoping Doc 3, 21.3; D-023, D-033). Single source for demo IDs across all apps. The company, organizations and people are fictional. 'program' and 'cohorts' are the demo patients' program (also first in 'programs'). 'device_profiles' seed patient.db on the patient's device; their names, birth dates, phones and contact labels never leave the device (emergency contact phones leave only with emergency consent, D-067).",
+  "company": {
+    "company_id": "co_halvaren",
+    "display_name": "Halvaren Therapeutics",
+    "note": "Fictional company (D-071, D-078). Its programs, cohort rates and documents come from real public trials and labels, credited per program in data/company/trial_map.json; Halvaren is not the sponsor of those trials."
+  },
   "program": {
     "program_id": "prog_demo_01",
-    "company_id": "co_demo",
+    "company_id": "co_halvaren",
     "drug_name": "Tagrisso"
   },
   "cohorts": [
     {
       "cohort_id": "cohort_A",
       "drug_version": "v1",
-      "label": "Tagrisso v1"
+      "label": "Comparator: gefitinib or erlotinib (global)"
     },
     {
       "cohort_id": "cohort_B",
       "drug_version": "v2",
-      "label": "Tagrisso v2"
+      "label": "Osimertinib 80 mg (global)"
     },
     {
       "cohort_id": "cohort_C",
       "drug_version": "v3",
-      "label": "Tagrisso v3"
+      "label": "Osimertinib 80 mg (China)"
     },
     {
       "cohort_id": "cohort_D",
       "drug_version": "v4",
-      "label": "Tagrisso v4"
+      "label": "Comparator: gefitinib or erlotinib (China)"
+    }
+  ],
+  "programs": [
+    {
+      "program_id": "prog_demo_01",
+      "company_id": "co_halvaren",
+      "drug_name": "Tagrisso",
+      "label": "Tagrisso (osimertinib), first-line EGFR-mutant lung cancer",
+      "population": "adults",
+      "cohorts": [
+        {
+          "cohort_id": "cohort_A",
+          "drug_version": "v1",
+          "label": "Comparator: gefitinib or erlotinib (global)"
+        },
+        {
+          "cohort_id": "cohort_B",
+          "drug_version": "v2",
+          "label": "Osimertinib 80 mg (global)"
+        },
+        {
+          "cohort_id": "cohort_C",
+          "drug_version": "v3",
+          "label": "Osimertinib 80 mg (China)"
+        },
+        {
+          "cohort_id": "cohort_D",
+          "drug_version": "v4",
+          "label": "Comparator: gefitinib or erlotinib (China)"
+        }
+      ]
+    },
+    {
+      "program_id": "prog_rybrevant_01",
+      "company_id": "co_halvaren",
+      "drug_name": "Rybrevant",
+      "label": "Rybrevant (amivantamab) with lazertinib, first-line EGFR-mutant lung cancer",
+      "population": "adults",
+      "cohorts": [
+        {
+          "cohort_id": "cohort_ryb_A",
+          "drug_version": "v1",
+          "label": "Amivantamab + lazertinib (group 1)"
+        },
+        {
+          "cohort_id": "cohort_ryb_B",
+          "drug_version": "v2",
+          "label": "Amivantamab + lazertinib (group 2)"
+        },
+        {
+          "cohort_id": "cohort_ryb_C",
+          "drug_version": "v3",
+          "label": "Osimertinib (comparator)"
+        },
+        {
+          "cohort_id": "cohort_ryb_D",
+          "drug_version": "v4",
+          "label": "Lazertinib alone"
+        }
+      ]
+    },
+    {
+      "program_id": "prog_beyfortus_01",
+      "company_id": "co_halvaren",
+      "drug_name": "Beyfortus",
+      "label": "Beyfortus (nirsevimab), RSV prevention in infants; a parent answers",
+      "population": "infants",
+      "cohorts": [
+        {
+          "cohort_id": "cohort_inf_A",
+          "drug_version": "v1",
+          "label": "Nirsevimab (group 1)"
+        },
+        {
+          "cohort_id": "cohort_inf_B",
+          "drug_version": "v2",
+          "label": "Nirsevimab (group 2)"
+        },
+        {
+          "cohort_id": "cohort_inf_C",
+          "drug_version": "v3",
+          "label": "Nirsevimab (group 3)"
+        },
+        {
+          "cohort_id": "cohort_inf_D",
+          "drug_version": "v4",
+          "label": "Placebo"
+        }
+      ]
     }
   ],
   "organizations": [

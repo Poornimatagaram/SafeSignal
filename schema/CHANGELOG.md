@@ -2,6 +2,18 @@
 
 Owner: company-side lead. Version rules (Scoping Doc 26.11): 1.x adds optional fields; 2.0 breaks existing payloads. The service accepts the old and new version until the next integration run.
 
+## 2.2 — 2026-11-08
+
+Additive; payloads unchanged (`schema_version` stays `"2.0"`; every 2.1 payload is still valid). Responses carry `X-Schema-Version: 2.2`.
+
+- `company_record.json`: `cohort_id` is a pattern `^cohort_[A-Za-z0-9_]{1,24}$` instead of an enum; cohort IDs are unique across programs (D-081).
+- `company_record.json`, `doctor_payload.json`, `enums.json`, `terms.json`: new term codes `SE_NAUSEA`, `SE_VOMITING`, `SE_FEVER`, `SE_NASAL`, `SE_IRRITABILITY`, `SE_INJECTION_SITE` (D-079).
+- `terms.json`: `drug_scope` verified against the FDA labels (Tagrisso now includes shortness of breath and cough) (D-079).
+- `enums.json`: `id_patterns.cohort_id`, `id_patterns.company_id`; `cohort_id` lists every seeded cohort.
+- `company.sql`: new `company` table; nullable `program.label`, `population`, `source_trial`, `source_url`; `cohort.source_arm`; `document.program_id`, `kind`; `v_completion_weekly` adds `voice_records`, `text_records`, `mixed_records` (D-078, D-080, D-081).
+- `demo_fixtures.json`: `company` (Halvaren Therapeutics, fictional) and `programs` (Tagrisso, Rybrevant, Beyfortus with their cohorts); `program` and `cohorts` stay as the demo patients' program; cohort labels name the real trial arm (D-078, D-081).
+- API (`openapi.json`): `GET /v1/company/programs`, `GET /v1/company/documents`, `GET /v1/company/terms`, `GET /v1/company/cohorts/{cohort_id}/survey`; completion rows gain the input-mode counts.
+
 ## 2.1 — 2026-11-07
 
 Additive; payloads unchanged (`schema_version` stays `"2.0"`). Responses carry `X-Schema-Version: 2.1`.
