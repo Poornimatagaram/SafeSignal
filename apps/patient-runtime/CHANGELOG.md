@@ -27,6 +27,7 @@ Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
 ### Changed
 - Import guard: `huggingface_hub` and `ollama` are now on the network list; `ollama` is allowed only in `extract.py`.
+- Seeding test: expectations now come from `schema/demo_fixtures.json` for every device profile, instead of hard-coded values; Priya's fixture changed in PR #11.
 - `README.md` and `CLAUDE.md`: setup steps for the models, plus how to run the leakage eval and the patient screen.
 
 ## 2026-11-07: Task A1, runtime skeleton (branch `patient/feat/runtime-skeleton`)

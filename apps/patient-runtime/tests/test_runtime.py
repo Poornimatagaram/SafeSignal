@@ -1,6 +1,7 @@
 """Task A1 skeleton (contract 2.0): database from schema/patient.sql, seeded profile, /health, egress-import rule."""
 
 import ast
+import json
 import re
 from contextlib import closing
 from pathlib import Path
@@ -10,10 +11,8 @@ from fastapi.testclient import TestClient
 
 from sentinel_contract import SCHEMA_VERSION
 from sentinel_patient.config import WALTER, Settings
-from sentinel_patient.db import PATIENT_SQL, SchemaMismatch, connect, init_db
+from sentinel_patient.db import DEMO_FIXTURES, PATIENT_SQL, SchemaMismatch, connect, init_db
 from sentinel_patient.main import create_app
-
-PRIYA = "pt_9c1d2e3f"
 
 PACKAGE = Path(__file__).resolve().parents[1] / "sentinel_patient"
 
@@ -69,11 +68,26 @@ def test_seeds_walter_profile_consent_and_emergency_setup(client, db_path):
     ]
 
 
-def test_patient_without_emergency_consent_gets_no_emergency_rows(db_path):
-    init_db(db_path, PRIYA)
-    assert rows(db_path, "SELECT emergency_consent FROM consent") == [{"emergency_consent": 0}]
-    assert rows(db_path, "SELECT * FROM emergency_org") == []
-    assert rows(db_path, "SELECT * FROM emergency_contact") == []
+FIXTURES = json.loads(DEMO_FIXTURES.read_text())
+
+
+@pytest.mark.parametrize("profile", FIXTURES["device_profiles"], ids=lambda p: p["patient_ref"])
+def test_seeding_mirrors_the_fixtures_for_every_device_profile(tmp_path, profile):
+    """Derived from schema/demo_fixtures.json, so fixture edits by the company owner don't break it."""
+    db_path, ref = tmp_path / "patient.db", profile["patient_ref"]
+    init_db(db_path, ref)
+    c = profile["consent"]
+    assert rows(db_path, "SELECT share_care_team, emergency_consent, share_caregiver, caregiver_detail FROM consent") == [
+        {"share_care_team": int(c["share_care_team"]), "emergency_consent": int(c["emergency_consent"]),
+         "share_caregiver": int(c["share_caregiver"]), "caregiver_detail": c["caregiver_detail"]}]
+    assert [r["org_id"] for r in rows(db_path, "SELECT org_id FROM emergency_org ORDER BY org_id")] == sorted(
+        profile.get("emergency_org_ids", []))
+    labels = profile.get("emergency_contact_labels", {})
+    expected = sorted(({"contact_id": e["contact_id"], "contact_type": e["contact_type"], "phone": e["phone"],
+                        "org_id": e.get("org_id"), "priority": e["priority"], "display_label": labels.get(e["contact_id"])}
+                       for e in FIXTURES.get("emergency_contacts", []) if e["patient_ref"] == ref),
+                      key=lambda e: e["contact_id"])
+    assert rows(db_path, "SELECT * FROM emergency_contact ORDER BY contact_id") == expected
 
 
 TABLES = ("schema_meta", "patient_profile", "consent", "emergency_org", "emergency_contact")

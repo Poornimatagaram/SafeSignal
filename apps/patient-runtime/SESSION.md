@@ -54,6 +54,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **`main` moved while PR #10 was open, and a seeding test broke.** PR #11 gave Priya emergency consent and a 911 contact in `schema/demo_fixtures.json`, and my test had hard-coded her old values. CI did not catch it, because it doesn't run patient tests; a local rebase-and-test before merging did. Fixed by replacing that test with one that derives its expectations from the fixture file for every device profile. Lesson: rebase and run the patient tests before every merge, even when GitHub says "no conflicts".
 - **faster-whisper 1.2.1 doesn't work with PyAV 19.0.2.** Its decoder passes `metadata_errors=` to `av.open`, which PyAV 19 removed, so passing bytes raised `TypeError`. Fixed by decoding with PyAV in `stt._decode` and passing a numpy array.
 - **`say` speaking rate has a floor:** 115 wpm was only 1.1× longer. Slow is now 60 wpm (about 1.3× longer), and Whisper still transcribes it word for word.
 - **Presidio DEBUG logs contain words from the text.** Fixed by holding its logger at WARNING.
