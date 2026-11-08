@@ -28,7 +28,7 @@ from .db import DEMO_FIXTURES, connect, utc_now
 
 SWITCHES = ("share_care_team", "share_caregiver")
 CONTACT_TYPES = ("emergency_service", "hospital", "person")
-DETAILS = ("alerts_only", "summary")
+DETAILS = ("alerts_only",)  # for now a caregiver gets alerts only; "summary" is not offered
 PHONE = re.compile(r"^(\+[1-9][0-9]{6,14}|[0-9]{3})$")  # schema/consent_update.json
 MAX_LABEL = 40
 
@@ -96,7 +96,7 @@ def setup(db_path: Path, patient_ref: str, choice: dict) -> str:
     if share_cg and caregiver is None:
         raise NoRecipient("choose a caregiver before sharing with them")
     if detail not in DETAILS:
-        raise ValueError("caregiver detail is alerts only or a summary")
+        raise ValueError("for now a caregiver gets alerts only")
     hospitals = list(choice.get("emergency_org_ids") or []) if emergency else []
     contacts = list(choice.get("emergency_contacts") or []) if emergency else []
     if len(hospitals) > 3 or len(set(hospitals)) != len(hospitals) or not set(hospitals) <= org_ids:

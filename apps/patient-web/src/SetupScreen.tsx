@@ -314,15 +314,8 @@ function CaregiverStep({ draft, options, actions }: StepProps) {
         />
       )}
       {draft.caregiver_id !== null && draft.share_caregiver && (
-        <Choices
-          question="What should your caregiver get?"
-          choices={[
-            { value: 'alerts_only' as const, label: CAREGIVER_DETAIL_WORDS.alerts_only },
-            { value: 'summary' as const, label: CAREGIVER_DETAIL_WORDS.summary },
-          ]}
-          chosen={draft.caregiver_detail}
-          onChoose={(caregiver_detail) => actions.change({ caregiver_detail })}
-        />
+        // For now a caregiver gets alerts only; the "summary" detail level is not offered.
+        <p className="switch__means">{CAREGIVER_DETAIL_WORDS.alerts_only}: your caregiver is told when you report a severe problem.</p>
       )}
     </>
   )

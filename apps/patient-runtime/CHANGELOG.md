@@ -21,6 +21,7 @@ Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
   - An older update still queued is superseded and never sent.
   - Turning the care team off means no new envelope, no waiting envelope is sealed, and the record says `consent.care_team: false`.
 - Consent setup (CN-01): `PUT /consent/setup` replaces the whole choice: care team, caregiver and detail level, and (only with emergency consent) up to 3 emergency hospitals and 3 contacts.
+  - A caregiver gets alerts only for now: `caregiver_detail` must be `alerts_only` (422 otherwise).
   - It is checked on the device first (care team not also an emergency hospital, known organizations, phone format, unique order, labels up to 40 characters), saved, and sent as one consent update with `send_consent`.
   - Contact labels stay on the device.
   - `GET /consent` adds `setup` and `options` (organizations and caregivers from the synthetic demo directory).
