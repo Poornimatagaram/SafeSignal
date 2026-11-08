@@ -2,6 +2,36 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Task A4, egress gate, approve before sharing, receipt (branch `patient/feat/egress-gate`)
+
+### Added
+- `egress_gate.py` (PV-04 to PV-08), the only module that sends:
+  - Builds the 2.0 company record and validates it against the schema.
+  - Writes it to the outbox before sending, sends it with `SentinelClient.send_record`, and writes `egress_log` (field names and hash).
+  - Returns a receipt.
+  - Never sends twice; a payload kept while offline is resent unchanged.
+  - `refresh_config` fetches the survey and term list into `survey_cache` and `term_cache`, checking each reply against the contract first.
+- `checkin.py`: check-in sessions.
+  - Answers are stored as `answer_turn` rows, and coded symptoms collect in a draft.
+  - Only wellbeing, symptom-screen and exposure questions can add symptoms.
+  - Severity and onset answers apply to the symptoms from the latest answer that reported any.
+  - A missing severity is chosen by the patient, never guessed.
+  - At approval, `symptom_event` rows, the session status and the outbox row are written in one transaction.
+- Endpoints:
+  - `POST /checkin/sessions`
+  - `GET /checkin/sessions/{id}/summary`: what would be shared; sends nothing.
+  - `POST /checkin/sessions/{id}/approve`: the only route that sends.
+  - `/checkin/turn` now requires `session_id`, and the model runs only for questions that ask about symptoms.
+- `extract.py` helpers: `severity_in_text` and `onset_in_text`, which are rule-based and return None when unclear.
+- Tests: `test_egress_gate.py` (including live tests against the service on port 8000) and a rewritten `test_checkin_api.py` (approve before sending, no double send, offline queue, missing severity); 417 runtime tests in total.
+
+### Changed
+- `extract.py`: when the model isn't sure, the symptom is coded `SE_OTHER_REVIEW` instead of a guessed term ("chest feels tight" is no longer `SE_COUGH`).
+  - A code is kept only when the text contains a cue for it.
+  - Symptoms the patient denies, or says have stopped, are dropped.
+  - Severity and onset are kept only when the text supports them.
+- `survey.py`: questions come only from the survey downloaded from the service; the example-survey stand-in is gone.
+
 ## 2026-11-07: Tasks A2 and A3, voice, filter and extraction (branch `patient/feat/voice-and-filter`)
 
 ### Added

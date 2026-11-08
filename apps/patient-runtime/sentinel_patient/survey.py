@@ -1,26 +1,21 @@
-"""Today's questions for this device (VC-01, VC-09 groundwork).
+"""Today's questions for this device (VC-01, VC-09).
 
-Source: the newest `survey_cache` row for the patient's cohort. Until the egress gate fetches the survey from
-`GET /v1/survey` (task A4), the cache is empty and the contract's example survey is used instead.
+Source: the newest `survey_cache` row for the patient's cohort, filled by `egress_gate.refresh_config` from
+`GET /v1/survey` at the start of each check-in. There is no stand-in: if the survey was never downloaded, the
+check-in cannot start (NoSurvey). Once cached, check-ins keep working with the network off.
 """
 
 from __future__ import annotations
 
 import json
-from contextlib import closing
+import sqlite3
 from functools import lru_cache
-from pathlib import Path
 
 from sentinel_contract import SCHEMA_DIR
 
-from .db import connect
 
-EXAMPLE_SURVEY = SCHEMA_DIR / "examples" / "survey_config.valid.json"
-
-
-@lru_cache(maxsize=1)
-def _example_questions() -> tuple[dict, ...]:
-    return tuple(json.loads(EXAMPLE_SURVEY.read_text())["questions"])
+class NoSurvey(LookupError):
+    """No survey in the cache yet: the service has never been reached from this device."""
 
 
 @lru_cache(maxsize=1)
@@ -30,14 +25,24 @@ def term_labels() -> dict[str, str]:
     return {t["term_code"]: t["label_term"] for t in terms}
 
 
-def current_questions(db_path: Path, patient_ref: str) -> tuple[list[dict], str]:
-    """(questions, source) where source is "cache" or "example"."""
-    with closing(connect(db_path)) as conn:
-        row = conn.execute(
-            "SELECT questions_json FROM survey_cache WHERE cohort_id = "
-            "(SELECT cohort_id FROM patient_profile WHERE patient_ref = ?) "
-            "ORDER BY version DESC, fetched_at DESC LIMIT 1", (patient_ref,)).fetchone()
-    if row:
-        data = json.loads(row["questions_json"])
-        return list(data["questions"] if isinstance(data, dict) else data), "cache"
-    return list(_example_questions()), "example"
+def latest_survey(conn: sqlite3.Connection, patient_ref: str) -> tuple[str, list[dict]]:
+    """(config_id, questions) of the newest cached survey for the patient's cohort; NoSurvey if none."""
+    row = conn.execute(
+        "SELECT config_id, questions_json FROM survey_cache WHERE cohort_id = "
+        "(SELECT cohort_id FROM patient_profile WHERE patient_ref = ?) "
+        "ORDER BY version DESC, fetched_at DESC LIMIT 1", (patient_ref,)).fetchone()
+    if row is None:
+        raise NoSurvey("today's questions have not been downloaded yet")
+    return row["config_id"], _questions(row["questions_json"])
+
+
+def survey_questions(conn: sqlite3.Connection, config_id: str) -> list[dict]:
+    row = conn.execute("SELECT questions_json FROM survey_cache WHERE config_id = ?", (config_id,)).fetchone()
+    if row is None:
+        raise NoSurvey(f"survey {config_id} is not in the cache")
+    return _questions(row["questions_json"])
+
+
+def _questions(questions_json: str) -> list[dict]:
+    data = json.loads(questions_json)
+    return list(data["questions"] if isinstance(data, dict) else data)

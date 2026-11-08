@@ -3,6 +3,20 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08, A4: egress gate, approve before sharing, receipt** (branch `patient/feat/egress-gate`). Built by three parallel agents (egress gate, extract fix, patient screen); I owned `checkin.py`, `survey.py`, `main.py` and their tests.
+  - **Checks:**
+    - Runtime: 417 tests pass, including live egress tests against `apps/service` on port 8000.
+    - Eval harness: 37 tests pass.
+    - Patient web: 114 tests pass, the build is clean, and `npm audit` reports 0 vulnerabilities.
+    - Leakage eval: **PASS** (0 of 59 identifiers; term F1 0.909).
+    - Extraction probe set (the extract agent's own 60 sentences): F1 went from 0.794 to 0.959.
+  - **Live end-to-end** (runtime against the real service, six synthetic spoken answers, webm/opus):
+    - "my chest feels tight" was coded `SE_OTHER_REVIEW`, and follow-up answers added no symptoms.
+    - The summary showed the exact record. Nothing reached the service before approval (0 `egress_log` rows).
+    - Approval got 201 from the service. The receipt hash equals the hash of the record shown in the summary and the hash stored in the outbox.
+    - A second approval returned the same receipt without sending again.
+    - The stored payload contains no name, date of birth, phone or spoken words.
+- **2026-11-08, A2 + A3 merged as PR #10** (squash, `5e79007`). Merged branches deleted locally and on GitHub, including `patient/feat/runtime-skeleton`.
 - **2026-11-07, A2 voice + A3 filter and extraction** (branch `patient/feat/voice-and-filter`). Built by four parallel agents with fixed interfaces; I owned `pyproject.toml`, `uv.lock`, `main.py` and `survey.py`.
   - **Runtime:**
     - `stt` uses faster-whisper `base.en`, from local files only.
@@ -22,6 +36,23 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **Only `POST /checkin/sessions/{id}/approve` sends** (PV-04). The summary shows the exact record that will go, and approval sends that same record (same `record_id`, same hash). Approving again returns the stored receipt; a record kept while offline is resent unchanged (D-021).
+- **The survey and term list are fetched at the start of each check-in**, through `egress_gate.refresh_config`. If offline, the cache is used. With no cache, the check-in can't start (503); there is no stand-in survey any more.
+- **A missing severity is never guessed** (VC-10). The summary lists it in `needs_severity`, and the patient picks Mild, Moderate or Severe; approval is refused until then.
+  - Record `status` is `completed` when every question was answered, otherwise `partial`.
+  - `possible_link_flag` is always false until exposure linking (SE-04) is built.
+- **Only wellbeing, symptom-screen and exposure questions add symptoms**, and the model runs only for those. Answers to the severity and onset questions fill in only the symptoms from the latest answer that reported any. Both rules came from the live run (see Errors and fixes).
+- **Rules override the model in `extract.py`** (Scoping Doc 17.1):
+  - A specific code is kept only if the text contains a cue for it (schema words plus a curated cue list); otherwise it becomes `SE_OTHER_REVIEW`.
+  - "unsure" from the model becomes `SE_OTHER_REVIEW` unless the patient used the term's own schema words.
+  - Denied and stopped symptoms are dropped.
+  - Severity and onset are kept only if the text supports them.
+- **The check-in draft lives in memory.** If the runtime restarts mid check-in, the answers are kept but the coded symptoms of earlier answers are lost (A6).
+- **Config fetches can't go in `egress_log`** (PV-06). `egress_log.outbox_id` is required and must point to an outbox row, and the outbox allows only the four send destinations. So survey and term fetches go to the Python log (method, path, status) only; ask the company owner whether to change the schema.
+  - A 5xx reply reached the service, so it is logged in `egress_log`, and the record stays queued.
+  - A transport error reached nothing and is not logged.
+  - A refused record (4xx) is marked `failed` and never resent.
+- **`apps/patient-web/.gitignore`** ignores `.vite/` (Vite's cache), because the root `.gitignore` belongs to the company owner.
 - **Local model calls are not egress.** `extract.py` may import the `ollama` client (and nothing else on the network list) to reach Ollama on this device. The host must be exactly `127.0.0.1`, `::1` or `localhost`. That is checked at startup (`main.py` fails fast) and on every call, and the import guard test allows `ollama` only in `extract.py`. Ask the company owner to reword the brief's "any HTTP library" rule to say "anything that reaches beyond this device".
 - **Models are fetched once at setup, never during a check-in.**
   - Whisper loads with `local_files_only=True`; fetch it with `uv run python -m sentinel_patient.stt --download`.
@@ -54,6 +85,9 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **The first live A4 run talked to an old runtime.** Port 8001 was held by an A2-era runtime (PID 15222, started 2026-11-07 20:04, not by me), so the new runtime failed to bind. Every request went to the old code: no `session_id`, and `SE_COUGH` from the old extractor. Fixed by running the new runtime on port 8011; I left the unknown process alone. Lesson: check the runtime log for "address already in use" before trusting a live run.
+- **The live run found invented symptoms.** "It started two days ago" and "I took my tablets" each became `SE_OTHER_REVIEW`, and the onset answer was copied onto fatigue from an earlier question. Fixed by allowing symptoms only from symptom questions and applying follow-up answers only to the symptoms they refer to, with a test for each.
+- **Live egress tests write real records** for Walter to the local service: synthetic, a few per run. They also suppress Walter's missed check-in alert for today. Reseed before the demo: `scripts/reset_all.sh --seed`.
 - **`main` moved while PR #10 was open, and a seeding test broke.** PR #11 gave Priya emergency consent and a 911 contact in `schema/demo_fixtures.json`, and my test had hard-coded her old values. CI did not catch it, because it doesn't run patient tests; a local rebase-and-test before merging did. Fixed by replacing that test with one that derives its expectations from the fixture file for every device profile. Lesson: rebase and run the patient tests before every merge, even when GitHub says "no conflicts".
 - **faster-whisper 1.2.1 doesn't work with PyAV 19.0.2.** Its decoder passes `metadata_errors=` to `av.open`, which PyAV 19 removed, so passing bytes raised `TypeError`. Fixed by decoding with PyAV in `stt._decode` and passing a numpy array.
 - **`say` speaking rate has a floor:** 115 wpm was only 1.1× longer. Slow is now 60 wpm (about 1.3× longer), and Whisper still transcribes it word for word.
@@ -67,22 +101,29 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - The Starlette `TestClient` deprecation warning is harmless; `apps/service` gets it too.
 
 ## Next
-- **This PR:** get CI green, squash-merge, delete the branch. Also delete the merged remote branch `patient/feat/runtime-skeleton`.
-- **Known extraction mistakes**, for A5 re-asking and the A6 spoken summary with correction (VC-08) to catch:
-  - Symptoms the person says have stopped can still be included.
-  - "Chest feels tight" is coded as `SE_COUGH`.
-  - "Cracked skin" also adds `SE_PARONYCHIA`.
-  - Severity can attach to the wrong symptom.
+- **A4 PR:** get CI green, then the user merges it (not merged by me).
+- **Restart the runtime on port 8001** (PID 15222 still runs A2 code) before using the patient screen.
+- **Reseed the service before the demo** (`scripts/reset_all.sh --seed`): the live tests left synthetic Walter records for today.
+- **A4 items not yet built:**
+  - Severe alerts: a `severe_trigger` term or severity `severe` should send `POST /v1/alerts`.
+  - A network-log view on the screen (PV-06).
+  - Re-checking the receipt hash in the browser.
+  - Showing the exact record after the patient picks a missing severity (a preview call that takes the chosen severities).
+- **Known extraction misses:**
+  - The model sometimes drops a second symptom; the guard can remove codes but never add them.
+  - "Cracked skin on my fingers" can become `SE_OTHER_REVIEW` instead of `SE_DRY_SKIN`.
+  - Some curated cues are broad ("dry", "toilet").
 - **Grow the leakage set to the 50 transcripts in Scoping Doc 17.3**, including held-out cases the filter was never tuned on. Ask the company owner to add a source-and-licence row for `data/patient/` to `data/README.md` (Scoping Doc 16.1).
-- **A4 egress gate:**
-  - Fetch the survey (replacing the example fallback) and terms (`term_cache`, `known_side_effect`).
-  - Build and send the record with a receipt.
-  - Save `checkin_session` and `answer_turn` rows.
 - **A5:** answer rating and re-asking (`asks[1]`, `asks[2]`), wired into the screen.
-- **A6:** spoken summary and correction; queue sends while the network is off.
+- **A6:**
+  - Spoken summary with one correction (VC-08); the summary `text` is ready for text-to-speech.
+  - Retry queued records with `BACKOFF_SECONDS`.
+  - Persist the check-in draft so a restart loses nothing.
+- **A7:** care envelopes per organization; `possible_link_flag` from exposures (SE-04).
 - **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
 - **Ask the company owner** for:
   - CI jobs for `apps/patient-runtime` pytest, `evals/patient` and `apps/patient-web` `npm test`; CI runs none of them today.
   - The loopback wording in the brief.
+  - Where config fetches should be logged for PV-06, given that `egress_log` requires an outbox row.
 - **Piper:** the command-line flags are untested against a real binary (Piper is not installed).
 - **Editor setup:** point VS Code's Python interpreter at `apps/patient-runtime/.venv` to clear the "could not be resolved" warnings.
