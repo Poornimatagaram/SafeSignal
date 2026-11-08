@@ -7,7 +7,11 @@ This module makes no outbound calls: every outbound byte goes through egress_gat
 
 Check-in: start (refreshes the survey and term list through the egress gate) -> one turn per answer: audio (in memory
 only) -> stt -> transcript -> filter (identifiers removed) -> extract (local model, coded fields only) -> summary in
-plain words with the exact record -> nothing leaves until the patient approves -> egress gate sends -> receipt.
+plain words with the exact record -> nothing leaves until the patient approves -> egress gate sends the record,
+then the care envelope sealed on this device (NF-05) -> receipts.
+
+Consent (CN-01, CN-03): GET/PUT /consent are the two switches. A change is saved on the device at once and sent as
+a consent update through the egress gate; it is the only other thing the patient can send.
 """
 
 from __future__ import annotations
@@ -22,9 +26,9 @@ from fastapi.responses import Response
 
 from sentinel_contract import SCHEMA_VERSION, ContractError
 
-from . import commands, egress_gate, extract, rating, stt, summary, tts
+from . import commands, consent, egress_gate, extract, rating, stt, summary, tts
 from . import filter as pii_filter
-from .checkin import (DESTINATION_LABEL, SYMPTOM_PURPOSES, AlreadyShared, CheckinStore, CorrectionUsed,
+from .checkin import (CARE_LABEL, DESTINATION_LABEL, SYMPTOM_PURPOSES, AlreadyShared, CheckinStore, CorrectionUsed,
                       NeedsSeverity, NoTerms, UnknownQuestion, UnknownSession)
 from .config import Settings
 from .db import connect, init_db
@@ -65,7 +69,8 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
             clients[0].close()
 
     # The worker closes the client it gets after each pass, so it gets its own, never the shared one.
-    worker = egress_gate.RetryWorker(settings.db_path, lambda: sentinel_client or egress_gate.make_client(settings))
+    worker = egress_gate.RetryWorker(settings.db_path, lambda: sentinel_client or egress_gate.make_client(settings),
+                                     patient_ref=settings.patient_ref)
     app = FastAPI(title="Sentinel patient runtime", version=SCHEMA_VERSION, lifespan=lifespan)
     app.state.retry_worker = worker
     app.state.settings = settings
@@ -246,26 +251,48 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
     def checkin_approve(session_id: str = Path(..., pattern=SESSION_ID),
                         severities: dict[str, str] = Body(default_factory=dict, embed=True)) -> dict:
         """The patient tapped "Share this": the only route that sends. Returns the egress receipt (PV-05)."""
-        record, alert = _session_errors(store.approve, session_id, severities, client=get_client())
-        return _receipt(record, alert)
+        return _receipt(_session_errors(store.approve, session_id, severities, client=get_client()))
 
     @app.get("/checkin/sessions/{session_id}/receipt")
     def checkin_receipt(session_id: str = Path(..., pattern=SESSION_ID)) -> dict:
         """The receipt as it stands now: a queued record turns "sent" once the retry worker gets it through."""
-        record, alert = _session_errors(store.receipts, session_id, settings.sentinel_base_url)
-        if record is None:
+        shared = _session_errors(store.receipts, session_id, settings.sentinel_base_url)
+        if shared is None:
             raise HTTPException(404, "this check-in has not been shared")
-        return _receipt(record, alert)
+        return _receipt(shared)
+
+    # ---------- consent switches (CN-01, CN-03) ----------
+
+    @app.get("/consent")
+    def consent_get() -> dict:
+        """The two switches as they stand on this device, and the receipt of the latest consent update."""
+        return consent.state(settings.db_path, settings.patient_ref, base_url=settings.sentinel_base_url)
+
+    @app.put("/consent")
+    def consent_put(share_care_team: bool | None = Body(None), share_caregiver: bool | None = Body(None)) -> dict:
+        """The patient flipped a switch: saved on the device at once, then sent through the egress gate."""
+        try:
+            outbox_id = consent.change(settings.db_path, settings.patient_ref, share_care_team=share_care_team,
+                                       share_caregiver=share_caregiver)
+        except ValueError as e:  # includes NoRecipient; messages never carry patient content
+            raise HTTPException(422, str(e))
+        if outbox_id is not None:
+            egress_gate.send_queued(settings.db_path, outbox_id, client=get_client())
+        return consent.state(settings.db_path, settings.patient_ref, base_url=settings.sentinel_base_url)
 
     return app
 
 
-def _receipt(record, alert) -> dict:
+def _receipt(shared) -> dict:
+    record, alert, envelope = shared.record, shared.alert, shared.envelope
+    if envelope is not None and not isinstance(envelope, dict):
+        envelope = {**envelope.to_dict(), "label": CARE_LABEL, "envelope_id": envelope.outbox_id}
     return {"status": record.status, "record_id": record.outbox_id, "destination": DESTINATION_LABEL,
             "method": record.method, "url": record.url, "fields_sent": record.fields_sent,
             "payload_sha256": record.payload_sha256, "sent_at": record.sent_at, "response_code": record.response_code,
             "alert": None if alert is None else {"status": alert.status, "alert_id": alert.outbox_id,
-                                                 "sent_at": alert.sent_at}}
+                                                 "sent_at": alert.sent_at},
+            "envelope": envelope}
 
 
 def _session_errors(fn, *args, **kwargs):

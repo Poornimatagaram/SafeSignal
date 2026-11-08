@@ -11,8 +11,19 @@ This is the ONLY module allowed to import sentinel_contract.client or any HTTP l
   twice: the stored receipt comes back instead.
 - `build_alert` builds the 2.0 severe alert (AL-02, SE-03): ids and a timestamp only, never symptom details (AL-03).
   It is queued and sent like a record (destination "alert", `send_alert`), with the same receipt and egress_log.
-- `RetryWorker` retries every queued record and alert automatically until the service accepts it (PV-07), with the
-  backoff of `BACKOFF_SECONDS` (2, 4, 8, 16, 32, 60, 60 ... seconds); alerts go first. Refused rows are never retried.
+- `RetryWorker` retries every queued row automatically until the service accepts it (PV-07), with the backoff of
+  `BACKOFF_SECONDS` (2, 4, 8, 16, 32, 60, 60 ... seconds), in the order consent, alert, company record, care
+  envelope; it also seals and queues the envelopes of pending sessions once a key exists. Refused rows are never
+  retried.
+- Care envelopes (NF-05; task A7): `queue_care_envelope` seals the doctor payload of an approved session
+  (`care_payload.doctor_payload_for_session`) to the care-team organization's key (`fetch_org_key`, always fetched
+  fresh) and queues it, only while the patient shares with the care team and only for sessions approved while
+  sharing. The stored envelope is resent unchanged on retry (re-sealing gives a new ciphertext and a 409, D-021).
+  For envelopes the outbox, egress_log and receipt hash is the PLAINTEXT hash the envelope carries (26.13).
+  No key yet (404 until the org admin registers one) raises `KeyUnavailable`: nothing is queued and the session
+  stays in `pending_care_sessions`, which the retry worker keeps trying.
+- Consent updates (CN-01): `queue_consent_update` queues the full current consent state for
+  `PUT /v1/consent/{patient_ref}` and supersedes (marks failed, never sent) every older queued update.
 - `refresh_config` fetches the survey and term list (configuration only; no patient data in the request) into
   `survey_cache` and `term_cache`; offline keeps the cache.
 
@@ -21,6 +32,8 @@ Logs carry method, path, status code and outbox_id only: never payloads, respons
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
 import re
@@ -37,15 +50,19 @@ from typing import Any
 
 from sentinel_contract import SCHEMA_VERSION, canonical, payload_sha256, validate
 from sentinel_contract.client import (BACKOFF_SECONDS, ContractError, SendRejected, SendRetryable, SentinelClient,
-                                      field_names)
+                                      build_envelope, field_names)
 
+from . import care_payload
 from .db import connect, utc_now
 
 log = logging.getLogger(__name__)
 
 __all__ = ["Receipt", "ConfigRefresh", "make_client", "field_names", "new_record_id", "records_url",
            "build_company_record", "queue_payload", "send_queued", "receipt_for", "refresh_config",
-           "new_alert_id", "alerts_url", "build_alert", "RetryWorker", "BACKOFF_SECONDS"]
+           "new_alert_id", "alerts_url", "build_alert", "RetryWorker", "BACKOFF_SECONDS",
+           "new_envelope_id", "envelopes_url", "new_consent_id", "consent_url", "KeyUnavailable", "fetch_org_key",
+           "queue_care_envelope", "pending_care_sessions", "build_consent_update", "queue_consent_update",
+           "latest_consent_receipt"]
 
 # outbox.destination -> payload kind in schema/ (schema/enums.json -> outbox_destination)
 PAYLOAD_KINDS = {"company_record": "company_record", "care_envelope": "care_envelope", "alert": "alert_event",
@@ -53,7 +70,8 @@ PAYLOAD_KINDS = {"company_record": "company_record", "care_envelope": "care_enve
 # outbox_id must equal the payload's own ID, so a retry reuses it (brief "Always")
 ID_FIELDS = {"company_record": "record_id", "care_envelope": "envelope_id", "alert": "alert_id"}
 # destinations this gate sends today -> SentinelClient method
-SENDERS = {"company_record": "send_record", "alert": "send_alert"}
+SENDERS = {"company_record": "send_record", "alert": "send_alert", "care_envelope": "send_envelope",
+           "consent": "send_consent"}
 
 # SentinelClient raises SendRetryable(f"{status} from {path}") for a 5xx reply (the request reached the service)
 # and chains the httpx.TransportError for no network (it reached nothing).
@@ -68,7 +86,7 @@ class Receipt:
     method: str               # "POST"
     url: str                  # full URL, e.g. "http://127.0.0.1:8000/v1/records"
     fields_sent: list[str]    # field names only, e.g. "symptoms[].term_code"; never values
-    payload_sha256: str       # hash of the canonical payload; equals the service's payload_sha256
+    payload_sha256: str       # hash of the canonical payload (for an envelope: of its plaintext); = the service's
     sent_at: str | None       # UTC "YYYY-MM-DDTHH:MM:SSZ" when sent, else None
     response_code: int | None
 
@@ -100,6 +118,23 @@ def new_alert_id() -> str:
 
 def alerts_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/v1/alerts"
+
+
+def new_envelope_id() -> str:
+    return "env_" + secrets.token_hex(4)
+
+
+def envelopes_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/v1/care-envelopes"
+
+
+def new_consent_id() -> str:
+    """Outbox id of a consent update (the consent payload itself has no id field)."""
+    return "con_" + secrets.token_hex(4)
+
+
+def consent_url(base_url: str, patient_ref: str) -> str:
+    return f"{base_url.rstrip('/')}/v1/consent/{patient_ref}"
 
 
 # ---------- build ----------
@@ -178,6 +213,8 @@ def queue_payload(conn: sqlite3.Connection, *, outbox_id: str, session_id: str |
     """Write a schema-valid payload to the outbox as "queued". Does not commit: the caller owns the transaction.
 
     Same id and same payload again is a no-op; same id with a different payload raises ValueError.
+    The stored hash is the payload's hash, except for a care envelope: there it is the plaintext hash the envelope
+    carries (`payload_sha256`, 26.13), which is what the service stores and the receipt shows.
     """
     kind = PAYLOAD_KINDS.get(destination)
     if kind is None:
@@ -186,15 +223,23 @@ def queue_payload(conn: sqlite3.Connection, *, outbox_id: str, session_id: str |
     id_field = ID_FIELDS.get(destination)
     if id_field and payload.get(id_field) != outbox_id:
         raise ValueError(f"outbox_id must equal the payload's {id_field}")
-    digest = payload_sha256(payload)
-    row = conn.execute("SELECT destination, payload_sha256 FROM outbox WHERE outbox_id = ?", (outbox_id,)).fetchone()
+    digest = _row_hash(destination, payload)
+    text = canonical(payload).decode("utf-8")
+    row = conn.execute("SELECT destination, payload, payload_sha256 FROM outbox WHERE outbox_id = ?",
+                       (outbox_id,)).fetchone()
     if row is not None:
-        if (row[0], row[1]) == (destination, digest):
+        if (row[0], row[1], row[2]) == (destination, text, digest):
             return
         raise ValueError(f"outbox {outbox_id} already holds a different payload")
     conn.execute("INSERT INTO outbox (outbox_id, session_id, destination, payload, payload_sha256, status, created_at) "
-                 "VALUES (?, ?, ?, ?, ?, 'queued', ?)",
-                 (outbox_id, session_id, destination, canonical(payload).decode("utf-8"), digest, utc_now()))
+                 "VALUES (?, ?, ?, ?, ?, 'queued', ?)", (outbox_id, session_id, destination, text, digest, utc_now()))
+
+
+def _row_hash(destination: str, payload: Mapping) -> str | None:
+    """outbox/egress_log/receipt hash: the plaintext hash an envelope carries, else the payload's own hash."""
+    if destination == "care_envelope":
+        return payload.get("payload_sha256")
+    return payload_sha256(payload)
 
 
 def _route(destination: str, payload: Mapping) -> tuple[str, str]:
@@ -246,7 +291,11 @@ def send_queued(db_path: Path, outbox_id: str, *, client) -> Receipt:
 
         payload = json.loads(row["payload"])
         digest = row["payload_sha256"]
-        if payload_sha256(payload) != digest:
+        # An envelope cannot be re-hashed (its hash is of the plaintext inside): its stored text must be the
+        # canonical JSON it was queued as, and the hash it carries must be the stored one.
+        intact = (canonical(payload).decode("utf-8") == row["payload"] and _row_hash(destination, payload) == digest
+                  if destination == "care_envelope" else payload_sha256(payload) == digest)
+        if not intact:
             raise RuntimeError(f"outbox {outbox_id} payload does not match its stored hash; not sent")
         method, path = _route(destination, payload)
         url, fields = f"{base_url.rstrip('/')}{path}", field_names(payload)
@@ -287,31 +336,226 @@ def send_queued(db_path: Path, outbox_id: str, *, client) -> Receipt:
                        result.payload_sha256, sent_at, result.status_code)
 
 
+# ---------- care envelopes (NF-05; task A7) ----------
+
+class KeyUnavailable(Exception):
+    """The organization's public key could not be fetched; nothing was sealed or queued.
+
+    `reason`: "no_key" (404: its admin has not registered one yet, the normal case at first), "refused" (403 or
+    another 4xx, or a reply that is not base64 of a 32-byte key) or "offline" (no network or 5xx).
+    """
+
+    def __init__(self, reason: str, org_id: str):
+        self.reason, self.org_id = reason, org_id
+        super().__init__(f"public key of {org_id} unavailable: {reason}")
+
+
+def _is_key(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        return len(base64.b64decode(value, validate=True)) == 32
+    except (binascii.Error, ValueError):
+        return False
+
+
+def fetch_org_key(db_path: Path, org_id: str, *, client) -> str:
+    """The organization's current X25519 public key (base64), fetched fresh every time: an org may re-register its
+    key, so a cached one is never used to seal. The care-team org's key is stored in
+    `patient_profile.care_org_public_key` (for display only). Raises KeyUnavailable."""
+    path = f"/v1/orgs/{org_id}/public-key"
+    try:
+        key = client.fetch_org_key(org_id)
+    except SendRetryable:
+        log.warning("egress GET %s -> no network or server error", path)
+        raise KeyUnavailable("offline", org_id) from None
+    except SendRejected as e:
+        log.warning("egress GET %s -> %s", path, e.status)
+        raise KeyUnavailable("no_key" if e.status == 404 else "refused", org_id) from None
+    except (KeyError, TypeError, ValueError):  # a reply without a usable public_key
+        log.warning("egress GET %s -> reply does not match the contract", path)
+        raise KeyUnavailable("refused", org_id) from None
+    if not _is_key(key):
+        log.warning("egress GET %s -> 200, not a 32-byte key", path)
+        raise KeyUnavailable("refused", org_id)
+    log.info("egress GET %s -> 200", path)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("UPDATE patient_profile SET care_org_public_key = ? WHERE care_org_id = ?", (key, org_id))
+    return key
+
+
+def _sharing_care_team(conn: sqlite3.Connection) -> bool:
+    row = conn.execute("SELECT share_care_team FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
+    return bool(row and row["share_care_team"])
+
+
+def _approved_while_sharing(conn: sqlite3.Connection, session_id: str) -> bool:
+    """The session was approved (ended_at set) and its company record (queued or sent) says consent.care_team."""
+    for row in conn.execute("SELECT o.payload FROM outbox o JOIN checkin_session s ON s.session_id = o.session_id "
+                            "WHERE o.session_id = ? AND o.destination = 'company_record' "
+                            "AND o.status IN ('queued', 'sent') AND s.ended_at IS NOT NULL", (session_id,)):
+        try:
+            if json.loads(row["payload"])["consent"]["care_team"] is True:
+                return True
+        except (KeyError, TypeError, ValueError):
+            continue
+    return False
+
+
+def _envelope_row(conn: sqlite3.Connection, session_id: str) -> str | None:
+    row = conn.execute("SELECT outbox_id FROM outbox WHERE session_id = ? AND destination = 'care_envelope' "
+                       "ORDER BY created_at, outbox_id LIMIT 1", (session_id,)).fetchone()
+    return row["outbox_id"] if row else None
+
+
+def _care_org(conn: sqlite3.Connection, patient_ref: str) -> str | None:
+    row = conn.execute("SELECT care_org_id FROM patient_profile WHERE patient_ref = ?", (patient_ref,)).fetchone()
+    return row["care_org_id"] if row else None
+
+
+def queue_care_envelope(db_path: Path, session_id: str, patient_ref: str, *, client) -> str | None:
+    """Seal the doctor payload of an approved session to the care-team organization and queue it (NF-05).
+
+    Returns the envelope_id (== outbox_id) of the session's care envelope: the existing one if it was queued
+    before, else a new one. Returns None when there is nothing to send: the patient does not share with the care
+    team now, there is no care organization, or the session was not approved while sharing (its company record is
+    missing, refused or says consent.care_team false). Does not send: `send_queued` or the retry worker does.
+    Raises KeyUnavailable (nothing queued; try again later), ValueError (no date of birth) or ContractError.
+    Only the care-team organization for now: envelopes for consented emergency organizations (D-065) are a later
+    task.
+    """
+    with _lock_for(f"care:{session_id}"):  # the approve route and the retry worker never seal one session twice
+        with closing(connect(db_path)) as conn:
+            if (existing := _envelope_row(conn, session_id)) is not None:
+                return existing
+            org_id = _care_org(conn, patient_ref)
+            if not (org_id and _sharing_care_team(conn) and _approved_while_sharing(conn, session_id)):
+                return None
+            payload = care_payload.doctor_payload_for_session(conn, session_id, patient_ref)
+        key = fetch_org_key(db_path, org_id, client=client)
+        envelope_id = new_envelope_id()
+        envelope = build_envelope(envelope_id, org_id, payload, key)
+        with closing(connect(db_path)) as conn, conn:
+            if not (_sharing_care_team(conn) and _care_org(conn, patient_ref) == org_id):
+                return None  # consent was withdrawn or changed while the key was fetched
+            queue_payload(conn, outbox_id=envelope_id, session_id=session_id, destination="care_envelope",
+                          payload=envelope)
+        log.info("care envelope %s queued for %s", envelope_id, org_id)
+        return envelope_id
+
+
+def pending_care_sessions(db_path: Path) -> list[str]:
+    """Approved sessions whose care envelope is still to be sealed (oldest first): the patient shares with the care
+    team now, a care organization is set, the session was approved while sharing, and it has no care_envelope row.
+    Empty while consent is off: turning it off stops future sharing (CN-03)."""
+    with closing(connect(db_path)) as conn:
+        if not _sharing_care_team(conn):
+            return []
+        if not conn.execute("SELECT 1 FROM patient_profile WHERE care_org_id IS NOT NULL").fetchone():
+            return []
+        candidates = [r["session_id"] for r in conn.execute(
+            "SELECT s.session_id FROM checkin_session s WHERE s.ended_at IS NOT NULL AND NOT EXISTS "
+            "(SELECT 1 FROM outbox o WHERE o.session_id = s.session_id AND o.destination = 'care_envelope') "
+            "ORDER BY s.ended_at, s.session_id")]
+        return [sid for sid in candidates if _approved_while_sharing(conn, sid)]
+
+
+# ---------- consent updates (CN-01) ----------
+
+def build_consent_update(conn: sqlite3.Connection, patient_ref: str) -> dict:
+    """The 2.0 consent update for the CURRENT local state; raises LookupError without a profile or consent row and
+    ContractError if it is not valid. Emergency organizations and contacts are included only with emergency
+    consent; contact labels (display_label) never leave the device."""
+    profile = conn.execute("SELECT care_org_id, caregiver_id FROM patient_profile WHERE patient_ref = ?",
+                           (patient_ref,)).fetchone()
+    consent = conn.execute("SELECT share_care_team, share_caregiver, caregiver_detail, emergency_consent FROM consent "
+                           "ORDER BY consent_id DESC LIMIT 1").fetchone()
+    if profile is None or consent is None:
+        raise LookupError("no profile or consent on this device")
+    emergency = bool(consent["emergency_consent"])
+    orgs = [r["org_id"] for r in conn.execute("SELECT org_id FROM emergency_org ORDER BY org_id")] if emergency else []
+    contacts = [{"contact_id": r["contact_id"], "contact_type": r["contact_type"], "phone": r["phone"],
+                 "org_id": r["org_id"], "priority": r["priority"]}
+                for r in conn.execute("SELECT contact_id, contact_type, phone, org_id, priority FROM emergency_contact "
+                                      "ORDER BY priority, contact_id")] if emergency else []
+    update = {
+        "schema_version": SCHEMA_VERSION,
+        "patient_ref": patient_ref,
+        "care_org_id": profile["care_org_id"],
+        "share_care_team": _flag(consent["share_care_team"]),
+        "caregiver_id": profile["caregiver_id"],
+        "share_caregiver": _flag(consent["share_caregiver"]),
+        "caregiver_detail": consent["caregiver_detail"],
+        "emergency_consent": emergency,
+        "emergency_org_ids": orgs,
+        "emergency_contacts": contacts,
+    }
+    validate("consent_update", update)
+    return update
+
+
+def queue_consent_update(conn: sqlite3.Connection, patient_ref: str) -> str:
+    """Queue the full current consent state (destination "consent", session_id NULL) and return its outbox_id.
+
+    Does not commit: the caller owns the transaction and writes the new consent row first. Every older update still
+    queued is marked failed with no egress_log row (superseded, never sent): each update is the whole state, so an
+    older one landing after this one would undo it. (One already in flight may still land; this newer one is
+    queued behind it and is sent after it, so the service ends on the newest state.)
+    """
+    update = build_consent_update(conn, patient_ref)
+    outbox_id = new_consent_id()
+    conn.execute("UPDATE outbox SET status = 'failed' WHERE destination = 'consent' AND status = 'queued'")
+    queue_payload(conn, outbox_id=outbox_id, session_id=None, destination="consent", payload=update)
+    return outbox_id
+
+
+def latest_consent_receipt(db_path: Path, *, base_url: str = "") -> Receipt | None:
+    """Receipt of the newest consent update (sent, queued or failed); None if none was ever queued."""
+    with closing(connect(db_path)) as conn:
+        row = conn.execute("SELECT outbox_id FROM outbox WHERE destination = 'consent' "
+                           "ORDER BY created_at DESC, rowid DESC LIMIT 1").fetchone()
+    return receipt_for(db_path, row["outbox_id"], base_url=base_url) if row else None
+
+
 # ---------- automatic retry (PV-07) ----------
 
 class RetryWorker:
-    """Retries every queued record and alert until the service accepts it (201 or 200).
+    """Retries every queued row until the service accepts it (201 or 200), and seals pending care envelopes.
 
     After the n-th failed attempt of a row (no network or 5xx) the next one is due `backoff[min(n-1, len-1)]`
     seconds later: 2, 4, 8, 16, 32, 60, 60 ... A newly queued row is due at once. Refused ("failed") and "sent" rows
-    are never touched. Attempt counts live in memory only, so a restart begins again at 2 s. Alerts go before
-    records. Sending goes through `send_queued`, so receipts, egress_log and never-twice are the same as for a
-    send from the approve route; a row being sent by one caller is skipped by the others.
+    are never touched. Attempt counts live in memory only, so a restart begins again at 2 s. Order: consent first
+    (a withdrawal reaches the service before later sends), then alerts, records and care envelopes. Sending goes
+    through `send_queued`, so receipts, egress_log and never-twice are the same as for a send from the approve
+    route; a row being sent by one caller is skipped by the others.
+
+    Each pass first calls `queue_care_envelope` for every due session of `pending_care_sessions` (backoff key
+    "care:<session_id>", same delays): no key yet (KeyUnavailable) backs off; once queued, the envelope is sent in
+    the same pass. `patient_ref` defaults to the device's single patient_profile row.
     """
 
-    PRIORITY = ("alert", "company_record")  # alerts first (AL-02)
+    PRIORITY = ("consent", "alert", "company_record", "care_envelope")
+    CARE = "care:"
 
     def __init__(self, db_path: Path, client_factory: Callable[[], Any], *, backoff: Sequence[int] = BACKOFF_SECONDS,
-                 clock: Callable[[], float] = time.monotonic):
+                 clock: Callable[[], float] = time.monotonic, patient_ref: str | None = None):
         if not backoff:
             raise ValueError("backoff needs at least one delay")
         self.db_path, self.client_factory = Path(db_path), client_factory
         self.backoff, self.clock = tuple(backoff), clock
-        self._state: dict[str, tuple[int, float]] = {}   # outbox_id -> (failed attempts, next attempt due at)
+        self.patient_ref = patient_ref
+        self._state: dict[str, tuple[int, float]] = {}   # outbox_id or "care:<session_id>" -> (failures, due at)
         self._in_flight: set[str] = set()
         self._guard = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+
+    def _patient_ref(self) -> str | None:
+        if self.patient_ref:
+            return self.patient_ref
+        with closing(connect(self.db_path)) as conn:
+            refs = [r[0] for r in conn.execute("SELECT patient_ref FROM patient_profile LIMIT 2")]
+        return refs[0] if len(refs) == 1 else None
 
     def _queued(self) -> list[tuple[str, str]]:
         order = " ".join(f"WHEN '{d}' THEN {i}" for i, d in enumerate(self.PRIORITY))
@@ -321,38 +565,65 @@ class RetryWorker:
                 f"SELECT outbox_id, destination FROM outbox WHERE status = 'queued' AND destination IN ({marks}) "
                 f"ORDER BY CASE destination {order} END, created_at, outbox_id", self.PRIORITY).fetchall()]
 
-    def _claim_due(self) -> list[str]:
-        queued = self._queued()
+    def _claim(self, keys: list[str], *, care: bool) -> list[str]:
+        """Claim the due keys of one kind and forget the state of that kind's keys that are no longer pending."""
         now = self.clock()
         with self._guard:
-            ids = {oid for oid, _ in queued}
-            for gone in [oid for oid in self._state if oid not in ids and oid not in self._in_flight]:
-                del self._state[gone]  # sent or refused elsewhere (e.g. the approve route)
-            due = [oid for oid, _ in queued
-                   if oid not in self._in_flight and self._state.get(oid, (0, now))[1] <= now]
+            live = set(keys)
+            for gone in [k for k in self._state if k.startswith(self.CARE) == care
+                         and k not in live and k not in self._in_flight]:
+                del self._state[gone]  # sent, refused or sealed elsewhere (e.g. the approve route)
+            due = [k for k in keys if k not in self._in_flight and self._state.get(k, (0, now))[1] <= now]
             self._in_flight.update(due)
         return due
 
-    def _finish(self, outbox_id: str, still_queued: bool) -> None:
+    def _claim_due(self) -> list[str]:
+        return self._claim([oid for oid, _ in self._queued()], care=False)
+
+    def _claim_care_due(self) -> list[str]:
+        return self._claim([self.CARE + sid for sid in pending_care_sessions(self.db_path)], care=True)
+
+    def _finish(self, key: str, still_queued: bool) -> None:
         with self._guard:
-            self._in_flight.discard(outbox_id)
+            self._in_flight.discard(key)
             if not still_queued:
-                self._state.pop(outbox_id, None)
+                self._state.pop(key, None)
                 return
-            attempts = self._state.get(outbox_id, (0, 0.0))[0] + 1
+            attempts = self._state.get(key, (0, 0.0))[0] + 1
             delay = self.backoff[min(attempts - 1, len(self.backoff) - 1)]
-            self._state[outbox_id] = (attempts, self.clock() + delay)
+            self._state[key] = (attempts, self.clock() + delay)
 
     def run_once(self) -> list[Receipt]:
-        """Send every queued row whose next attempt is due; returns their receipts (sent, queued or failed)."""
-        due = self._claim_due()
-        if not due:
-            return []
+        """Seal due pending care envelopes, then send every queued row whose next attempt is due; returns the
+        receipts of the rows it tried to send (sent, queued or failed)."""
+        care_due = self._claim_care_due()
+        pending = list(care_due)
         receipts: list[Receipt] = []
-        pending = list(due)
         client = None
         try:
-            client = self.client_factory()
+            if care_due:
+                client = self.client_factory()
+                patient_ref = self._patient_ref()
+                for key in care_due:
+                    session_id = key[len(self.CARE):]
+                    retry = True
+                    try:
+                        if patient_ref is not None:
+                            queue_care_envelope(self.db_path, session_id, patient_ref, client=client)
+                            retry = False
+                    except KeyUnavailable as e:
+                        log.info("care envelope for %s waits: key %s", session_id, e.reason)
+                    except Exception as e:  # never the message: it could quote a value
+                        log.error("care envelope for %s failed with %s; backing off", session_id, type(e).__name__)
+                    finally:
+                        pending.remove(key)
+                        self._finish(key, retry)
+
+            due = self._claim_due()
+            pending.extend(due)
+            if not due:
+                return receipts
+            client = client or self.client_factory()
             for outbox_id in due:
                 still_queued = True
                 try:
@@ -367,8 +638,8 @@ class RetryWorker:
                     pending.remove(outbox_id)
                     self._finish(outbox_id, still_queued)
         finally:
-            for outbox_id in pending:  # the client could not be built (or a pass was cut short): back these off
-                self._finish(outbox_id, True)
+            for key in pending:  # the client could not be built (or a pass was cut short): back these off
+                self._finish(key, True)
             close = getattr(client, "close", None)
             if callable(close):
                 close()

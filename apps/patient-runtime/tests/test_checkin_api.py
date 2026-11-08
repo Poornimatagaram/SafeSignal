@@ -4,14 +4,16 @@ Speech, filter, model and the Sentinel client are fakes here; the real ones have
 test_egress_gate.py also runs against the local service.
 """
 
+import base64
 import json
 from contextlib import closing
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
+from nacl.public import PrivateKey, SealedBox
 
-from sentinel_contract import SCHEMA_DIR, payload_sha256
-from sentinel_contract.client import SendResult, SendRetryable, field_names
+from sentinel_contract import SCHEMA_DIR, canonical, payload_sha256
+from sentinel_contract.client import SendRejected, SendResult, SendRetryable, field_names
 from sentinel_patient import extract, stt, tts
 from sentinel_patient.config import WALTER, Settings
 from sentinel_patient.db import connect
@@ -25,10 +27,40 @@ TERMS = json.loads((SCHEMA_DIR / "terms.json").read_text())["terms"]
 
 
 class FakeClient:
-    """Shaped like SentinelClient: service-shaped config responses, records kept in `sent`."""
+    """Shaped like SentinelClient: service-shaped config responses, records kept in `sent`.
 
-    def __init__(self, online=True):
+    `org_key` is the care team's private key; None = its admin has not registered one yet (404, like the service).
+    """
+
+    def __init__(self, online=True, org_key=None):
         self.online, self.sent, self.alerts, self.fetches = online, [], [], 0
+        self.org_key, self.envelopes, self.consents, self.calls = org_key, [], [], []
+
+    def fetch_org_key(self, org_id):
+        self.calls.append(("key", org_id))
+        if not self.online:
+            raise SendRetryable("no network")
+        if self.org_key is None:
+            raise SendRejected(404, {"error": "not_found"})
+        return base64.b64encode(bytes(self.org_key.public_key)).decode()
+
+    def send_envelope(self, envelope):
+        if not self.online:
+            raise SendRetryable("no network")
+        self.calls.append(("envelope", envelope["envelope_id"]))
+        self.envelopes.append(envelope)
+        return SendResult("POST", "http://127.0.0.1:8000/v1/care-envelopes", 201, envelope["payload_sha256"],
+                          field_names(envelope), {"envelope_id": envelope["envelope_id"],
+                                                  "payload_sha256": envelope["payload_sha256"]})
+
+    def send_consent(self, update):
+        if not self.online:
+            raise SendRetryable("no network")
+        self.calls.append(("consent", update["share_care_team"], update["share_caregiver"]))
+        self.consents.append(update)
+        digest = payload_sha256(update)
+        return SendResult("PUT", f"http://127.0.0.1:8000/v1/consent/{update['patient_ref']}", 200, digest,
+                          field_names(update), {"patient_ref": update["patient_ref"]})
 
     def fetch_survey(self, cohort_id):
         self.fetches += 1
@@ -48,6 +80,7 @@ class FakeClient:
         if not self.online:
             raise SendRetryable("no network")
         self.alerts.append(alert)
+        self.calls.append(("alert", alert["alert_id"]))
         digest = payload_sha256(alert)
         return SendResult("POST", "http://127.0.0.1:8000/v1/alerts", 201, digest, field_names(alert),
                           {"alert_id": alert["alert_id"], "payload_sha256": digest})
@@ -56,6 +89,7 @@ class FakeClient:
         if not self.online:
             raise SendRetryable("no network")
         self.sent.append(record)
+        self.calls.append(("record", record["record_id"]))
         digest = payload_sha256(record)
         return SendResult("POST", "http://127.0.0.1:8000/v1/records", 201, digest, field_names(record),
                           {"record_id": record["record_id"], "payload_sha256": digest})
@@ -480,3 +514,157 @@ def test_offline_check_in_is_sent_by_the_retry_worker_when_back_online(tmp_path)
         now = c.get(f"/checkin/sessions/{sid}/receipt").json()
     assert now["status"] == "sent" and now["response_code"] == 201
     assert now["payload_sha256"] == queued["payload_sha256"] == payload_sha256(sentinel.sent[0])
+
+
+# ---------- care envelope (NF-05) and consent switches (CN-01, CN-03) ----------
+
+def check_in(c, answers=ANSWERS):
+    sid = start(c)
+    for qid, text in answers:
+        assert answer(c, sid, qid, text).status_code == 200
+    return sid
+
+
+def opened(org_key, envelope):
+    return json.loads(SealedBox(org_key).decrypt(base64.b64decode(envelope["ciphertext"])))
+
+
+def test_approval_seals_the_doctor_copy_to_the_care_team_after_the_record(tmp_path):
+    key = PrivateKey.generate()
+    c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_key=key))
+    with c:
+        sid = check_in(c)
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+        assert sentinel.envelopes == [] and ("key", "org_5e1a2b3c") not in sentinel.calls  # nothing before approval
+        receipt = c.post(f"/checkin/sessions/{sid}/approve", json={}).json()
+        later = c.get(f"/checkin/sessions/{sid}/receipt").json()
+
+    care = summary["share"]["care"]
+    assert care["org_id"] == "org_5e1a2b3c" and care["sealed"] and care["url"].endswith("/v1/care-envelopes")
+    assert {"display_name", "checkin_date", "drug_name", "trend", "symptoms[].term_code"} <= set(care["fields"])
+
+    [envelope] = sentinel.envelopes
+    plain = opened(key, envelope)
+    assert envelope["org_id"] == "org_5e1a2b3c" and envelope["patient_ref"] == WALTER
+    assert plain["display_name"] == "Walter" and plain["drug_name"] == "Tagrisso" and plain["age_years"] == 92
+    assert plain["trend"] == "unknown"  # first check-in on this device
+    assert {s["term_code"]: s["severity"] for s in plain["symptoms"]} == {"SE_FATIGUE": "mild", "SE_RASH": "moderate"}
+    assert set(plain) == {"schema_version", "patient_ref", "display_name", "drug_name", "drug_version",
+                          "checkin_date", "status", "trend", "symptoms", "reporter", "age_years"}
+    for local_only in ("1934-03-12", "555-0142", "itchy", "arms", "tablets"):
+        assert local_only not in json.dumps(plain)  # coded fields only, even inside the seal
+    assert "Walter" not in envelope["ciphertext"] and "Walter" not in json.dumps(sentinel.sent)
+
+    # Hash over the plaintext: receipt, outbox and egress_log all show it (brief 26.13).
+    digest = payload_sha256(plain)
+    assert envelope["payload_sha256"] == digest == receipt["envelope"]["payload_sha256"]
+    assert receipt["envelope"]["status"] == "sent" and receipt["envelope"]["destination"] == "care_envelope"
+    assert receipt["envelope"]["envelope_id"] == envelope["envelope_id"] and later["envelope"]["status"] == "sent"
+    assert rows(tmp_path, "SELECT payload_sha256 FROM egress_log WHERE outbox_id = ?", envelope["envelope_id"]) \
+        == [{"payload_sha256": digest}]
+    assert [k for k, *_ in sentinel.calls if k in ("record", "envelope")] == ["record", "envelope"]
+
+
+def test_trend_compares_with_earlier_check_ins(tmp_path):
+    key = PrivateKey.generate()
+    c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_key=key))
+    with c:
+        c.post(f"/checkin/sessions/{check_in(c)}/approve", json={})  # fatigue mild + rash moderate
+        c.post(f"/checkin/sessions/{check_in(c, [('q2', 'nothing new')])}/approve", json={})  # no symptoms
+    assert [opened(key, e)["trend"] for e in sentinel.envelopes] == ["unknown", "better"]
+
+
+def test_envelope_waits_for_the_org_key_then_the_worker_seals_and_sends_it(tmp_path):
+    sentinel = FakeClient()  # Northgate's admin has not registered a key yet
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        sid = check_in(c)
+        receipt = c.post(f"/checkin/sessions/{sid}/approve", json={}).json()
+        assert receipt["status"] == "sent" and receipt["envelope"] == {"status": "waiting", "reason": "no_key"}
+        assert rows(tmp_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'") == []
+        sentinel.org_key = key = PrivateKey.generate()
+        c.app.state.retry_worker.run_once()
+        now = c.get(f"/checkin/sessions/{sid}/receipt").json()
+    assert now["envelope"]["status"] == "sent" and len(sentinel.envelopes) == 1
+    assert opened(key, sentinel.envelopes[0])["display_name"] == "Walter"
+
+
+def test_offline_envelope_is_sent_unchanged_when_back_online(tmp_path):
+    key = PrivateKey.generate()
+    sentinel = FakeClient(org_key=key)
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        sid = check_in(c)
+        sentinel.online = False
+        assert c.post(f"/checkin/sessions/{sid}/approve", json={}).json()["envelope"] == \
+            {"status": "waiting", "reason": "offline"}
+        sentinel.online = True
+        c.app.state.retry_worker.run_once()  # seals it now and queues it
+        c.app.state.retry_worker.run_once()
+        stored = rows(tmp_path, "SELECT payload FROM outbox WHERE destination = 'care_envelope'")
+        now = c.get(f"/checkin/sessions/{sid}/receipt").json()
+    assert now["envelope"]["status"] == "sent" and len(sentinel.envelopes) == 1
+    assert canonical(sentinel.envelopes[0]).decode() == stored[0]["payload"]
+
+
+def test_consent_switches_are_saved_at_once_and_sent_through_the_gate(tmp_path):
+    c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_key=PrivateKey.generate()))
+    with c:
+        state = c.get("/consent").json()
+        assert state == {"share_care_team": True, "share_caregiver": True, "has_care_team": True,
+                         "has_caregiver": True, "receipt": None}
+        off = c.put("/consent", json={"share_care_team": False}).json()
+        same = c.put("/consent", json={"share_care_team": False}).json()  # no change: nothing sent
+        assert c.put("/consent", json={}).status_code == 422
+    assert off["share_care_team"] is False and off["share_caregiver"] is True
+    assert off["receipt"]["status"] == "sent" and off["receipt"]["method"] == "PUT"
+    assert off["receipt"]["url"].endswith(f"/v1/consent/{WALTER}") and same["receipt"] == off["receipt"]
+    [update] = sentinel.consents
+    assert update["share_care_team"] is False and update["care_org_id"] == "org_5e1a2b3c"
+    assert off["receipt"]["payload_sha256"] == payload_sha256(update)
+    assert "Emergency services" not in json.dumps(update)  # contact labels stay on the device
+    latest = rows(tmp_path, "SELECT share_care_team, share_caregiver FROM consent ORDER BY consent_id DESC LIMIT 1")
+    assert latest == [{"share_care_team": 0, "share_caregiver": 1}]
+
+
+def test_turning_the_doctor_off_stops_future_envelopes(tmp_path):
+    key = PrivateKey.generate()
+    c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_key=key))
+    with c:
+        c.post(f"/checkin/sessions/{check_in(c)}/approve", json={})
+        c.put("/consent", json={"share_care_team": False})
+        sid = check_in(c)
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+        receipt = c.post(f"/checkin/sessions/{sid}/approve", json={}).json()
+        c.app.state.retry_worker.run_once()
+        c.put("/consent", json={"share_care_team": True})  # back on: only check-ins approved from now on
+        c.app.state.retry_worker.run_once()
+    assert summary["share"]["care"] is None and receipt["envelope"] is None
+    assert summary["share"]["record"]["consent"]["care_team"] is False
+    assert len(sentinel.envelopes) == 1  # only the check-in approved while sharing
+    assert [k for k, *_ in sentinel.calls if k == "consent"] == ["consent", "consent"]
+
+
+def test_consent_change_offline_takes_effect_now_and_is_sent_later(tmp_path):
+    sentinel = FakeClient(org_key=PrivateKey.generate())
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        start(c)  # download the survey once
+        sentinel.online = False
+        off = c.put("/consent", json={"share_caregiver": False}).json()
+        assert off["share_caregiver"] is False and off["receipt"]["status"] == "queued"
+        sentinel.online = True
+        c.app.state.retry_worker.run_once()
+        now = c.get("/consent").json()
+    assert now["receipt"]["status"] == "sent" and sentinel.consents[0]["share_caregiver"] is False
+
+
+def test_a_switch_cannot_be_turned_on_without_someone_to_share_with(tmp_path):
+    c, _, sentinel = make_client(tmp_path)
+    with c:
+        c.put("/consent", json={"share_caregiver": False})
+        with closing(connect(tmp_path / "patient.db")) as conn, conn:
+            conn.execute("UPDATE patient_profile SET caregiver_id = NULL")
+        assert c.get("/consent").json()["has_caregiver"] is False
+        assert c.put("/consent", json={"share_caregiver": True}).status_code == 422
+    assert len(sentinel.consents) == 1

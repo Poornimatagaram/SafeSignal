@@ -10,6 +10,9 @@
   the patient picks one on the summary screen (VC-10).
 - approve: only here does anything leave the device. symptom_event rows, the session's final status and the outbox
   row are written in one transaction; then egress_gate sends the stored payload and returns the receipt.
+- care envelope (NF-05, A7): after the record, if the patient shares with the care team, egress_gate seals the doctor
+  payload (name, exact date, drug, symptoms, trend) to the care-team organization's key and sends it. If the key
+  can't be fetched yet (not registered, offline), the check-in waits and the retry worker seals and sends it later.
 
 The draft lives in memory: if the runtime restarts mid check-in, the transcripts are kept but the coded symptoms of
 earlier answers are lost (to be persisted with the network-off work in A6).
@@ -17,6 +20,7 @@ earlier answers are lost (to be persisted with the network-off work in A6).
 
 from __future__ import annotations
 
+import logging
 import secrets
 import threading
 from contextlib import closing
@@ -24,6 +28,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import egress_gate, extract, summary as spoken
+from sentinel_contract import ContractError
+
 from .db import connect, utc_now
 from .survey import latest_survey, survey_questions, term_labels
 
@@ -32,6 +38,22 @@ SYMPTOM_PURPOSES = frozenset({"wellbeing", "symptom_screen", "exposure"})  # sch
 DESTINATION = "company_record"
 ALERT = "alert"
 DESTINATION_LABEL = "Drug company safety team (Sentinel service)"
+CARE_ENVELOPE = "care_envelope"
+CARE_LABEL = "Your care team (sealed: only your doctors can read it)"
+
+log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class Shared:
+    """What approval sent (or queued): the record, the severe alert and the care envelope.
+
+    `envelope` is a Receipt, {"status": "waiting", "reason": "no_key" | "offline" | "refused"} while the sealed
+    record waits for the organization's key, or None when the patient does not share with the care team.
+    """
+    record: "egress_gate.Receipt"
+    alert: "egress_gate.Receipt | None"
+    envelope: "egress_gate.Receipt | dict | None"
 ONSET_WORDS = {"today": "started today", "1_3_days": "started 1 to 3 days ago",
                "4_7_days": "started 4 to 7 days ago", "over_7_days": "started more than a week ago",
                "unknown": "start not known"}
@@ -76,6 +98,7 @@ class CheckinStore:
         self.db_path, self.patient_ref = db_path, patient_ref
         self._drafts: dict[str, Draft] = {}
         self._lock = threading.Lock()
+        self._envelope_wait: dict[str, str] = {}  # session_id -> why its care envelope is still waiting
 
     # ---------- session ----------
 
@@ -168,11 +191,13 @@ class CheckinStore:
             fields = egress_gate.field_names(record or self._record(
                 conn, "rec_00000000", [{**i, "severity": i["severity"] or "mild"} for i in items], unanswered,
                 validate=False))
+            care = self._care_preview(conn, items, base_url)
         return {"session_id": session_id, "shared": shared, "items": items, "needs_severity": needs,
                 "unanswered_questions": unanswered, "text": _plain_words(items, unanswered),
                 "spoken": spoken.spoken_summary(items, unanswered), "correction_used": draft.correction_used,
                 "share": {"destination": DESTINATION_LABEL, "method": "POST",
-                          "url": egress_gate.records_url(base_url), "fields": fields, "record": record}}
+                          "url": egress_gate.records_url(base_url), "fields": fields, "record": record,
+                          "care": care}}
 
     def correction_items(self, session_id: str) -> list[dict]:
         """Current items, for parsing a spoken correction against them."""
@@ -206,16 +231,46 @@ class CheckinStore:
                 draft.symptoms[term_code]["onset"] = onset
             draft.correction_used, draft.record_id = True, None
 
-    def receipts(self, session_id: str, base_url: str) -> tuple[egress_gate.Receipt | None, egress_gate.Receipt | None]:
-        """(record receipt, alert receipt) as they stand now; the retry worker may have sent a queued one since."""
+    def receipts(self, session_id: str, base_url: str) -> Shared | None:
+        """The receipts as they stand now (the retry worker may have sent a queued one since); None if not shared."""
         with closing(connect(self.db_path)) as conn:
             self._session(conn, session_id)
             rec, alert = self._outbox(conn, session_id), self._outbox(conn, session_id, ALERT)
-        return (egress_gate.receipt_for(self.db_path, rec["outbox_id"], base_url=base_url) if rec else None,
-                egress_gate.receipt_for(self.db_path, alert["outbox_id"], base_url=base_url) if alert else None)
+            env = self._outbox(conn, session_id, CARE_ENVELOPE)
+        if rec is None:
+            return None
+        if env is not None:
+            envelope = egress_gate.receipt_for(self.db_path, env["outbox_id"], base_url=base_url)
+        elif session_id in egress_gate.pending_care_sessions(self.db_path):
+            envelope = {"status": "waiting", "reason": self._envelope_wait.get(session_id, "no_key")}
+        else:
+            envelope = None
+        return Shared(egress_gate.receipt_for(self.db_path, rec["outbox_id"], base_url=base_url),
+                      egress_gate.receipt_for(self.db_path, alert["outbox_id"], base_url=base_url) if alert else None,
+                      envelope)
 
-    def approve(self, session_id: str, severities: dict[str, str], *,
-                client) -> tuple[egress_gate.Receipt, egress_gate.Receipt | None]:
+    def _send_envelope(self, session_id: str, client) -> "egress_gate.Receipt | dict | None":
+        """Seal and send the care envelope for an approved session (NF-05), or say why it is waiting.
+
+        Sealed only while the patient shares with the care team (checked again here, so turning sharing off stops
+        it, CN-03). A key that can't be fetched leaves nothing queued; the retry worker tries again later.
+        """
+        try:
+            envelope_id = egress_gate.queue_care_envelope(self.db_path, session_id, self.patient_ref, client=client)
+        except egress_gate.KeyUnavailable as e:
+            self._envelope_wait[session_id] = e.reason
+            log.info("care envelope for %s waiting: %s", session_id, e.reason)
+            return {"status": "waiting", "reason": e.reason}
+        except (ContractError, ValueError) as e:  # never the message: it could quote a value
+            log.error("care envelope for %s not built: %s", session_id, type(e).__name__)
+            self._envelope_wait[session_id] = "refused"
+            return {"status": "waiting", "reason": "refused"}
+        self._envelope_wait.pop(session_id, None)
+        if envelope_id is None:
+            return None
+        return egress_gate.send_queued(self.db_path, envelope_id, client=client)
+
+    def approve(self, session_id: str, severities: dict[str, str], *, client) -> Shared:
         with self._lock:
             with closing(connect(self.db_path)) as conn:
                 self._session(conn, session_id)
@@ -225,8 +280,10 @@ class CheckinStore:
                 alert = (egress_gate.send_queued(self.db_path, alert_row["outbox_id"], client=client)
                          if alert_row else None)
                 if existing["status"] == "queued":
-                    return egress_gate.send_queued(self.db_path, existing["outbox_id"], client=client), alert
-                return egress_gate.receipt_for(self.db_path, existing["outbox_id"]), alert
+                    record = egress_gate.send_queued(self.db_path, existing["outbox_id"], client=client)
+                else:
+                    record = egress_gate.receipt_for(self.db_path, existing["outbox_id"])
+                return Shared(record, alert, self._send_envelope(session_id, client))
 
             draft = self._drafts.setdefault(session_id, Draft())
             for code, sev in severities.items():
@@ -261,7 +318,9 @@ class CheckinStore:
                                                                               patient_ref=self.patient_ref))
             # The alert goes first: it is the urgent one. Both are already safe in the outbox if the network is off.
             alert = egress_gate.send_queued(self.db_path, alert_id, client=client) if alert_id else None
-            return egress_gate.send_queued(self.db_path, record_id, client=client), alert
+            record = egress_gate.send_queued(self.db_path, record_id, client=client)
+            # Then the doctor's copy, sealed on this device to the care-team organization's key (NF-05).
+            return Shared(record, alert, self._send_envelope(session_id, client))
 
     # ---------- helpers ----------
 
@@ -283,6 +342,20 @@ class CheckinStore:
     def _outbox(conn, session_id: str, destination: str = "company_record"):
         return conn.execute("SELECT outbox_id, status FROM outbox WHERE session_id = ? AND destination = ? "
                             "ORDER BY created_at LIMIT 1", (session_id, destination)).fetchone()
+
+    def _care_preview(self, conn, items: list[dict], base_url: str) -> dict | None:
+        """What the care team would get, sealed (field names only), or None when not sharing with the care team."""
+        profile = conn.execute("SELECT care_org_id FROM patient_profile WHERE patient_ref = ?",
+                               (self.patient_ref,)).fetchone()
+        consent = conn.execute("SELECT share_care_team FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
+        if not (profile and profile["care_org_id"] and consent and consent["share_care_team"]):
+            return None
+        shape = {k: None for k in ("schema_version", "patient_ref", "display_name", "drug_name", "drug_version",
+                                   "checkin_date", "status", "trend", "reporter", "age_years")}
+        shape["symptoms"] = [{k: None for k in ("term_code", "severity", "onset", "known_side_effect",
+                                                "possible_link_flag")}] if items else []
+        return {"destination": CARE_LABEL, "org_id": profile["care_org_id"], "method": "POST",
+                "url": egress_gate.envelopes_url(base_url), "sealed": True, "fields": egress_gate.field_names(shape)}
 
     @staticmethod
     def _severe(conn, items: list[dict]) -> bool:

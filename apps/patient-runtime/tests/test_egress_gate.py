@@ -4,6 +4,7 @@ Offline tests drive the real SentinelClient against an in-memory stand-in for th
 Live tests run against the local Sentinel service and skip when it is not reachable.
 """
 
+import base64
 import json
 import logging
 import threading
@@ -13,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
+from nacl.public import PrivateKey, SealedBox
 
 from sentinel_contract import SCHEMA_DIR, ContractError, canonical, payload_sha256
 from sentinel_contract.client import SentinelClient, field_names as client_field_names
@@ -41,10 +43,12 @@ class FakeService:
     """Stand-in for the Sentinel service behind the real SentinelClient; records every request that reached it."""
 
     def __init__(self, *, status: int = 201, get_status: int = 200, down: bool = False, survey=None, terms=None,
-                 failures: int = 0, delay: float = 0.0):
+                 failures: int = 0, delay: float = 0.0, org_key: str | None = None, key_status: int = 200):
         self.status, self.get_status, self.down = status, get_status, down
         self.survey, self.terms = survey or SURVEY, terms or TERMS
         self.failures, self.delay = failures, delay  # the first `failures` POSTs get a 503
+        self.org_key, self.key_status = org_key, key_status  # GET /v1/orgs/{id}/public-key: 404 without a key
+        self.consent_status = 200
         self.requests: list[tuple[str, str, bytes]] = []
         self._lock = threading.Lock()
 
@@ -60,6 +64,20 @@ class FakeService:
         if flaky:
             return httpx.Response(503, json={"error": BODY_MARKER})
         path = request.url.path
+        if path.endswith("/public-key"):
+            if self.key_status != 200 or self.org_key is None:
+                return httpx.Response(self.key_status if self.key_status != 200 else 404, json={"error": BODY_MARKER})
+            return httpx.Response(200, json={"org_id": path.split("/")[3], "public_key": self.org_key})
+        if path.startswith("/v1/consent/"):
+            if self.consent_status != 200:
+                return httpx.Response(self.consent_status, json={"error": BODY_MARKER})
+            return httpx.Response(200, json={"patient_ref": path.rsplit("/", 1)[1]})  # no payload_sha256 echoed
+        if path == "/v1/care-envelopes":
+            if self.status >= 400:
+                return httpx.Response(self.status, json={"error": BODY_MARKER})
+            body = json.loads(request.content)
+            return httpx.Response(self.status, json={"envelope_id": body["envelope_id"],
+                                                     "payload_sha256": body["payload_sha256"]})
         if path in ("/v1/records", "/v1/alerts"):
             if self.status >= 400:
                 return httpx.Response(self.status, json={"error": BODY_MARKER})
@@ -78,7 +96,7 @@ class FakeService:
                               http=httpx.Client(base_url=BASE, transport=httpx.MockTransport(self)))
 
     def sends(self) -> list:
-        return [r for r in self.requests if r[0] == "POST"]
+        return [r for r in self.requests if r[0] in ("POST", "PUT")]
 
 
 @pytest.fixture()
@@ -324,13 +342,9 @@ def test_rejected_is_failed_logged_and_never_retried(db_path, status):
     assert len(service.sends()) == 1
 
 
-def test_other_destinations_are_not_sent_yet(db_path):
-    envelope = json.loads((SCHEMA_DIR / "examples" / "care_envelope.valid.json").read_text())
-    queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])
-    service = FakeService()
-    with pytest.raises(NotImplementedError):
-        gate.send_queued(db_path, envelope["envelope_id"], client=service.client())
-    assert service.requests == [] and rows(db_path, "SELECT status FROM outbox") == [{"status": "queued"}]
+def test_every_outbox_destination_has_a_sender():
+    assert set(gate.SENDERS) == set(gate.PAYLOAD_KINDS)
+    assert gate.SENDERS["care_envelope"] == "send_envelope" and gate.SENDERS["consent"] == "send_consent"
 
 
 def test_unknown_outbox_ids(db_path):
@@ -516,13 +530,15 @@ def test_retry_sends_alerts_before_records(db_path):
     assert all(r.status == "sent" for r in receipts)
 
 
-def test_retry_skips_destinations_it_cannot_send(db_path):
+def test_retry_sends_a_queued_envelope_unchanged(db_path):
     envelope = json.loads((SCHEMA_DIR / "examples" / "care_envelope.valid.json").read_text())
     queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])
     service = FakeService()
     worker = worker_for(db_path, service)
-    assert worker.run_once() == [] and service.requests == []
-    assert worker.status(envelope["envelope_id"]) is None
+    assert worker.status(envelope["envelope_id"]) == {"attempts": 0, "next_attempt_in": 0.0}
+    [receipt] = worker.run_once()
+    assert (receipt.status, receipt.payload_sha256) == ("sent", envelope["payload_sha256"])
+    assert service.sends() == [("POST", "/v1/care-envelopes", canonical(envelope))]
 
 
 def test_concurrent_run_once_never_double_sends(db_path):
@@ -659,6 +675,321 @@ def test_refresh_config_without_a_profile(tmp_path):
     assert service.requests == []
 
 
+# ---------- hash vectors (26.13) ----------
+
+HASH_VECTORS = json.loads((SCHEMA_DIR / "examples" / "hash_vectors.json").read_text())["vectors"]
+
+
+@pytest.mark.parametrize("vector", HASH_VECTORS, ids=[v["name"] for v in HASH_VECTORS])
+def test_hash_vectors(vector):
+    assert canonical(vector["input"]) == vector["canonical"].encode("utf-8")
+    assert payload_sha256(vector["input"]) == vector["sha256"]
+
+
+# ---------- care envelopes (NF-05; task A7) ----------
+
+NORTHGATE = "org_5e1a2b3c"
+ORG_SK = PrivateKey.generate()  # test-only care-team key pair
+ORG_PK = base64.b64encode(bytes(ORG_SK.public_key)).decode()
+
+
+def seed_session(db_path, session_id="ses_00000007", day=7, symptoms=(RASH,), *, care_team=True,
+                 record_status="queued", started_at=None):
+    """An approved session as checkin.approve leaves it: session ended, symptom_event rows, company record queued."""
+    started = started_at or f"2026-11-{day:02d}T15:00:00Z"
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("INSERT OR IGNORE INTO survey_cache VALUES ('cfg_cohort_b_v1', 'cohort_B', 1, '{}', ?)",
+                     (utc_now(),))
+        conn.execute("INSERT OR IGNORE INTO term_cache VALUES ('SE_RASH', 'Rash', '[]', 0, 1)")
+        conn.execute("INSERT INTO checkin_session (session_id, config_id, started_at, ended_at, status) "
+                     "VALUES (?, 'cfg_cohort_b_v1', ?, ?, 'completed')", (session_id, started, started))
+        for i, s in enumerate(symptoms):
+            conn.execute("INSERT INTO symptom_event (event_id, session_id, term_code, severity, onset, "
+                         "known_side_effect, possible_link_flag, patient_words, created_at) "
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, 'Walter says it itches', ?)",
+                         (f"sym_{session_id[4:]}{i}", session_id, s["term_code"], s["severity"], s["onset"],
+                          s["known_side_effect"], s["possible_link_flag"], started))
+        record = make_record(db_path, record_id="rec_" + session_id[4:], symptoms=symptoms,
+                             consent={"share_care_team": int(care_team), "share_caregiver": 1})
+        gate.queue_payload(conn, outbox_id=record["record_id"], session_id=session_id,
+                           destination="company_record", payload=record)
+        if record_status != "queued":
+            conn.execute("UPDATE outbox SET status = ? WHERE outbox_id = ?", (record_status, record["record_id"]))
+    return session_id
+
+
+def set_consent(db_path, *, care_team=1, emergency=1, caregiver=1):
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("INSERT INTO consent (share_care_team, emergency_consent, share_caregiver, caregiver_detail, "
+                     "updated_at) VALUES (?, ?, ?, 'alerts_only', ?)", (care_team, emergency, caregiver, utc_now()))
+
+
+def plaintext_for(db_path, session_id):
+    from sentinel_patient import care_payload
+    with closing(connect(db_path)) as conn:
+        return care_payload.doctor_payload_for_session(conn, session_id, WALTER)
+
+
+def test_envelope_and_consent_ids_and_urls():
+    for make, prefix in ((gate.new_envelope_id, "env_"), (gate.new_consent_id, "con_")):
+        ids = {make() for _ in range(20)}
+        assert len(ids) == 20
+        assert all(i.startswith(prefix) and len(i) == 12 and set(i[4:]) <= set("0123456789abcdef") for i in ids)
+    assert gate.envelopes_url("http://127.0.0.1:8000/") == "http://127.0.0.1:8000/v1/care-envelopes"
+    assert gate.consent_url("http://127.0.0.1:8000/", WALTER) == f"http://127.0.0.1:8000/v1/consent/{WALTER}"
+
+
+def test_fetch_org_key_stores_the_care_team_key_and_maps_errors(db_path, caplog):
+    caplog.set_level(logging.DEBUG)
+    assert gate.fetch_org_key(db_path, NORTHGATE, client=FakeService(org_key=ORG_PK).client()) == ORG_PK
+    assert rows(db_path, "SELECT care_org_public_key FROM patient_profile") == [{"care_org_public_key": ORG_PK}]
+    other = base64.b64encode(bytes(PrivateKey.generate().public_key)).decode()
+    gate.fetch_org_key(db_path, "org_8f4d6a2e", client=FakeService(org_key=other).client())  # not the care org
+    assert rows(db_path, "SELECT care_org_public_key FROM patient_profile") == [{"care_org_public_key": ORG_PK}]
+
+    for service, reason in ((FakeService(), "no_key"), (FakeService(org_key=ORG_PK, key_status=403), "refused"),
+                            (FakeService(org_key=ORG_PK, key_status=503), "offline"),
+                            (FakeService(org_key=ORG_PK, down=True), "offline"),
+                            (FakeService(org_key=base64.b64encode(b"short").decode()), "refused"),
+                            (FakeService(org_key="not base64 !!"), "refused")):
+        with pytest.raises(gate.KeyUnavailable) as exc:
+            gate.fetch_org_key(db_path, NORTHGATE, client=service.client())
+        assert exc.value.reason == reason
+    assert f"/v1/orgs/{NORTHGATE}/public-key" in caplog.text and "404" in caplog.text
+    assert BODY_MARKER not in caplog.text and ORG_PK not in caplog.text
+    assert rows(db_path, "SELECT * FROM egress_log") == []  # a key fetch carries no patient payload
+
+
+def test_envelope_round_trip(db_path, caplog):
+    caplog.set_level(logging.DEBUG)
+    session_id = seed_session(db_path)
+    service = FakeService(org_key=ORG_PK)
+    envelope_id = gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client())
+    assert envelope_id.startswith("env_")
+    plaintext = plaintext_for(db_path, session_id)
+    digest = payload_sha256(plaintext)
+
+    [row] = rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'")
+    assert (row["outbox_id"], row["session_id"], row["status"]) == (envelope_id, session_id, "queued")
+    assert row["payload_sha256"] == digest  # the plaintext hash, never a hash of the sealed JSON
+    envelope = json.loads(row["payload"])
+    assert payload_sha256(envelope) != digest
+    assert (envelope["envelope_id"], envelope["org_id"], envelope["patient_ref"]) == (envelope_id, NORTHGATE, WALTER)
+    for secret in ("Tagrisso", "SE_RASH", "itches", "display_name") + LOCAL_ONLY:  # sealed: no plaintext
+        assert secret not in row["payload"]
+
+    receipt = gate.send_queued(db_path, envelope_id, client=service.client())
+    assert (receipt.status, receipt.response_code, receipt.destination) == ("sent", 201, "care_envelope")
+    assert (receipt.method, receipt.url) == ("POST", f"{BASE}/v1/care-envelopes")
+    assert receipt.payload_sha256 == digest and receipt.fields_sent == client_field_names(envelope)
+    [(method, path, body)] = [r for r in service.sends() if r[1] == "/v1/care-envelopes"]
+    assert body == row["payload"].encode()  # the stored envelope, unchanged
+    opened = SealedBox(ORG_SK).decrypt(base64.b64decode(json.loads(body)["ciphertext"]))
+    assert opened == canonical(plaintext) and payload_sha256(json.loads(opened)) == digest
+    assert json.loads(opened)["display_name"] == "Walter" and "itches" not in opened.decode()
+    [entry] = rows(db_path, "SELECT * FROM egress_log")
+    assert (entry["outbox_id"], entry["payload_sha256"], entry["response_code"]) == (envelope_id, digest, 201)
+    assert gate.receipt_for(db_path, envelope_id) == receipt
+
+    # once queued, the session keeps its one envelope: no second key fetch, no second seal
+    fetches = len(service.requests)
+    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) == envelope_id
+    assert len(service.requests) == fetches and gate.pending_care_sessions(db_path) == []
+    for secret in ("Walter", "Tagrisso", "SE_RASH", BODY_MARKER, envelope["ciphertext"][:24]):
+        assert secret not in caplog.text
+
+
+def test_envelope_is_resent_unchanged_after_offline_and_a_server_error(db_path):
+    session_id = seed_session(db_path)
+    service = FakeService(org_key=ORG_PK)
+    envelope_id = gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client())
+    stored = rows(db_path, "SELECT payload, payload_sha256 FROM outbox WHERE outbox_id = ?", envelope_id)[0]
+    service.down = True
+    queued = gate.send_queued(db_path, envelope_id, client=service.client())
+    assert (queued.status, queued.payload_sha256) == ("queued", stored["payload_sha256"])
+    assert gate.receipt_for(db_path, envelope_id, base_url=BASE) == queued
+    service.down, service.failures = False, 1
+    assert gate.send_queued(db_path, envelope_id, client=service.client()).status == "queued"
+    assert gate.send_queued(db_path, envelope_id, client=service.client()).status == "sent"
+    bodies = [b for _, p, b in service.sends() if p == "/v1/care-envelopes"]
+    assert bodies == [stored["payload"].encode()] * 2  # the 503 attempt and the 201 one: same bytes
+    assert [r["response_code"] for r in rows(db_path, "SELECT * FROM egress_log ORDER BY log_id")] == [503, 201]
+    assert rows(db_path, "SELECT payload FROM outbox WHERE outbox_id = ?", envelope_id)[0] == {
+        "payload": stored["payload"]}
+
+
+def test_envelope_queue_is_idempotent_and_the_integrity_check_holds(db_path):
+    envelope = json.loads((SCHEMA_DIR / "examples" / "care_envelope.valid.json").read_text())
+    queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])
+    queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])  # no-op
+    with pytest.raises(ValueError, match="different payload"):  # same plaintext hash, new ciphertext
+        queue(db_path, {**envelope, "ciphertext": "V" + envelope["ciphertext"][1:]}, destination="care_envelope",
+              outbox_id=envelope["envelope_id"])
+    assert rows(db_path, "SELECT payload_sha256 FROM outbox") == [{"payload_sha256": envelope["payload_sha256"]}]
+
+    with closing(connect(db_path)) as conn, conn:  # someone edits the stored hash: never sent
+        conn.execute("UPDATE outbox SET payload_sha256 = ?", ("0" * 64,))
+    service = FakeService()
+    with pytest.raises(RuntimeError, match="hash"):
+        gate.send_queued(db_path, envelope["envelope_id"], client=service.client())
+    with closing(connect(db_path)) as conn, conn:  # or re-writes the stored text
+        conn.execute("UPDATE outbox SET payload_sha256 = ?, payload = ?",
+                     (envelope["payload_sha256"], json.dumps(envelope, indent=1)))
+    with pytest.raises(RuntimeError, match="hash"):
+        gate.send_queued(db_path, envelope["envelope_id"], client=service.client())
+    assert service.requests == []
+
+
+def test_no_key_queues_nothing_and_the_worker_sends_once_a_key_exists(db_path):
+    session_id = seed_session(db_path)
+    service = FakeService()  # Northgate's admin has not registered a key yet: 404
+    with pytest.raises(gate.KeyUnavailable) as exc:
+        gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client())
+    assert exc.value.reason == "no_key"
+    assert rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'") == []
+    assert gate.pending_care_sessions(db_path) == [session_id]
+
+    clock = FakeClock()
+    worker = gate.RetryWorker(db_path, service.client, clock=clock, patient_ref=WALTER)
+    receipts = worker.run_once()  # sends the queued record; the envelope waits for a key
+    assert [r.destination for r in receipts] == ["company_record"]
+    assert worker._state[f"care:{session_id}"][0] == 1
+    service.org_key = ORG_PK
+    clock.now += 1
+    assert worker.run_once() == []  # not due yet (2 s)
+    clock.now += 1
+    [receipt] = worker.run_once()
+    assert (receipt.destination, receipt.status, receipt.response_code) == ("care_envelope", "sent", 201)
+    assert receipt.payload_sha256 == payload_sha256(plaintext_for(db_path, session_id))
+    assert gate.pending_care_sessions(db_path) == [] and f"care:{session_id}" not in worker._state
+    clock.now += 1000
+    assert worker.run_once() == []
+    assert len([r for r in service.sends() if r[1] == "/v1/care-envelopes"]) == 1
+
+
+def test_worker_reads_the_patient_ref_from_the_profile(db_path):
+    session_id = seed_session(db_path, record_status="sent")
+    service = FakeService(org_key=ORG_PK)
+    [receipt] = gate.RetryWorker(db_path, service.client, clock=FakeClock()).run_once()
+    assert (receipt.destination, receipt.status) == ("care_envelope", "sent")
+    assert rows(db_path, "SELECT session_id FROM outbox WHERE destination = 'care_envelope'") == [
+        {"session_id": session_id}]
+
+
+def test_consent_off_means_no_envelope_and_nothing_pending(db_path):
+    session_id = seed_session(db_path)
+    set_consent(db_path, care_team=0)  # CN-03: turning it off stops future sharing
+    service = FakeService(org_key=ORG_PK)
+    assert gate.pending_care_sessions(db_path) == []
+    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) is None
+    worker = gate.RetryWorker(db_path, service.client, clock=FakeClock(), patient_ref=WALTER)
+    assert [r.destination for r in worker.run_once()] == ["company_record"]
+    assert service.requests == [("POST", "/v1/records", service.requests[0][2])]  # never a key fetch or envelope
+    assert rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'") == []
+
+    set_consent(db_path, care_team=1)  # back on: the session was approved while sharing, so it may go now
+    assert gate.pending_care_sessions(db_path) == [session_id]
+
+
+@pytest.mark.parametrize("kwargs", [{"care_team": False}, {"record_status": "failed"}])
+def test_sessions_not_approved_while_sharing_never_get_an_envelope(db_path, kwargs):
+    session_id = seed_session(db_path, **kwargs)
+    service = FakeService(org_key=ORG_PK)
+    assert gate.pending_care_sessions(db_path) == []
+    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) is None
+    assert service.requests == []
+
+
+def test_no_envelope_without_a_care_org_or_before_approval(db_path):
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("INSERT INTO survey_cache VALUES ('cfg_cohort_b_v1', 'cohort_B', 1, '{}', ?)", (utc_now(),))
+        conn.execute("INSERT INTO checkin_session (session_id, config_id, started_at, status) "
+                     "VALUES ('ses_0000000a', 'cfg_cohort_b_v1', ?, 'partial')", (utc_now(),))
+    service = FakeService(org_key=ORG_PK)
+    assert gate.queue_care_envelope(db_path, "ses_0000000a", WALTER, client=service.client()) is None
+    session_id = seed_session(db_path)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("UPDATE patient_profile SET care_org_id = NULL")
+    assert gate.pending_care_sessions(db_path) == []
+    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) is None
+    assert service.requests == []
+
+
+# ---------- consent updates (CN-01) ----------
+
+CONSENT_LABELS = ("Emergency services", "Lakeside Emergency Hospital", "display_label")
+
+
+def test_consent_update_from_the_seeded_state_matches_the_example(db_path):
+    with closing(connect(db_path)) as conn:
+        update = gate.build_consent_update(conn, WALTER)
+    assert update == json.loads((SCHEMA_DIR / "examples" / "consent_update.valid.json").read_text())
+    for value in CONSENT_LABELS + LOCAL_ONLY:
+        assert value not in json.dumps(update)
+
+
+def test_consent_update_without_emergency_consent_has_empty_lists(db_path):
+    set_consent(db_path, care_team=0, emergency=0, caregiver=0)
+    with closing(connect(db_path)) as conn:
+        update = gate.build_consent_update(conn, WALTER)
+    assert (update["share_care_team"], update["share_caregiver"], update["emergency_consent"]) == (False, False, False)
+    assert update["emergency_org_ids"] == [] and update["emergency_contacts"] == []
+    assert "911" not in json.dumps(update) and "+1617" not in json.dumps(update)
+    with closing(connect(db_path)) as conn, pytest.raises(LookupError):
+        gate.build_consent_update(conn, "pt_00000000")
+
+
+def test_queue_consent_update_supersedes_older_queued_ones_and_sends_with_put(db_path):
+    with closing(connect(db_path)) as conn:  # the caller owns the transaction
+        gate.queue_consent_update(conn, WALTER)
+        conn.rollback()
+    assert rows(db_path, "SELECT * FROM outbox") == []
+    assert gate.latest_consent_receipt(db_path) is None
+
+    with closing(connect(db_path)) as conn, conn:
+        first = gate.queue_consent_update(conn, WALTER)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("INSERT INTO consent (share_care_team, emergency_consent, share_caregiver, caregiver_detail, "
+                     "updated_at) VALUES (0, 0, 1, 'summary', ?)", (utc_now(),))
+        second = gate.queue_consent_update(conn, WALTER)
+    assert first.startswith("con_") and second.startswith("con_") and first != second
+    statuses = {r["outbox_id"]: (r["status"], r["session_id"], r["destination"])
+                for r in rows(db_path, "SELECT * FROM outbox")}
+    assert statuses == {first: ("failed", None, "consent"), second: ("queued", None, "consent")}
+    assert rows(db_path, "SELECT * FROM egress_log") == []  # superseded, never sent
+
+    service = FakeService()
+    receipt = gate.send_queued(db_path, second, client=service.client())
+    assert (receipt.status, receipt.response_code, receipt.method) == ("sent", 200, "PUT")
+    assert receipt.url == gate.consent_url(BASE, WALTER)
+    [(method, path, body)] = service.sends()
+    assert (method, path) == ("PUT", f"/v1/consent/{WALTER}")
+    sent = json.loads(body)
+    assert (sent["share_care_team"], sent["caregiver_detail"], sent["emergency_contacts"]) == (False, "summary", [])
+    assert receipt.payload_sha256 == payload_sha256(sent)
+    assert gate.latest_consent_receipt(db_path) == receipt
+    assert gate.send_queued(db_path, first, client=service.client()).status == "failed"  # never sent
+    assert len(service.sends()) == 1
+
+
+def test_worker_sends_consent_then_alert_then_record_then_envelope(db_path):
+    envelope = json.loads((SCHEMA_DIR / "examples" / "care_envelope.valid.json").read_text())
+    queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])
+    queue(db_path, make_record(db_path))
+    queue_alert(db_path, make_alert())
+    with closing(connect(db_path)) as conn, conn:
+        consent_id = gate.queue_consent_update(conn, WALTER)
+    service = FakeService()
+    worker = worker_for(db_path, service)
+    assert all(worker.status(i)["attempts"] == 0
+               for i in (consent_id, "alt_0a1b2c3d", "rec_0a1b2c3d", envelope["envelope_id"]))
+    receipts = worker.run_once()
+    assert [r.outbox_id for r in receipts] == [consent_id, "alt_0a1b2c3d", "rec_0a1b2c3d", envelope["envelope_id"]]
+    assert [p for _, p, _ in service.sends()] == [f"/v1/consent/{WALTER}", "/v1/alerts", "/v1/records",
+                                                  "/v1/care-envelopes"]
+    assert all(r.status == "sent" for r in receipts)
+
+
 # ---------- live: the local Sentinel service ----------
 
 LIVE = "http://127.0.0.1:8000"
@@ -735,3 +1066,50 @@ def test_live_retry_worker_sends_a_queued_alert(db_path, live):
         Settings(db_path=db_path, patient_ref=WALTER, sentinel_base_url=live)))
     [receipt] = worker.run_once()
     assert (receipt.status, receipt.response_code, receipt.outbox_id) == ("sent", 201, alert["alert_id"])
+
+
+PATEL = "dr_b29c4e71"  # Northgate admin (schema/demo_fixtures.json)
+
+
+@pytest.fixture(scope="module")
+def live_org_key(live):
+    """Registers a throwaway Northgate care-team key as Dr. Patel, as doctor-web's admin flow does.
+    This replaces Northgate's key in the local dev service (synthetic data, reseeded before the demo)."""
+    sk = PrivateKey.generate()
+    r = httpx.put(f"{live}/v1/orgs/{NORTHGATE}/public-key", timeout=5,
+                  json={"public_key": base64.b64encode(bytes(sk.public_key)).decode()},
+                  headers={"X-Role": "doctor", "X-Actor-Id": PATEL})
+    assert r.status_code == 200, r.status_code
+    return sk
+
+
+def test_live_care_envelope_reaches_northgate_and_decrypts(db_path, live, live_client, live_org_key):
+    session_id = seed_session(db_path, started_at=utc_now())
+    envelope_id = gate.queue_care_envelope(db_path, session_id, WALTER, client=live_client)
+    plaintext = plaintext_for(db_path, session_id)
+    receipt = gate.send_queued(db_path, envelope_id, client=live_client)
+    assert (receipt.status, receipt.response_code) == ("sent", 201)
+    assert receipt.url == f"{live}/v1/care-envelopes" and receipt.payload_sha256 == payload_sha256(plaintext)
+
+    # the service's own hash: the stored envelope again -> 200 with its payload_sha256
+    stored = rows(db_path, "SELECT payload FROM outbox WHERE outbox_id = ?", envelope_id)[0]["payload"]
+    again = httpx.post(f"{live}/v1/care-envelopes", content=stored.encode(), timeout=5,
+                       headers={"Content-Type": "application/json", "X-Role": "patient_device", "X-Actor-Id": WALTER})
+    assert again.status_code == 200 and again.json()["payload_sha256"] == receipt.payload_sha256
+
+    inbox = httpx.get(f"{live}/v1/orgs/{NORTHGATE}/envelopes", timeout=5,
+                      headers={"X-Role": "doctor", "X-Actor-Id": PATEL}).json()
+    mine = next(e for e in inbox if e["envelope_id"] == envelope_id)
+    opened = json.loads(SealedBox(live_org_key).decrypt(base64.b64decode(mine["ciphertext"])))
+    assert opened == plaintext and payload_sha256(opened) == mine["payload_sha256"] == receipt.payload_sha256
+    assert gate.send_queued(db_path, envelope_id, client=live_client) == receipt  # not re-sent
+
+
+def test_live_consent_update(db_path, live, live_client):
+    """Sends Walter's seeded consent (the same state the service was seeded with)."""
+    with closing(connect(db_path)) as conn, conn:
+        outbox_id = gate.queue_consent_update(conn, WALTER)
+    receipt = gate.send_queued(db_path, outbox_id, client=live_client)
+    assert (receipt.status, receipt.response_code, receipt.method) == ("sent", 200, "PUT")
+    assert receipt.url == gate.consent_url(live, WALTER)
+    assert gate.latest_consent_receipt(db_path) == receipt
