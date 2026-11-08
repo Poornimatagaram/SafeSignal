@@ -2,6 +2,15 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Softer voice and typed answers (branch `patient/feat/voice-controls`)
+
+### Added
+- `POST /checkin/turn/text?session_id=&question_id=&ask=` with JSON `{"text"}` ("Type instead"). It takes up to 1000 characters; blank text gives 400 and longer text gives 422; it accepts calls from this computer only. A typed answer goes through the same steps as a spoken one after transcription (command check, filter, rating, extraction, stored turn) through one shared helper, so the two cannot drift. Typed words are never logged.
+- Input mode (D-066): the first answer sets `checkin_session.input_mode` to `voice` or `text`, and an answer given the other way makes it `mixed`. The summary preview and the company record carry it instead of the old fixed `voice`. Commands ("repeat", "slower") don't change it. It is stored in the database, so it survives a restart.
+
+### Changed
+- `tts.py`: when `PATIENT_TTS_VOICE` is unset, the `say` voice is the first installed of "Ava (Premium)" and "Samantha (Enhanced)", read once from `say -v '?'`; otherwise the system default. The normal rate is gentler: 155 words per minute (was 170). "Slower" stays at 60.
+
 ## 2026-11-08: One README for the patient feature (branch `patient/docs/patient-readme`)
 
 ### Changed

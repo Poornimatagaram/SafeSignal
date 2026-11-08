@@ -1,7 +1,10 @@
 """Spoken questions and summaries, offline only (VC-01, VC-07, VC-08). Never uses online voices.
 
 Engines (both run locally as a subprocess with an argument list, never a shell):
-- `say`: macOS system voices, offline. Optional voice from PATIENT_TTS_VOICE (`say -v '?'` lists them).
+- `say`: macOS system voices, offline, at a gentle 155 words per minute. Voice: PATIENT_TTS_VOICE if set (any name
+  `say -v '?'` lists); otherwise the first installed of "Ava (Premium)" and "Samantha (Enhanced)" (softer voices,
+  downloaded in System Settings > Accessibility > Spoken Content); otherwise the system default voice (no `-v`).
+  The installed voices are read once per process with `say -v '?'`; if that fails, the system default is used.
 - `piper`: the Piper CLI with a local voice model, PATIENT_PIPER_MODEL = path to the `.onnx` file (its `.onnx.json`
   sits next to it). The model must be an existing file, so Piper never tries to download a voice.
   PATIENT_PIPER_BIN overrides the `piper` command.
@@ -27,6 +30,9 @@ from typing import Protocol
 
 Runner = Callable[..., subprocess.CompletedProcess]
 TIMEOUT_SECONDS = 60
+LIST_VOICES_TIMEOUT_SECONDS = 10
+PREFERRED_SAY_VOICES = ("Ava (Premium)", "Samantha (Enhanced)")  # softer than the default; first installed wins
+_installed_say_voices: dict[str, frozenset[str]] = {}  # per process: say binary -> installed voice names
 EMPTY_WAV_RATE = 22_050
 
 
@@ -86,10 +92,37 @@ def _synthesize(engine: str, command: Callable[[str], list[str]], text: str, run
     return _check_wav(data, engine)
 
 
-class SaySpeaker:
-    """macOS `say` with an offline system voice. Speaking rate is in words per minute."""
+def _parse_say_voices(listing: str) -> frozenset[str]:
+    """Voice names from `say -v '?'`. A line is `<name> <locale> # <sample>`; names may hold spaces and parentheses
+    ("Samantha (English (US))"), so the name is everything before the locale column."""
+    names = set()
+    for line in listing.splitlines():
+        parts = line.split("#", 1)[0].strip().rsplit(None, 1)
+        if len(parts) == 2:
+            names.add(parts[0].strip())
+    return frozenset(names)
 
-    rate_wpm = 170
+
+def _say_voices(binary: str, runner: Runner) -> frozenset[str]:
+    """Installed `say` voices, read once per process; empty on any failure (the system default is used then)."""
+    if binary not in _installed_say_voices:
+        try:
+            result = runner([binary, "-v", "?"], capture_output=True, text=True,
+                            timeout=LIST_VOICES_TIMEOUT_SECONDS, check=False)
+            voices = _parse_say_voices(result.stdout or "") if result.returncode == 0 else frozenset()
+        except (OSError, subprocess.SubprocessError, ValueError, TypeError, AttributeError):
+            voices = frozenset()
+        _installed_say_voices[binary] = voices
+    return _installed_say_voices[binary]
+
+
+class SaySpeaker:
+    """macOS `say` with an offline system voice. Speaking rate is in words per minute.
+
+    Voice precedence: the `voice` argument, then PATIENT_TTS_VOICE, then the first installed of
+    PREFERRED_SAY_VOICES, then the system default (no `-v`). The installed list is only read when needed."""
+
+    rate_wpm = 155  # a little slower than `say`'s default, calmer for older patients
     # "slower" (VC-07). Current macOS voices map the rate to speed in coarse steps with a floor: on this project's
     # Mac, 115 wpm was only 1.1x longer than 170, while 60 wpm was 1.3x longer for Samantha, Daniel and Fred and
     # still transcribed word for word.
@@ -97,11 +130,21 @@ class SaySpeaker:
     sample_rate = 22_050
 
     def __init__(self, voice: str | None = None, *, binary: str | None = None, runner: Runner = subprocess.run):
-        self.voice = voice or os.environ.get("PATIENT_TTS_VOICE", "").strip() or None
+        self._voice = voice or os.environ.get("PATIENT_TTS_VOICE", "").strip() or None
+        self._voice_resolved = self._voice is not None
         self.binary = binary or _find_say()
         if not self.binary:
             raise TTSUnavailable("macOS `say` is not available on this machine")
         self._runner = runner
+
+    @property
+    def voice(self) -> str | None:
+        """The `-v` voice, or None for the system default."""
+        if not self._voice_resolved:
+            installed = _say_voices(self.binary, self._runner)
+            self._voice = next((v for v in PREFERRED_SAY_VOICES if v in installed), None)
+            self._voice_resolved = True
+        return self._voice
 
     def command(self, output_path: str, *, slow: bool = False) -> list[str]:
         cmd = [self.binary, "-o", output_path, "--file-format=WAVE", f"--data-format=LEI16@{self.sample_rate}",
