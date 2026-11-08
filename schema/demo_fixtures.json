@@ -113,7 +113,8 @@
       "patient_ref": "pt_9c1d2e3f",
       "program_id": "prog_demo_01",
       "cohort_id": "cohort_A",
-      "checkin_window": "13:00-14:00"
+      "checkin_window": "13:00-14:00",
+      "demo_missed_tail": 2
     }
   ],
   "care_links": [
@@ -160,6 +161,14 @@
       "phone": "+16175550199",
       "org_id": "org_8f4d6a2e",
       "priority": 2
+    },
+    {
+      "contact_id": "ec_9e8d7c6b",
+      "patient_ref": "pt_9c1d2e3f",
+      "contact_type": "emergency_service",
+      "phone": "911",
+      "org_id": null,
+      "priority": 1
     }
   ],
   "device_profiles": [
@@ -205,16 +214,19 @@
         "share_care_team": true,
         "share_caregiver": false,
         "caregiver_detail": "alerts_only",
-        "emergency_consent": false
+        "emergency_consent": true
       },
       "care_org_id": "org_5e1a2b3c",
       "reporter_default": "self",
       "emergency_org_ids": [],
-      "emergency_contact_labels": {}
+      "emergency_contact_labels": {
+        "ec_9e8d7c6b": "Emergency services"
+      }
     }
   ],
   "demo_notes": {
     "doctor_change": "Dr. Rivera (dr_c71e0f9a) is registered but not a member: the Northgate admin adds and grants her during the demo, and she reads Walter's full history.",
-    "emergency": "Lakeside (Dr. Okafor) is Walter's emergency hospital: it can read his history only through emergency access, which is logged and notifies Anna and Northgate."
+    "emergency": "Lakeside (Dr. Okafor) is Walter's emergency hospital: it can read his history only through emergency access, which is logged and notifies Anna and Northgate.",
+    "missed_escalation": "Priya missed her last 2 check-ins before demo day (enrollments.demo_missed_tail). When today's window closes without a check-in, the scheduler raises a level 3 alert: Priya, Northgate and her emergency contact (911, in-app record only) are notified. Use `python -m sentinel_service.demo close-window pt_9c1d2e3f --in 60` to fire it on cue."
   }
 }
