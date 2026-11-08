@@ -687,7 +687,7 @@ def test_a_switch_cannot_be_turned_on_without_someone_to_share_with(tmp_path):
 # ---------- consent setup (CN-01) ----------
 
 SETUP = {"care_org_id": "org_5e1a2b3c", "share_care_team": True, "caregiver_id": "cg_7e21c9a4",
-         "share_caregiver": True, "caregiver_detail": "summary", "emergency_consent": True,
+         "share_caregiver": True, "caregiver_detail": "alerts_only", "emergency_consent": True,
          "emergency_org_ids": ["org_8f4d6a2e"],
          "emergency_contacts": [{"contact_type": "person", "phone": "+16175550123", "org_id": None, "priority": 1,
                                  "label": "Neighbour Bob"},
@@ -713,7 +713,7 @@ def test_setup_is_saved_and_sent_with_labels_kept_on_the_device(tmp_path):
         state = c.put("/consent/setup", json=SETUP).json()
     [update] = sentinel.consents
     assert state["receipt"]["status"] == "sent" and state["receipt"]["payload_sha256"] == payload_sha256(update)
-    assert update["caregiver_detail"] == "summary" and update["emergency_org_ids"] == ["org_8f4d6a2e"]
+    assert update["caregiver_detail"] == "alerts_only" and update["emergency_org_ids"] == ["org_8f4d6a2e"]
     assert [(x["phone"], x["priority"]) for x in update["emergency_contacts"]] == [("+16175550123", 1), ("911", 2)]
     assert "Neighbour" not in json.dumps(update) and "label" not in json.dumps(update)
     assert [x["label"] for x in state["setup"]["emergency_contacts"]] == ["Neighbour Bob", None]
@@ -739,7 +739,8 @@ def test_setup_refuses_choices_the_contract_does_not_allow(tmp_path):
            {**SETUP, "emergency_contacts": [{**SETUP["emergency_contacts"][0], "phone": "555-0142"}]},
            {**SETUP, "emergency_contacts": SETUP["emergency_contacts"] * 2},       # more than 3
            {**SETUP, "emergency_contacts": [{**SETUP["emergency_contacts"][0], "label": "x" * 41}]},
-           {**SETUP, "emergency_contacts": [SETUP["emergency_contacts"][0]] * 2}]  # same priority twice
+           {**SETUP, "emergency_contacts": [SETUP["emergency_contacts"][0]] * 2},  # same priority twice
+           {**SETUP, "caregiver_detail": "summary"}]                                # alerts only for now
     with c:
         codes = [c.put("/consent/setup", json=b).status_code for b in bad]
         details = c.put("/consent/setup", json=bad[3]).json()["detail"]

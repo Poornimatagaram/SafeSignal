@@ -162,7 +162,7 @@ export function setupRequest(draft: SetupDraft): ConsentSetupRequest {
     share_care_team: draft.care_org_id !== null && draft.share_care_team,
     caregiver_id: draft.caregiver_id,
     share_caregiver: draft.caregiver_id !== null && draft.share_caregiver,
-    caregiver_detail: draft.caregiver_detail,
+    caregiver_detail: 'alerts_only', // the only level offered for now
     emergency_consent: emergency,
     emergency_org_ids: emergency ? draft.emergency_org_ids.filter((id) => id !== draft.care_org_id) : [],
     emergency_contacts: emergency
@@ -391,9 +391,7 @@ export function reviewSections(draft: SetupDraft, options: ConsentOptions): Revi
       ? ['No caregiver. Nobody else is told anything.']
       : request.share_caregiver
         ? [
-            request.caregiver_detail === 'summary'
-              ? `${nameOf(people, request.caregiver_id)}: alerts about a severe problem, and a summary of each check-in.`
-              : `${nameOf(people, request.caregiver_id)}: only alerts about a severe problem.`,
+            `${nameOf(people, request.caregiver_id)}: only alerts about a severe problem.`,
           ]
         : [`${nameOf(people, request.caregiver_id)}: sharing is off, so they get nothing new.`]
 

@@ -300,6 +300,11 @@ describe('setup choices and checks', () => {
     expect(JSON.stringify(body)).not.toMatch(/Maple|River|Anna/)
     expect(setupRequest({ ...DRAFT, caregiver_id: null }).share_caregiver).toBe(false)
   })
+
+  it('a caregiver gets alerts only for now: the summary level is never sent', () => {
+    expect(DRAFT.caregiver_detail).toBe('summary') // even a draft that somehow holds it
+    expect(setupRequest(DRAFT).caregiver_detail).toBe('alerts_only')
+  })
 })
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -326,11 +331,19 @@ describe('setup flow and screen', () => {
       <SetupView state={{ ...INITIAL_SETUP_STATE, phase: 'editing', options: OPTIONS, ...patch }} actions={noopActions} onClose={() => undefined} />,
     )
 
+  it('the caregiver step offers no summary option, only alerts', () => {
+    const html = render({ step: 'caregiver', draft: DRAFT })
+    expect(textOf(html)).toContain('Only alerts')
+    expect(textOf(html)).not.toContain('Alerts and a summary')
+    expect(textOf(html)).not.toContain('What should your caregiver get?')
+  })
+
   it('the review lists choices and what is sent in plain words; names stay on this computer', () => {
     const text = textOf(render({ step: 'review', draft: DRAFT }))
     expect(text).toContain('Step 4 of 4')
     expect(text).toContain('Maple Clinic: your check-ins go to them sealed, so only they can read them.')
-    expect(text).toContain('Anna: alerts about a severe problem, and a summary of each check-in.')
+    expect(text).toContain('Anna: only alerts about a severe problem.')
+    expect(text).not.toContain('summary of each check-in')
     expect(text).toContain('Hospitals: River Hospital.')
     expect(text).toContain('Contact 1: An emergency number (like 911), 911.')
     expect(text).toContain('Contact 2: A person, +15550100199.')

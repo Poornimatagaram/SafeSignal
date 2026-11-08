@@ -80,6 +80,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **The envelope receipt shows the plaintext hash** (brief 26.13, `send_envelope`). The org key is fetched fresh for every envelope and never taken from the cache, because an organization may register a new key.
 - **One envelope per organization** (D-064, D-065): the care team, plus each emergency hospital when emergency consent is on both now and when the check-in was approved. The latter is the consent row with the highest id whose `updated_at` is no later than the approval, compared to the second. Each organization waits for its own key, so a missing Lakeside key never holds up Northgate.
 - **The setup screen's choices come from `schema/demo_fixtures.json`** (organizations, and this patient's caregivers): the service has no organization directory a patient device can read. Ask the company owner for one before real use.
+- **A caregiver gets alerts only for now** (user's choice, 2026-11-08). The setup screen no longer offers "Alerts and a summary", and `PUT /consent/setup` refuses `summary` (422), because the service only sends caregivers alerts today.
 - **Setup replaces the whole choice,** like the service (D-067). Contacts get new `ec_` ids on every save, labels stay in `emergency_contact.display_label`, and without emergency consent no hospitals or contacts are kept or sent. A new care team clears the cached key.
 - **The consent switches are a second send path,** approved by the user for A7. They only send the consent update, through `egress_gate.send_queued`, with a receipt.
 - **"Network off" in the live check means the local service was stopped**: connection refused, the same as no network for the egress gate. I can't switch off the laptop's network from here; speech, filter and model run locally either way.
@@ -184,7 +185,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Caregiver detail level** (CN-01, `alerts_only` or `summary`) is not on the screen yet.
 - **Reseed before the demo:** the live tests replaced Northgate's and Lakeside's keys with throwaway ones and added key grants, synthetic envelopes, an emergency access (with its alert) and consent changes (Walter's contacts now have new `ec_` ids). Doctor-web must register fresh keys after reseeding.
 - **Ask the company owner** for an organization directory a patient device can read, for the setup screen.
-- **Caregiver "summary" detail:** the setup screen offers it, but the service only sends caregivers alerts today; confirm what the summary should contain.
+- **Caregiver "summary" detail:** hidden for now (alerts only). Turn it back on once the user decides what the summary contains and the service can deliver it.
 - **Persist the check-in draft** so a runtime restart mid check-in loses nothing; the retry state is in memory too.
 - **`possible_link_flag` from exposures** (SE-04).
 - **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
