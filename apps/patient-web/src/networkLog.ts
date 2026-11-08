@@ -1,6 +1,9 @@
 // "What this computer sent" (PV-06): the runtime's network log in plain words, as a small state machine with no
 // React in it. Reading the log sends nothing; it only GETs from the runtime on this computer.
 import type { ConsentState, NetworkLogEntry, RuntimeClient } from './api.ts'
+import { S } from './strings.ts'
+
+const W = S.networkLog.what
 
 /** Who an organization is to the patient, from GET /consent (to name a sealed copy or a lock). */
 export interface OrgContext {
@@ -50,40 +53,35 @@ const PUBLIC_KEY_PATH = /\/v1\/orgs\/([^/]+)\/public-key\/?$/
 export function entryWhat(entry: NetworkLogEntry, orgs: OrgContext | null): string {
   if (entry.kind === 'config_fetch') {
     const path = pathOf(entry.url)
-    if (/\/v1\/survey\/?$/.test(path)) return "Today's questions downloaded"
-    if (/\/v1\/terms\/?$/.test(path)) return 'Symptom word list downloaded'
+    if (/\/v1\/survey\/?$/.test(path)) return W.survey
+    if (/\/v1\/terms\/?$/.test(path)) return W.terms
     const key = PUBLIC_KEY_PATH.exec(path)
     if (key) {
       const orgId = entry.org_id ?? decodeURIComponent(key[1])
       const role = orgRole(orgId, orgs)
-      const who = role === 'care' ? 'your care team' : role === 'emergency' ? 'an emergency hospital' : 'a hospital or clinic'
-      return `Lock for ${who}${orgName(orgId, orgs)} fetched`
+      const who = role === 'care' ? W.careTeam : role === 'emergency' ? W.emergencyHospital : W.someOrg
+      return W.lock(who, orgName(orgId, orgs))
     }
-    return 'Settings downloaded'
+    return W.settings
   }
   if (entry.kind === 'send') {
     switch (entry.destination) {
       case 'company_record':
-        return 'Check-in sent to the drug company safety team (coded answers only, no name)'
+        return W.record
       case 'care_envelope': {
         const role = orgRole(entry.org_id, orgs)
-        const who =
-          role === 'care'
-            ? 'your care team'
-            : role === 'emergency'
-              ? 'an emergency hospital'
-              : 'your care team or an emergency hospital'
-        return `Sealed copy sent to ${who}${orgName(entry.org_id, orgs)}`
+        const who = role === 'care' ? W.careTeam : role === 'emergency' ? W.emergencyHospital : W.careOrEmergency
+        return W.sealed(who, orgName(entry.org_id, orgs))
       }
       case 'alert':
-        return 'Severe-problem alert sent'
+        return W.alert
       case 'consent':
-        return 'Your sharing choices sent'
+        return W.consent
       default:
-        return 'Something sent to the service (see the details)'
+        return W.otherSend
     }
   }
-  return 'Something sent or fetched (see the details)'
+  return W.other
 }
 
 export type EntryOutcome = 'accepted' | 'refused' | 'retry' | 'unknown'
@@ -98,16 +96,7 @@ export function entryOutcome(code: number | null): EntryOutcome {
 
 /** The service's answer, in plain words. */
 export function entryStatus(code: number | null): string {
-  switch (entryOutcome(code)) {
-    case 'accepted':
-      return 'Accepted'
-    case 'refused':
-      return 'Refused'
-    case 'retry':
-      return 'Service error, will try again'
-    case 'unknown':
-      return 'Answer not known'
-  }
+  return S.networkLog.status[entryOutcome(code)]
 }
 
 /** A stable key for a row (the log id, or its place in the list). */
@@ -115,9 +104,8 @@ export function entryKey(entry: NetworkLogEntry, index: number): string {
   return entry.log_id !== null ? `log-${entry.log_id}` : `row-${index}`
 }
 
-export const ONLY_THESE =
-  'Only these went out. Nothing else leaves this computer: no recordings, no words you said.'
-export const NOTHING_SENT = 'Nothing has been sent yet.'
+export const ONLY_THESE = S.networkLog.onlyThese
+export const NOTHING_SENT = S.networkLog.nothingSent
 
 export type NetworkLogPhase = 'loading' | 'load-failed' | 'ready'
 

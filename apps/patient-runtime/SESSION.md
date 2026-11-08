@@ -3,6 +3,9 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08 (overnight), mobile-first patient screen** (branch `patient/feat/mobile-ui`, built by an agent in its own worktree).
+  - **Tests:** 294 web tests pass; the build is clean and `npm audit` reports 0 vulnerabilities.
+  - **Phone-width check:** I measured the home screen myself in headless Chrome emulating a 390px phone: no horizontal overflow. A plain `--window-size=390` screenshot looks clipped, but that comes from the headless window, not the page.
 - **2026-11-08 (overnight), `DEMO.md` written for the team** (branch `patient/docs/demo-guide`). I checked its facts against the code: ports, variables, origins and commands.
 - **2026-11-08 (overnight), held-out leakage set merged as PR #36** (`83b1608`).
 - **2026-11-08 (overnight), 40 held-out leakage transcripts (50 in total)** (branch `patient/test/leakage-held-out`). They were written by a fresh agent that never read the filter, extraction or eval code, and I did not retune the filter.
@@ -92,6 +95,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **The patient's name on the home screen comes from `VITE_PATIENT_DISPLAY_NAME` (default Walter)**, because the runtime API doesn't expose the profile name. It is shown on screen only, and a test checks it never reaches the API client.
 - **Restart state lives in JSON files beside the database, not in new tables**, because the schema is the contract. They are local-only like the database, 0600 and atomic. The drafts can hold an exposure description, so they are deleted at approval. Envelope "waiting" reasons are not saved: after a restart they read "no_key" until the next attempt.
 - **Possible link rule (SE-04):** a new symptom (not in the previous approved check-in) that started 0 to 7 days after a new exposure (this check-in, or stored in the last 30 days). Onset buckets are compared as day ranges. An exposure given without a time counts as within the last week. An unknown symptom onset is never linked. The exposure description stays on the device; only the flag leaves.
 - **The `egress_log` migration recreates the table** instead of `ALTER TABLE ADD COLUMN`, because 2.3 also makes `outbox_id` nullable, which SQLite can't change in place.

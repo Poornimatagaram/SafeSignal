@@ -15,7 +15,10 @@ import {
 } from './networkLog.ts'
 import type { NetworkLogEntry } from './api.ts'
 import { formatLocalTime } from './summaryText.ts'
-import { AlertIcon, CheckIcon, HourglassIcon } from './Icons.tsx'
+import { S } from './strings.ts'
+import { AlertIcon, BackIcon, CheckIcon, HourglassIcon, RefreshIcon } from './Icons.tsx'
+
+const W = S.networkLog
 
 export interface NetworkLogViewProps {
   state: NetworkLogState
@@ -50,7 +53,7 @@ export function NetworkLogView({ state, onRefresh, onToggle, onBack, headingRef 
   return (
     <main className="screen">
       <h1 className="title" tabIndex={-1} ref={headingRef}>
-        What this computer sent
+        {W.title}
       </h1>
       <p className="lead">{ONLY_THESE}</p>
 
@@ -58,7 +61,7 @@ export function NetworkLogView({ state, onRefresh, onToggle, onBack, headingRef 
         {busy && (
           <>
             <HourglassIcon className="icon" />
-            <span>Getting the list…</span>
+            <span>{W.loading}</span>
           </>
         )}
       </p>
@@ -97,10 +100,12 @@ export function NetworkLogView({ state, onRefresh, onToggle, onBack, headingRef 
         aria-disabled={busy}
         onClick={() => !busy && onRefresh()}
       >
-        {state.phase === 'load-failed' ? 'Try again' : 'Refresh'}
+        <RefreshIcon className="icon" />
+        <span>{state.phase === 'load-failed' ? W.tryAgain : W.refresh}</span>
       </button>
       <button type="button" className="button button--secondary button--huge" onClick={onBack}>
-        Back
+        <BackIcon className="icon" />
+        <span>{W.back}</span>
       </button>
     </main>
   )
@@ -119,7 +124,7 @@ function LogRow(props: {
   return (
     <li className="netlog__row">
       <p className="netlog__what">{entryWhat(entry, orgs)}</p>
-      <p>{entry.sent_at ? formatLocalTime(entry.sent_at) : 'Time not known'}</p>
+      <p>{entry.sent_at ? formatLocalTime(entry.sent_at) : W.timeUnknown}</p>
       <p className={`netlog__status netlog__status--${outcome}`}>
         {outcome === 'accepted' ? (
           <CheckIcon className="icon" />
@@ -137,25 +142,25 @@ function LogRow(props: {
         aria-controls={detailsId}
         onClick={onToggle}
       >
-        {open ? 'Hide details' : 'Show details'}
+        {open ? W.hideDetails : W.showDetails}
       </button>
       {open && (
         <dl className="netlog__details" id={detailsId}>
           <div>
-            <dt>Sent with</dt>
+            <dt>{W.sentWith}</dt>
             <dd className="mono">{`${entry.method} ${entry.url}`}</dd>
           </div>
           {entry.response_code !== null && (
             <div>
-              <dt>Answer code</dt>
+              <dt>{W.answerCode}</dt>
               <dd>{entry.response_code}</dd>
             </div>
           )}
           <div>
-            <dt>{entry.kind === 'config_fetch' ? 'Asked with' : 'Field names'}</dt>
+            <dt>{entry.kind === 'config_fetch' ? W.askedWith : W.fieldNames}</dt>
             <dd>
               {entry.fields_sent.length === 0 ? (
-                <p>None</p>
+                <p>{W.none}</p>
               ) : (
                 <ul className="mono fields">
                   {entry.fields_sent.map((field) => (
@@ -167,7 +172,7 @@ function LogRow(props: {
           </div>
           {entry.payload_sha256 !== '' && (
             <div>
-              <dt>Fingerprint</dt>
+              <dt>{W.fingerprint}</dt>
               <dd className="mono fingerprint">{entry.payload_sha256}</dd>
             </div>
           )}

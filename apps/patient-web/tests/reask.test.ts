@@ -2,9 +2,13 @@
 // moved on. Driven through the real API client against a mocked runtime, the way the screen drives it.
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { createRuntimeClient, type FetchLike, type Question, type TurnNext, type TurnResult } from '../src/api.ts'
 import { afterTurn, createQuestionVoice } from '../src/questionFlow.ts'
+import { ChatThread } from '../src/CheckinChat.tsx'
+import { S } from '../src/strings.ts'
 import { BASE, json, SID } from './fixtures.ts'
 
 const WORDING = [
@@ -145,7 +149,13 @@ describe('the screen', () => {
 
   it('speaks the re-ask right after the answer, with the plain-words lines', () => {
     expect(app).toMatch(/step\.kind === 'reask'[\s\S]{0,400}void speak\(step\.question, false\)/)
-    expect(app).toContain('Let me ask that more simply.')
-    expect(app).toContain("That's okay, let's move on.")
+    // The words live in src/strings.ts; the conversation shows them as bubbles.
+    expect(S.checkin.reask).toBe('Let me ask that more simply.')
+    expect(S.checkin.moveOn).toBe("That's okay, let's move on.")
+    const html = renderToStaticMarkup(
+      createElement(ChatThread, { bubbles: [{ kind: 'reask' }, { kind: 'move-on' }] }),
+    ).replace(/&#x27;/g, "'")
+    expect(html).toContain('Let me ask that more simply.')
+    expect(html).toContain("That's okay, let's move on.")
   })
 })

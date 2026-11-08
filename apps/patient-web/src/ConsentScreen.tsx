@@ -4,7 +4,10 @@ import { useEffect, useRef, useSyncExternalStore, type RefObject } from 'react'
 import type { ConsentKey, ConsentState, OutboxReceipt } from './api.ts'
 import { canToggle, hasRecipient, type ConsentFlow, type ConsentFlowState } from './consentFlow.ts'
 import { consentChangeMessage, consentLoadMessage } from './messages.ts'
-import { AlertIcon, CheckIcon, HourglassIcon } from './Icons.tsx'
+import { S } from './strings.ts'
+import { AlertIcon, BackIcon, CheckIcon, HourglassIcon } from './Icons.tsx'
+
+const W = S.consent
 
 export interface ConsentViewProps {
   state: ConsentFlowState
@@ -23,32 +26,12 @@ interface SwitchWords {
   nobody: string
 }
 
-export const SWITCH_WORDS: Record<ConsentKey, SwitchWords> = {
-  share_care_team: {
-    label: 'Share with my doctor',
-    on: "Your doctor's team gets your check-ins, sealed so only they can read them.",
-    off: "Your doctor's team gets nothing new from now on.",
-    nobody: 'No doctor is set up on this computer yet, so this cannot be turned on. Please ask your helper.',
-  },
-  share_caregiver: {
-    label: 'Share with my caregiver',
-    on: 'Your caregiver is told when you report a severe problem.',
-    off: 'Your caregiver gets nothing new from now on.',
-    nobody: 'No caregiver is set up on this computer yet, so this cannot be turned on. Please ask your helper.',
-  },
-}
+export const SWITCH_WORDS: Record<ConsentKey, SwitchWords> = W.switches
 
 /** Where a change stands, in plain words. */
 export function consentReceiptText(receipt: OutboxReceipt | null): string {
-  if (receipt === null) return 'Saved on this device.'
-  switch (receipt.status) {
-    case 'sent':
-      return 'Saved and sent.'
-    case 'queued':
-      return "Saved on this device. It will be sent when you're back online."
-    case 'failed':
-      return 'Saved on this device, but the service did not accept it. Please tell your helper.'
-  }
+  if (receipt === null) return W.receipt.none
+  return W.receipt[receipt.status]
 }
 
 export function ConsentScreen({ flow, onBack, onSetup }: { flow: ConsentFlow; onBack: () => void; onSetup?: () => void }) {
@@ -77,14 +60,14 @@ export function ConsentView({ state, onToggle, onRetry, onBack, onSetup, heading
   return (
     <main className="screen">
       <h1 className="title" tabIndex={-1} ref={headingRef}>
-        Who I share with
+        {W.title}
       </h1>
-      <p className="lead">Tap a switch to turn it on or off. A change counts straight away.</p>
+      <p className="lead">{W.lead}</p>
 
       {state.phase === 'loading' && (
         <p className="status" role="status" aria-live="polite">
           <HourglassIcon className="icon" />
-          <span>Getting your choices…</span>
+          <span>{W.loading}</span>
         </p>
       )}
 
@@ -93,7 +76,7 @@ export function ConsentView({ state, onToggle, onRetry, onBack, onSetup, heading
           <AlertIcon className="icon" />
           <p>{consentLoadMessage(state.failure?.error)}</p>
           <button type="button" className="button button--primary" onClick={onRetry}>
-            Try again
+            {W.tryAgain}
           </button>
         </div>
       )}
@@ -108,11 +91,12 @@ export function ConsentView({ state, onToggle, onRetry, onBack, onSetup, heading
 
       {onSetup && state.phase === 'ready' && (
         <button type="button" className="button button--primary button--huge" onClick={onSetup}>
-          Change my choices
+          {W.change}
         </button>
       )}
       <button type="button" className="button button--secondary button--huge" onClick={onBack}>
-        Back to my check-in
+        <BackIcon className="icon" />
+        <span>{W.back}</span>
       </button>
     </main>
   )
@@ -151,7 +135,7 @@ function ConsentSwitch(props: {
           <span className="switch__track">
             <span className="switch__thumb" />
           </span>
-          <span className="switch__word">{on ? 'On' : 'Off'}</span>
+          <span className="switch__word">{on ? W.on : W.off}</span>
         </span>
       </button>
       <p id={meansId} className="switch__means">
@@ -161,7 +145,7 @@ function ConsentSwitch(props: {
         {saving ? (
           <>
             <HourglassIcon className="icon" />
-            <span>Saving…</span>
+            <span>{W.saving}</span>
           </>
         ) : saved ? (
           <>

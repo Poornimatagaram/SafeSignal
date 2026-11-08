@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { DISPLAY_NAME } from './config.ts'
 import { createRuntimeClient, type CheckinSession, type Question, type TurnResult } from './api.ts'
 import { createPlayer, type Player } from './player.ts'
 import { startRecording, type ActiveRecording } from './recorder.ts'
@@ -7,9 +8,12 @@ import {
   needsRestart,
   questionErrorMessage,
   startErrorMessage,
-  symptomText,
   voiceErrorMessage,
 } from './messages.ts'
+import { S } from './strings.ts'
+import { Shell } from './Shell.tsx'
+import { HomeView } from './HomeScreen.tsx'
+import { bubblesAfterTurn, ChatThread, type Bubble } from './CheckinChat.tsx'
 import { afterTurn, createQuestionVoice } from './questionFlow.ts'
 import { createShareFlow, type ShareFlow } from './shareFlow.ts'
 import { ShareScreen } from './ShareScreen.tsx'
@@ -20,6 +24,8 @@ import { SetupScreen } from './SetupScreen.tsx'
 import { createNetworkLogFlow, type NetworkLogFlow } from './networkLog.ts'
 import { NetworkLogScreen } from './NetworkLogScreen.tsx'
 import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
+
+const C = S.checkin
 
 const client = createRuntimeClient()
 
@@ -50,6 +56,10 @@ export default function App() {
   const [voiceLoading, setVoiceLoading] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
+  // The conversation for the current question only (question, re-asks, Walter's words). Cleared on every question
+  // change, like the transcript: Walter's words stay in memory no longer than one question.
+  const [thread, setThread] = useState<Bubble[]>([])
+  const say = useCallback((...bubbles: Bubble[]) => setThread((shown) => [...shown, ...bubbles]), [])
   // "Who I share with": created when opened from the start screen, disposed when leaving it.
   const [consentFlow, setConsentFlow] = useState<ConsentFlow | null>(null)
   // "Set up who I share with": created when opened from "Who I share with".
@@ -149,6 +159,7 @@ export default function App() {
     setQuestion(null)
     setReply(null)
     setNotice(null)
+    setThread([])
     setAnswerError(null)
     setVoiceNote(null)
     setVoiceLoading(false)
@@ -186,6 +197,7 @@ export default function App() {
           return
         }
         setQuestion(next)
+        setThread([{ kind: 'question', text: next.text }])
         void speak(next, false)
       } catch (error) {
         if (gen === generation.current && mounted.current) setLoadError({ index, message: questionErrorMessage(error) })
@@ -286,6 +298,7 @@ export default function App() {
           setNotice('reask')
           setQuestion(step.question)
           void speak(step.question, false)
+          say(...bubblesAfterTurn(result, step.kind, { text: step.question.text }))
         } else if (step.kind === 'command') {
           // "Say that again" / "Slower": not an answer and not a re-ask. Same wording, same ask; wait for the answer.
           player.current?.stop()
@@ -293,11 +306,14 @@ export default function App() {
           setReply(null)
           setNotice(step.command)
           void speak(step.question, step.slow)
+          say(...bubblesAfterTurn(result, step.kind, { text: step.question.text, command: step.command }))
         } else if (step.kind === 'move-on') {
           setNotice('move-on')
+          say(...bubblesAfterTurn(result, step.kind))
         } else {
           setNotice(null)
           setReply(result)
+          say(...bubblesAfterTurn(result, step.kind))
         }
       } catch (error) {
         if (gen === generation.current && mounted.current) {
@@ -323,153 +339,124 @@ export default function App() {
     if (heard) nextButton.current?.focus({ preventScroll: true })
   }, [heard])
 
-  if (screen === 'start') {
+  return <Shell>{renderScreen()}</Shell>
+
+  function renderScreen() {
+    if (screen === 'start') {
+      return (
+        <HomeView
+          name={DISPLAY_NAME}
+          hour={new Date().getHours()}
+          starting={starting}
+          startError={startError}
+          onStart={() => void start()}
+          onConsent={openConsent}
+          onNetworkLog={openNetworkLog}
+        />
+      )
+    }
+
+    if (screen === 'network-log' && networkLogFlow) {
+      return <NetworkLogScreen flow={networkLogFlow} onBack={closeNetworkLog} />
+    }
+
+    if (screen === 'consent' && consentFlow) {
+      return <ConsentScreen flow={consentFlow} onBack={closeConsent} onSetup={openSetup} />
+    }
+
+    if (screen === 'setup' && setupFlow) {
+      return <SetupScreen flow={setupFlow} onClose={closeSetup} />
+    }
+
+    if (screen === 'share' && shareFlow) {
+      return <ShareScreen flow={shareFlow} onRestart={restart} />
+    }
+
+    const isLast = question !== null && question.index + 1 >= question.total
+    const status: { text: string; icon: ReactNode } | null =
+      talk === 'starting'
+        ? { text: C.status.micStarting, icon: <HourglassIcon className="icon" /> }
+        : talk === 'listening'
+          ? { text: C.status.listening, icon: <span className="rec-dot" aria-hidden="true" /> }
+          : talk === 'sending'
+            ? { text: C.status.sending, icon: <HourglassIcon className="icon" /> }
+            : loading
+              ? { text: C.status.loading, icon: <HourglassIcon className="icon" /> }
+              : voiceLoading
+                ? { text: C.status.voiceLoading, icon: <HourglassIcon className="icon" /> }
+                : speaking
+                  ? { text: C.status.speaking, icon: <SpeakerIcon className="icon" /> }
+                  : null
+
     return (
-      <main className="screen screen--start">
-        <h1 className="title">Your daily check-in</h1>
-        <p className="lead">I will ask you a few short questions out loud. Answer in your own words.</p>
-        <p className="lead">Your voice stays on this computer. Nothing is shared until you say so.</p>
-        <p className="status" role="status" aria-live="polite">
-          {starting && (
-            <>
-              <HourglassIcon className="icon" />
-              <span>Getting your check-in ready…</span>
-            </>
-          )}
-        </p>
-        {startError && (
+      <main className="screen screen--chat">
+        <h1 className="progress">{question ? C.progress(question.index + 1, question.total) : C.progressNone}</h1>
+
+        {loadError && (
           <div className="alert" role="alert">
             <AlertIcon className="icon" />
-            <p>{startError}</p>
+            <p>{loadError.message}</p>
+            <button
+              type="button"
+              className="button button--primary"
+              autoFocus
+              onClick={() => void loadQuestion(loadError.index)}
+            >
+              {C.tryAgain}
+            </button>
           </div>
         )}
-        <button
-          type="button"
-          className="button button--primary button--huge"
-          aria-disabled={starting}
-          onClick={() => void start()}
-        >
-          {startError ? 'Try again' : 'Start check-in'}
-        </button>
-        <button type="button" className="button button--secondary button--huge" onClick={openConsent}>
-          Who I share with
-        </button>
-        <button type="button" className="button button--secondary button--huge" onClick={openNetworkLog}>
-          What this computer sent
-        </button>
-      </main>
-    )
-  }
 
-  if (screen === 'network-log' && networkLogFlow) {
-    return <NetworkLogScreen flow={networkLogFlow} onBack={closeNetworkLog} />
-  }
+        {question && <ChatThread bubbles={thread} />}
 
-  if (screen === 'consent' && consentFlow) {
-    return <ConsentScreen flow={consentFlow} onBack={closeConsent} onSetup={openSetup} />
-  }
+        {question && voiceNote && <p className="note">{voiceNote}</p>}
 
-  if (screen === 'setup' && setupFlow) {
-    return <SetupScreen flow={setupFlow} onClose={closeSetup} />
-  }
-
-  if (screen === 'share' && shareFlow) {
-    return <ShareScreen flow={shareFlow} onRestart={restart} />
-  }
-
-  const isLast = question !== null && question.index + 1 >= question.total
-  const status: { text: string; icon: ReactNode } | null =
-    talk === 'starting'
-      ? { text: 'Getting the microphone ready…', icon: <HourglassIcon className="icon" /> }
-      : talk === 'listening'
-        ? { text: 'I am listening. Take your time; pauses are fine.', icon: <span className="rec-dot" aria-hidden="true" /> }
-        : talk === 'sending'
-          ? { text: 'Thinking about your answer…', icon: <HourglassIcon className="icon" /> }
-          : loading
-            ? { text: 'Getting the question…', icon: <HourglassIcon className="icon" /> }
-            : voiceLoading
-              ? { text: 'Getting the question ready to play…', icon: <HourglassIcon className="icon" /> }
-              : speaking
-                ? { text: 'Reading the question out loud…', icon: <SpeakerIcon className="icon" /> }
-                : null
-
-  return (
-    <main className="screen">
-      <p className="progress">{question ? `Question ${question.index + 1} of ${question.total}` : 'Daily check-in'}</p>
-
-      {loadError && (
-        <div className="alert" role="alert">
-          <AlertIcon className="icon" />
-          <p>{loadError.message}</p>
-          <button
-            type="button"
-            className="button button--primary"
-            autoFocus
-            onClick={() => void loadQuestion(loadError.index)}
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {question && notice === 'reask' && <p className="notice">Let me ask that more simply.</p>}
-      {question && notice === 'repeat' && <p className="note">Saying it again</p>}
-      {question && notice === 'slower' && <p className="note">Saying it more slowly</p>}
-
-      {question && <h1 className="question">{question.text}</h1>}
-
-      {question && (
-        <div className="voice-controls">
-          <button
-            type="button"
-            className="button button--secondary"
-            aria-disabled={busy}
-            onClick={() => !busy && void speak(question, false)}
-          >
-            <SpeakerIcon className="icon" /> Hear it again
-          </button>
-          <button
-            type="button"
-            className="button button--secondary"
-            aria-disabled={busy}
-            onClick={() => !busy && void speak(question, true)}
-          >
-            <SlowIcon className="icon" /> Slower
-          </button>
-        </div>
-      )}
-
-      {/* One live region, always present, so screen readers announce every change. */}
-      <p className="status" role="status" aria-live="polite">
-        {status && (
-          <>
-            {status.icon}
-            <span>{status.text}</span>
-          </>
+        {question && answerError && (
+          <div className="alert" role="alert">
+            <AlertIcon className="icon" />
+            <p>{answerError.message}</p>
+            {answerError.restart && (
+              <button type="button" className="button button--primary" onClick={restart}>
+                {C.startAgain}
+              </button>
+            )}
+          </div>
         )}
-      </p>
 
-      {question && (
-        <>
-          {voiceNote && <p className="note">{voiceNote}</p>}
+        {/* The one action sits at the bottom, always in reach. */}
+        <div className="dock">
+          {/* One live region, always present, so screen readers announce every change. */}
+          <p className="status" role="status" aria-live="polite">
+            {status && (
+              <>
+                {status.icon}
+                <span>{status.text}</span>
+              </>
+            )}
+          </p>
 
-          {reply && <Reply reply={reply} />}
-
-          {movingOn && <p className="notice">That's okay, let's move on.</p>}
-
-          {answerError && (
-            <div className="alert" role="alert">
-              <AlertIcon className="icon" />
-              <p>{answerError.message}</p>
-              {answerError.restart && (
-                <button type="button" className="button button--primary" onClick={restart}>
-                  Start again
-                </button>
-              )}
+          {question && (
+            <div className="voice-controls">
+              <button
+                type="button"
+                className="button button--secondary"
+                aria-disabled={busy}
+                onClick={() => !busy && void speak(question, false)}
+              >
+                <SpeakerIcon className="icon" /> {C.hearAgain}
+              </button>
+              <button
+                type="button"
+                className="button button--secondary"
+                aria-disabled={busy}
+                onClick={() => !busy && void speak(question, true)}
+              >
+                <SlowIcon className="icon" /> {C.slowerButton}
+              </button>
             </div>
           )}
 
-          {!heard && (
+          {question && !heard && (
             <button
               type="button"
               ref={talkButton}
@@ -481,7 +468,7 @@ export default function App() {
             </button>
           )}
 
-          {(reply || movingOn) && (
+          {question && (reply || movingOn) && (
             <button
               type="button"
               ref={nextButton}
@@ -489,13 +476,13 @@ export default function App() {
               aria-disabled={busy}
               onClick={() => !busy && next()}
             >
-              {isLast ? 'Finish check-in' : 'Next question'} <ArrowIcon className="icon" />
+              {isLast ? C.finish : C.next} <ArrowIcon className="icon" />
             </button>
           )}
-        </>
-      )}
-    </main>
-  )
+        </div>
+      </main>
+    )
+  }
 }
 
 function TalkLabel({ talk }: { talk: Talk }) {
@@ -504,67 +491,30 @@ function TalkLabel({ talk }: { talk: Talk }) {
       return (
         <>
           <StopIcon className="icon icon--large" />
-          <span>Listening… tap when you're done</span>
+          <span>{C.talk.listening}</span>
         </>
       )
     case 'starting':
       return (
         <>
           <MicIcon className="icon icon--large" />
-          <span>Getting ready…</span>
+          <span>{C.talk.starting}</span>
         </>
       )
     case 'sending':
       return (
         <>
           <HourglassIcon className="icon icon--large" />
-          <span>Thinking…</span>
+          <span>{C.talk.sending}</span>
         </>
       )
     default:
       return (
         <>
           <MicIcon className="icon icon--large" />
-          <span>Tap to answer</span>
+          <span>{C.talk.idle}</span>
         </>
       )
   }
 }
 
-function Reply({ reply }: { reply: TurnResult }) {
-  const words = reply.transcript.trim()
-  return (
-    <section className="reply" aria-label="Your answer">
-      {words ? (
-        <p className="said">
-          <strong>You said:</strong> “{words}”
-        </p>
-      ) : (
-        <p className="said">I did not catch any words. Tap to answer again, or go on to the next question.</p>
-      )}
-      {words && <SymptomNotes reply={reply} />}
-    </section>
-  )
-}
-
-/** Symptoms are shown as noted "for review", never as caused by anything. */
-function SymptomNotes({ reply }: { reply: TurnResult }) {
-  if (reply.symptoms === null || reply.extraction !== 'ok') {
-    return <p className="noted">I could not check this answer for symptoms right now.</p>
-  }
-  if (reply.symptoms.length === 0) {
-    return <p className="noted">No symptoms noted.</p>
-  }
-  return (
-    <div className="noted">
-      <p>
-        <strong>Noted for review:</strong>
-      </p>
-      <ul>
-        {reply.symptoms.map((symptom, i) => (
-          <li key={`${symptom.term_code}-${i}`}>{symptomText(symptom)}</li>
-        ))}
-      </ul>
-    </div>
-  )
-}

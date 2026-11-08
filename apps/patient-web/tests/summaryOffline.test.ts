@@ -2,6 +2,8 @@
 // (PV-07) and the severe-symptom alert line (AL-02). Driven through the real API client against a mocked runtime.
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createRuntimeClient,
@@ -14,6 +16,8 @@ import { afterTurn, createQuestionVoice } from '../src/questionFlow.ts'
 import { canCorrect, createShareFlow, isWaitingToSend, RECEIPT_POLL_MS } from '../src/shareFlow.ts'
 import { correctionErrorMessage } from '../src/messages.ts'
 import { alertText } from '../src/summaryText.ts'
+import { ChatThread } from '../src/CheckinChat.tsx'
+import { S } from '../src/strings.ts'
 import {
   ALERT_QUEUED,
   ALERT_SENT,
@@ -137,8 +141,21 @@ describe('voice commands during questions (VC-07)', () => {
     expect(branch).toContain('setNotice(step.command)')
     expect(branch).not.toContain("'reask'")
     expect(branch).not.toContain('setQuestion') // the same question and ask
-    expect(app).toContain('Saying it again')
-    expect(app).toContain('Saying it more slowly')
+    // The words live in src/strings.ts; the conversation shows them as small bubbles, never as the re-ask line.
+    expect(S.checkin.repeat).toBe('Saying it again')
+    expect(S.checkin.slower).toBe('Saying it more slowly')
+    const html = renderToStaticMarkup(
+      createElement(ChatThread, {
+        bubbles: [
+          { kind: 'command', command: 'repeat' },
+          { kind: 'command', command: 'slower' },
+        ],
+      }),
+    )
+    expect(html).toContain('Saying it again')
+    expect(html).toContain('Saying it more slowly')
+    expect(html).not.toContain(S.checkin.reask)
+    expect(html.match(/bubble--small/g)).toHaveLength(2)
   })
 })
 
