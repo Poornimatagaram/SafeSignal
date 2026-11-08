@@ -69,6 +69,8 @@ export interface SummaryItem {
   /** today | 1_3_days | 4_7_days | over_7_days | unknown */
   onset: string | null
   known_side_effect: boolean
+  /** SE-04: started within a week of something new the patient began; for review only, never a cause. */
+  possible_link: boolean
 }
 
 /** What the egress gate would send, shown before the patient approves (PV-04). */
@@ -818,7 +820,7 @@ function isCheckinSession(value: unknown): value is CheckinSession {
   return isRecord(value) && typeof value.session_id === 'string' && value.session_id !== '' && typeof value.total === 'number'
 }
 
-function isSummaryItem(value: unknown): value is SummaryItem {
+function isSummaryItem(value: unknown): value is Omit<SummaryItem, 'possible_link'> & { possible_link?: unknown } {
   return (
     isRecord(value) &&
     typeof value.term_code === 'string' &&
@@ -839,7 +841,8 @@ function isSharePreview(value: unknown): value is Omit<SharePreview, 'care'> & {
   )
 }
 
-type RawSummary = Omit<CheckinSummary, 'spoken' | 'correction_used' | 'share'> & {
+type RawSummary = Omit<CheckinSummary, 'spoken' | 'correction_used' | 'share' | 'items'> & {
+  items: Array<Omit<SummaryItem, 'possible_link'> & { possible_link?: unknown }>
   spoken?: unknown
   correction_used?: unknown
   share: Omit<SharePreview, 'care'> & { care?: unknown }
@@ -863,6 +866,8 @@ function readSummary(body: RawSummary): CheckinSummary {
   const spoken = typeof body.spoken === 'string' && body.spoken.trim() !== '' ? body.spoken : null
   return {
     ...body,
+    // A missing, null or non-true possible_link reads as false.
+    items: body.items.map((item) => ({ ...item, possible_link: item.possible_link === true })),
     spoken,
     correction_used: body.correction_used === true,
     share: { ...body.share, care: readCare(body.share.care) },

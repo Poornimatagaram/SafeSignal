@@ -24,12 +24,13 @@ from __future__ import annotations
 import json
 import logging
 import secrets
+from datetime import date
 import threading
 from contextlib import closing
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import egress_gate, extract, summary as spoken
+from . import egress_gate, exposure as exposures, extract, summary as spoken
 
 from .consent import options as consent_options
 from .db import connect, utc_now
@@ -102,6 +103,7 @@ class Draft:
     last_reported: list[str] = field(default_factory=list)   # codes from the latest answer that reported symptoms
     record_id: str | None = None
     correction_used: bool = False                            # VC-08: one correction before sharing
+    exposures: dict = field(default_factory=dict)            # question_id -> (local description, Exposure) (SE-04)
 
 
 class CheckinStore:
@@ -166,6 +168,10 @@ class CheckinStore:
             if rating in ("off_topic", "no_answer"):
                 return []  # nothing in it answers the question: no symptoms, no severity, no onset
             accepted = extracted if question["purpose"] in SYMPTOM_PURPOSES else []
+            if question["purpose"] == "exposure" and accepted:
+                # "I started a new hand cream" is an exposure, not a symptom: the model invents one for it, and the
+                # guard turns that into SE_OTHER_REVIEW. Keep only symptoms the answer names (a cue-backed code).
+                accepted = [s for s in accepted if s.term_code != extract.OTHER_REVIEW]
             for s in accepted or []:
                 d = draft.symptoms.setdefault(s.term_code, {"severity": None, "onset": "unknown"})
                 if s.severity:
@@ -178,6 +184,12 @@ class CheckinStore:
             if question["purpose"] == "severity" and (sev := extract.severity_in_text(filtered_text)):
                 for d in latest:
                     d["severity"] = d["severity"] or sev
+            if question["purpose"] == "exposure":  # SE-04: the latest answer to this question decides
+                if exposures.is_new_exposure(filtered_text):
+                    draft.exposures[question_id] = (filtered_text, exposures.exposure_from_answer(
+                        extract.onset_in_text(filtered_text)))
+                else:
+                    draft.exposures.pop(question_id, None)
             if question["purpose"] == "onset" and (onset := extract.onset_in_text(filtered_text)):
                 for d in latest:
                     if d["onset"] == "unknown":
@@ -191,7 +203,7 @@ class CheckinStore:
             session = self._session(conn, session_id)
             shared = self._outbox(conn, session_id) is not None
             draft = self._drafts.setdefault(session_id, Draft())
-            items = self._items(conn, draft)
+            items = self._flag_links(conn, session_id, draft, self._items(conn, draft))
             needs = [i["term_code"] for i in items if i["severity"] is None]
             unanswered = self._unanswered(conn, session_id, session["config_id"])
             record = None
@@ -214,7 +226,8 @@ class CheckinStore:
         """Current items, for parsing a spoken correction against them."""
         with self._lock, closing(connect(self.db_path)) as conn:
             self._session(conn, session_id)
-            return self._items(conn, self._drafts.setdefault(session_id, Draft()))
+            draft = self._drafts.setdefault(session_id, Draft())
+            return self._flag_links(conn, session_id, draft, self._items(conn, draft))
 
     def correct(self, session_id: str, term_code: str, *, severity: str | None = None, onset: str | None = None,
                 remove: bool = False) -> None:
@@ -311,7 +324,7 @@ class CheckinStore:
                     draft.record_id = None
             with closing(connect(self.db_path)) as conn, conn:
                 session = self._session(conn, session_id)
-                items = self._items(conn, draft)
+                items = self._flag_links(conn, session_id, draft, self._items(conn, draft))
                 needs = [i["term_code"] for i in items if i["severity"] is None]
                 if needs:
                     raise NeedsSeverity(needs)
@@ -320,9 +333,14 @@ class CheckinStore:
                 now = utc_now()
                 conn.executemany(
                     "INSERT INTO symptom_event (event_id, session_id, term_code, severity, onset, known_side_effect, "
-                    "possible_link_flag, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, ?)",
+                    "possible_link_flag, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     [("sym_" + secrets.token_hex(4), session_id, i["term_code"], i["severity"], i["onset"],
-                      int(i["known_side_effect"]), now) for i in items])
+                      int(i["known_side_effect"]), int(i["possible_link"]), now) for i in items])
+                today = date.today()
+                conn.executemany(  # SE-04: kept for later check-ins; the description never leaves this device
+                    "INSERT INTO exposure_event (exposure_id, description, started_on) VALUES (?, ?, ?)",
+                    [("exp_" + secrets.token_hex(4), text or "(not described)",
+                      exposures.started_on(e, today).isoformat()) for text, e in draft.exposures.values()])
                 conn.execute("UPDATE checkin_session SET ended_at = ?, status = ? WHERE session_id = ?",
                              (now, record["status"], session_id))
                 egress_gate.queue_payload(conn, outbox_id=record_id, session_id=session_id,
@@ -393,6 +411,26 @@ class CheckinStore:
         return bool(c and (c["share_care_team"] or c["share_caregiver"]))
 
     @staticmethod
+    def _flag_links(conn, session_id: str, draft: Draft, items: list[dict]) -> list[dict]:
+        """SE-04: mark each item `possible_link` (for review, never a cause). New = not in the previous approved
+        check-in; exposures = the ones reported in this check-in plus those stored in the last 30 days."""
+        today = date.today()
+        previous = conn.execute("SELECT session_id FROM checkin_session WHERE ended_at IS NOT NULL AND session_id != ? "
+                                "ORDER BY ended_at DESC, rowid DESC LIMIT 1", (session_id,)).fetchone()
+        previous_codes = {r["term_code"] for r in conn.execute(
+            "SELECT term_code FROM symptom_event WHERE session_id = ?", (previous["session_id"],))} if previous else set()
+        found = [e for _, e in draft.exposures.values()]
+        for r in conn.execute("SELECT started_on FROM exposure_event"):
+            try:
+                stored = exposures.stored_exposure(date.fromisoformat(r["started_on"]), today)
+            except ValueError:
+                continue
+            if stored:
+                found.append(stored)
+        flagged = exposures.possible_links(items, found, previous_codes)
+        return [{**i, "possible_link": i["term_code"] in flagged} for i in items]
+
+    @staticmethod
     def _items(conn, draft: Draft) -> list[dict]:
         known = {r["term_code"]: (r["label_term"], bool(r["known_for_program"]))
                  for r in conn.execute("SELECT term_code, label_term, known_for_program FROM term_cache")}
@@ -417,7 +455,8 @@ class CheckinStore:
         profile = conn.execute("SELECT * FROM patient_profile WHERE patient_ref = ?", (self.patient_ref,)).fetchone()
         consent = conn.execute("SELECT * FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
         symptoms = [{"term_code": i["term_code"], "severity": i["severity"], "onset": i["onset"],
-                     "known_side_effect": i["known_side_effect"], "possible_link_flag": False} for i in items]
+                     "known_side_effect": i["known_side_effect"],
+                     "possible_link_flag": bool(i.get("possible_link", False))} for i in items]
         kwargs = dict(record_id=record_id, profile=dict(profile), consent=dict(consent), symptoms=symptoms,
                       unanswered_questions=unanswered, reporter=profile["reporter_default"], input_mode="voice")
         if validate:
@@ -441,6 +480,10 @@ def _plain_words(items: list[dict], unanswered: int) -> str:
         parts = [f"{i['label'].lower()}, {i['severity'] or 'how bad not said yet'}, {ONSET_WORDS[i['onset']]}"
                  for i in items]
         text = "You told me about: " + "; ".join(parts) + "."
+        linked = [i["label"].lower() for i in items if i.get("possible_link")]
+        if linked:  # SE-04: for review, never a cause
+            text += (f" Marked for review: the {' and the '.join(linked)} started within a week of something new "
+                     "you began. That does not mean one caused the other.")
     else:
         text = "You did not report any new problems."
     if unanswered:

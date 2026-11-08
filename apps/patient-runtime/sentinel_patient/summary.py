@@ -34,12 +34,19 @@ NOTHING = "You did not report any new problems."
 CLOSING = "If something is wrong, you can change one answer. Otherwise, tap Share this."
 
 
+# SE-04: always "for review", never a cause.
+LINK_SPOKEN = ("I have marked something for review, because it started soon after something new you began. "
+               "That does not mean one caused the other.")
+
+
 def spoken_summary(items: list[dict], unanswered: int) -> str:
     """Template text for text-to-speech, e.g. "Here is what I heard. Rash, moderate, started 1 to 3 days ago. One
     question was not answered. If something is wrong, you can change one answer. Otherwise, tap Share this."."""
     sentences = [OPENING]
     if items:
         sentences += [_item_sentence(i) for i in items]
+        if any(i.get("possible_link") for i in items):
+            sentences.append(LINK_SPOKEN)
     else:
         sentences.append(NOTHING)
     if unanswered > 0:

@@ -750,3 +750,12 @@ ul {
 .netlog__details dd {
   margin: 4px 0 0;
 }
+
+/* SE-04 "Marked for review": words in a dashed box, never colour alone and never a cause. */
+.item__flag {
+  padding: 12px 16px;
+  border: 3px dashed var(--ink);
+  border-radius: 8px;
+  background: var(--paper);
+  font-weight: 600;
+}

@@ -2,6 +2,10 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Possible link "for review" (SE-04)
+- Added: under a flagged summary item, "Marked for review: this started within a week of something new you began. That does not mean one caused the other." The line is in a dashed box, so it doesn't rely on colour. A test checks that no wording for it names a cause.
+- Tests: `tests/possibleLink.test.tsx`; 251 in total.
+
 ## 2026-11-08: Network log view (PV-06)
 - Added: "What this computer sent" (`NetworkLogScreen.tsx`, `networkLog.ts`), reached from the start screen. Under "Only these went out. Nothing else leaves this computer: no recordings, no words you said.", one box per request, newest first. Each box says in plain words what was sent or downloaded, when, and the answer (Accepted, Refused, or Service error, will try again), with "Show details" for method, URL, field names and fingerprint.
 - Tests: `tests/networkLog.test.tsx`; 247 in total.
