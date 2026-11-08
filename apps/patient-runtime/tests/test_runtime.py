@@ -1,6 +1,7 @@
 """Task A1 skeleton (contract 2.0): database from schema/patient.sql, seeded profile, /health, egress-import rule."""
 
 import ast
+import json
 import re
 from contextlib import closing
 from pathlib import Path
@@ -10,10 +11,8 @@ from fastapi.testclient import TestClient
 
 from sentinel_contract import SCHEMA_VERSION
 from sentinel_patient.config import WALTER, Settings
-from sentinel_patient.db import PATIENT_SQL, SchemaMismatch, connect, init_db
+from sentinel_patient.db import DEMO_FIXTURES, PATIENT_SQL, SchemaMismatch, connect, init_db
 from sentinel_patient.main import create_app
-
-PRIYA = "pt_9c1d2e3f"
 
 PACKAGE = Path(__file__).resolve().parents[1] / "sentinel_patient"
 
@@ -69,11 +68,26 @@ def test_seeds_walter_profile_consent_and_emergency_setup(client, db_path):
     ]
 
 
-def test_patient_without_emergency_consent_gets_no_emergency_rows(db_path):
-    init_db(db_path, PRIYA)
-    assert rows(db_path, "SELECT emergency_consent FROM consent") == [{"emergency_consent": 0}]
-    assert rows(db_path, "SELECT * FROM emergency_org") == []
-    assert rows(db_path, "SELECT * FROM emergency_contact") == []
+FIXTURES = json.loads(DEMO_FIXTURES.read_text())
+
+
+@pytest.mark.parametrize("profile", FIXTURES["device_profiles"], ids=lambda p: p["patient_ref"])
+def test_seeding_mirrors_the_fixtures_for_every_device_profile(tmp_path, profile):
+    """Derived from schema/demo_fixtures.json, so fixture edits by the company owner don't break it."""
+    db_path, ref = tmp_path / "patient.db", profile["patient_ref"]
+    init_db(db_path, ref)
+    c = profile["consent"]
+    assert rows(db_path, "SELECT share_care_team, emergency_consent, share_caregiver, caregiver_detail FROM consent") == [
+        {"share_care_team": int(c["share_care_team"]), "emergency_consent": int(c["emergency_consent"]),
+         "share_caregiver": int(c["share_caregiver"]), "caregiver_detail": c["caregiver_detail"]}]
+    assert [r["org_id"] for r in rows(db_path, "SELECT org_id FROM emergency_org ORDER BY org_id")] == sorted(
+        profile.get("emergency_org_ids", []))
+    labels = profile.get("emergency_contact_labels", {})
+    expected = sorted(({"contact_id": e["contact_id"], "contact_type": e["contact_type"], "phone": e["phone"],
+                        "org_id": e.get("org_id"), "priority": e["priority"], "display_label": labels.get(e["contact_id"])}
+                       for e in FIXTURES.get("emergency_contacts", []) if e["patient_ref"] == ref),
+                      key=lambda e: e["contact_id"])
+    assert rows(db_path, "SELECT * FROM emergency_contact ORDER BY contact_id") == expected
 
 
 TABLES = ("schema_meta", "patient_profile", "consent", "emergency_org", "emergency_contact")
@@ -113,7 +127,10 @@ def test_cors_allows_patient_web_only(client):
 
 
 NETWORK_MODULES = {"sentinel_contract.client", "httpx", "requests", "urllib", "urllib3", "http.client",
-                   "aiohttp", "socket", "websockets"}
+                   "aiohttp", "socket", "websockets", "huggingface_hub", "ollama"}
+# egress_gate.py is the one path off the device. extract.py may reach only the local model server (Ollama on
+# loopback; extract.py refuses any other host), so it may import the ollama client and nothing else on this list.
+ALLOWED = {"egress_gate.py": NETWORK_MODULES, "extract.py": {"ollama"}}
 
 
 def _imports(path: Path) -> set[str]:
@@ -130,9 +147,8 @@ def _imports(path: Path) -> set[str]:
 def test_only_egress_gate_imports_network_code():
     offenders = {}
     for path in PACKAGE.rglob("*.py"):
-        if path.name == "egress_gate.py":
-            continue
-        bad = {m for m in _imports(path) for n in NETWORK_MODULES if m == n or m.startswith(n + ".")}
+        forbidden = NETWORK_MODULES - ALLOWED.get(path.name, set())
+        bad = {m for m in _imports(path) for n in forbidden if m == n or m.startswith(n + ".")}
         if bad:
             offenders[path.name] = sorted(bad)
     assert offenders == {}

@@ -1,0 +1,189 @@
+{
+  "schema_version": "2.0",
+  "source": "hand-written synthetic cases, no real people",
+  "transcripts": [
+    {
+      "id": "lk_01",
+      "reporter": "self",
+      "transcript": "Hi, it's Hollis Varga again. Sorry, I always go on a bit. So my week, well, we finally carried the last boxes into 42 Juniper Hollow Lane, and the dog has decided the new garden is his. The main thing is this rash on my forearms and my neck. It came up two days ago, red little itchy bumps, I'd say it's moderate, not terrible but I notice it all day. My daughter wanted me to call the nurse line at Kestrel Ridge Medical Center but the new landline is 218-555-0142 and it keeps cutting out, Duluth winters, you know. Anyway, that's the rash.",
+      "identifiers": [
+        {"type": "NAME", "value": "Hollis Varga"},
+        {"type": "ADDRESS", "value": "42 Juniper Hollow Lane"},
+        {"type": "PLACE", "value": "Kestrel Ridge Medical Center"},
+        {"type": "PHONE", "value": "218-555-0142"},
+        {"type": "PLACE", "value": "Duluth"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_RASH", "severity": "moderate", "onset": "1_3_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_02",
+      "reporter": "parent",
+      "transcript": "I'm answering for my daughter, Oona Pettersen, she was born on the 2nd of February 2026 so she's about nine months now. This is her dad, Kasimir. Since yesterday she's had loose, watery stools, five or six more nappies than usual, I'd call it mild because she's still drinking and wetting. And since then she's not hungry either, she keeps pushing the bottle away. We saw the team at Brightwater Children's Hospital last month and they said to report anything new. If you need more you can email me at k.pettersen@example.org, we're out in Marrowfield so it's a long drive in.",
+      "identifiers": [
+        {"type": "NAME", "value": "Oona Pettersen"},
+        {"type": "DATE_OF_BIRTH", "value": "2nd of February 2026"},
+        {"type": "NAME", "value": "Kasimir"},
+        {"type": "PLACE", "value": "Brightwater Children's Hospital"},
+        {"type": "EMAIL", "value": "k.pettersen@example.org"},
+        {"type": "PLACE", "value": "Marrowfield"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_DIARRHEA", "severity": "mild", "onset": "1_3_days"},
+          {"term_code": "SE_DECREASED_APPETITE", "severity": null, "onset": "1_3_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_03",
+      "reporter": "caregiver",
+      "transcript": "Hello, this is Tamsin, I'm the home carer for Mr. Bertram Oyelaran, he's eighty-seven, born 6 June 1939, and he asked me to do the check-in for him today. His ankles have been swollen for five days now, both of them, puffy by the evening, I'd say moderate. He also gets out of breath walking from the bedroom to the kitchen, that started a couple of days ago, he has to stop and sit down. We're at 17 Saltmarsh Road, Unit 3 in Spokane if anyone needs to visit, and the house phone is (509) 555-0187. I picked up his tablets from Dovecote Pharmacy on the way in.",
+      "identifiers": [
+        {"type": "NAME", "value": "Tamsin"},
+        {"type": "NAME", "value": "Bertram Oyelaran"},
+        {"type": "DATE_OF_BIRTH", "value": "6 June 1939"},
+        {"type": "ADDRESS", "value": "17 Saltmarsh Road, Unit 3"},
+        {"type": "PLACE", "value": "Spokane"},
+        {"type": "PHONE", "value": "(509) 555-0187"},
+        {"type": "PLACE", "value": "Dovecote Pharmacy"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_EDEMA", "severity": "moderate", "onset": "4_7_days"},
+          {"term_code": "SE_DYSPNEA", "severity": null, "onset": "1_3_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_04",
+      "reporter": "self",
+      "transcript": "Hi, Renée Castellanos, date of birth 11/23/1964. Honestly I feel good this week, no new problems, nothing to report on the side effects. Eating fine, sleeping fine, out walking most days. One admin thing: I've moved to 2290 Larkspur Avenue in Tacoma, so could someone update my file, and my new email is renee.castellanos@example.com. I picked up this month's refill at Marlow & Finch Pharmacy, no trouble at all.",
+      "identifiers": [
+        {"type": "NAME", "value": "Renée Castellanos"},
+        {"type": "DATE_OF_BIRTH", "value": "11/23/1964"},
+        {"type": "ADDRESS", "value": "2290 Larkspur Avenue"},
+        {"type": "PLACE", "value": "Tacoma"},
+        {"type": "EMAIL", "value": "renee.castellanos@example.com"},
+        {"type": "PLACE", "value": "Marlow & Finch Pharmacy"}
+      ],
+      "expected": {
+        "symptoms": []
+      }
+    },
+    {
+      "id": "lk_05",
+      "reporter": "self",
+      "transcript": "Gideon Farrowby speaking, born July 9th, 1948. The thing bothering me is headaches, a pounding one behind my eyes most afternoons, it's been going on for about three weeks now and I'd call it severe, I've had to lie down in the dark. No rash, no stomach trouble, breathing's fine. Dr. Ellery at the Oakmere Family Clinic told me to mention it here. You can reach me at +1 312 555 0163 or just come by, I'm at 9 Wrenfield Court.",
+      "identifiers": [
+        {"type": "NAME", "value": "Gideon Farrowby"},
+        {"type": "DATE_OF_BIRTH", "value": "July 9th, 1948"},
+        {"type": "NAME", "value": "Ellery"},
+        {"type": "PLACE", "value": "Oakmere Family Clinic"},
+        {"type": "PHONE", "value": "+1 312 555 0163"},
+        {"type": "ADDRESS", "value": "9 Wrenfield Court"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_OTHER_REVIEW", "severity": "severe", "onset": "over_7_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_06",
+      "reporter": "self",
+      "transcript": "This is Anouk Delacroix-Meyer. Good news first, no rash this week, the cream from the Pinecrest Oncology Clinic really cleared it up. But my skin is very dry and flaky on my hands and shins, it's mild, I honestly can't remember when that started. And two of my fingernails are sore and swollen around the edges, that began four days ago and it's moderate, it hurts to type. I'm visiting my brother in Albany until Sunday, so if you need me call 555-0119 or email anouk.dm@example.com.",
+      "identifiers": [
+        {"type": "NAME", "value": "Anouk Delacroix-Meyer"},
+        {"type": "PLACE", "value": "Pinecrest Oncology Clinic"},
+        {"type": "PLACE", "value": "Albany"},
+        {"type": "PHONE", "value": "555-0119"},
+        {"type": "EMAIL", "value": "anouk.dm@example.com"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_DRY_SKIN", "severity": "mild", "onset": "unknown"},
+          {"term_code": "SE_PARONYCHIA", "severity": "moderate", "onset": "4_7_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_07",
+      "reporter": "parent",
+      "transcript": "Okay, so this is about my son Kai Whitcombe, he's twelve, his birthday is May 21, 2014. Sorry, it's chaos here, his little sister is practising the recorder. Since last week he's had sores inside his mouth, ulcers on his cheeks and tongue, they're quite bad, I'd say severe, it stings when he has anything salty. He's also more tired than usual, worn out after school, mild I guess, that's been the last three days. We're at 512 Tamarack Street, Apartment 4B, and my mobile is 555-0175. His nurse at St. Aldric's Hospital is lovely, she said to log everything.",
+      "identifiers": [
+        {"type": "NAME", "value": "Kai Whitcombe"},
+        {"type": "DATE_OF_BIRTH", "value": "May 21, 2014"},
+        {"type": "ADDRESS", "value": "512 Tamarack Street, Apartment 4B"},
+        {"type": "PHONE", "value": "555-0175"},
+        {"type": "PLACE", "value": "St. Aldric's Hospital"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_STOMATITIS", "severity": "severe", "onset": "4_7_days"},
+          {"term_code": "SE_FATIGUE", "severity": "mild", "onset": "1_3_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_08",
+      "reporter": "self",
+      "transcript": "Teodor Lindqvist here, date of birth the 3rd of December 1959. I had my infusion yesterday at the Harrowgate Infusion Center and about twenty minutes in I got chills and felt sick during the drip, they slowed it down and it settled, I'd call that moderate. Since then I've had a dry cough, mild, mostly at night. Dr. Amara Okafor was there and said to put it in the app. I drove back to Eau Claire afterwards. If the team needs anything my email is t.lindqvist@example.org.",
+      "identifiers": [
+        {"type": "NAME", "value": "Teodor Lindqvist"},
+        {"type": "DATE_OF_BIRTH", "value": "3rd of December 1959"},
+        {"type": "PLACE", "value": "Harrowgate Infusion Center"},
+        {"type": "NAME", "value": "Amara Okafor"},
+        {"type": "PLACE", "value": "Eau Claire"},
+        {"type": "EMAIL", "value": "t.lindqvist@example.org"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_INFUSION_REACTION", "severity": "moderate", "onset": "1_3_days"},
+          {"term_code": "SE_COUGH", "severity": "mild", "onset": "1_3_days"}
+        ]
+      }
+    },
+    {
+      "id": "lk_09",
+      "reporter": "other",
+      "transcript": "Hi, my name's Desmond, I'm a neighbour of Marisol Achterberg, she asked me to fill this in because she's not great with the app. She's had diarrhea since this morning, six or seven times already, she says it's severe, and she's trying to drink plenty of water. She's at 88 Pellingham Drive, it's the blue house, and her number is (608) 555-0131 but she's not answering much. Should she go to Cedar Hollow Regional Hospital? That's where she had her scan.",
+      "identifiers": [
+        {"type": "NAME", "value": "Desmond"},
+        {"type": "NAME", "value": "Marisol Achterberg"},
+        {"type": "ADDRESS", "value": "88 Pellingham Drive"},
+        {"type": "PHONE", "value": "(608) 555-0131"},
+        {"type": "PLACE", "value": "Cedar Hollow Regional Hospital"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_DIARRHEA", "severity": "severe", "onset": "today"}
+        ]
+      }
+    },
+    {
+      "id": "lk_10",
+      "reporter": "self",
+      "transcript": "Wilhelmina Ostrova, but everyone calls me Willa, born 02/17/1955. Well, where do I start. My grandson came up to Fernhallow for the weekend and we went to the craft fair, lovely time. I have been very tired, no energy at all, for about a week now, moderate I'd say, I nod off after lunch. And I'm off my food, just not hungry, that started two days ago. The pharmacist at Bellwether Pharmacy said that can happen. If you need to send anything, it's 3 Osprey Point Road, or email willa.ostrova@example.com, or phone 715.555.0108.",
+      "identifiers": [
+        {"type": "NAME", "value": "Wilhelmina Ostrova"},
+        {"type": "NAME", "value": "Willa"},
+        {"type": "DATE_OF_BIRTH", "value": "02/17/1955"},
+        {"type": "PLACE", "value": "Fernhallow"},
+        {"type": "PLACE", "value": "Bellwether Pharmacy"},
+        {"type": "ADDRESS", "value": "3 Osprey Point Road"},
+        {"type": "EMAIL", "value": "willa.ostrova@example.com"},
+        {"type": "PHONE", "value": "715.555.0108"}
+      ],
+      "expected": {
+        "symptoms": [
+          {"term_code": "SE_FATIGUE", "severity": "moderate", "onset": "4_7_days"},
+          {"term_code": "SE_DECREASED_APPETITE", "severity": null, "onset": "1_3_days"}
+        ]
+      }
+    }
+  ]
+}

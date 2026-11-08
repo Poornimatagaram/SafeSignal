@@ -11,14 +11,42 @@
 
 Structure inside this folder is up to its owner.
 
+## Setup (once, needs the network; check-ins never do)
+```bash
+cd apps/patient-runtime && uv sync                     # includes the spaCy model used by the filter
+uv run python -m sentinel_patient.stt --download        # public Whisper base.en model into the local cache
+ollama pull llama3.2:3b                                 # local model for extraction (Ollama must be installed and running)
+```
+
 ## Run
 ```bash
-cd apps/patient-runtime && uv sync
-uv run uvicorn sentinel_patient.main:app --port 8001   # http://127.0.0.1:8001/health
+cd apps/patient-runtime && uv run uvicorn sentinel_patient.main:app --port 8001   # http://127.0.0.1:8001/health
+cd apps/patient-web && npm install && npm run dev                                 # http://127.0.0.1:5173
 ```
-Settings: `SENTINEL_ACTOR_ID` (default Walter `pt_4b82d0c6`), `SENTINEL_BASE_URL` (default `http://127.0.0.1:8000`), `PATIENT_DB_PATH` (default `var/patient/patient.db`), `PATIENT_ALLOWED_ORIGINS` (default patient-web on port 5173).
+Settings:
+
+| Variable | Default |
+| --- | --- |
+| `SENTINEL_ACTOR_ID` | Walter, `pt_4b82d0c6` |
+| `SENTINEL_BASE_URL` | `http://127.0.0.1:8000` |
+| `PATIENT_DB_PATH` | `var/patient/patient.db` |
+| `PATIENT_ALLOWED_ORIGINS` | patient-web on port 5173 |
+| `PATIENT_WHISPER_MODEL` | `base.en` |
+| `PATIENT_TTS_ENGINE` | `say`, or `piper` with `PATIENT_PIPER_MODEL` |
+| `PATIENT_TTS_VOICE` | system default voice |
+| `PATIENT_OLLAMA_HOST` | `http://127.0.0.1:11434`; loopback only |
+| `PATIENT_OLLAMA_MODEL` | `llama3.2:3b` |
+
+## API (localhost only)
+- `GET /health`
+- `GET /checkin/question?index=&ask=`: the question text.
+- `GET /checkin/question/audio?index=&ask=&slow=`: the question as WAV.
+- `POST /checkin/turn?question_id=&ask=`: send the raw audio body; returns `{transcript, symptoms, extraction}`.
 
 ## Check
 ```bash
 cd apps/patient-runtime && uv run pytest -q
+cd ../.. && uv run --project apps/patient-runtime python evals/patient/leakage_eval.py   # PV-01 leakage eval; needs Ollama
+uv run --project apps/patient-runtime pytest -q evals/patient
+npm test --prefix apps/patient-web
 ```

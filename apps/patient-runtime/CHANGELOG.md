@@ -2,6 +2,34 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-07: Tasks A2 and A3, voice, filter and extraction (branch `patient/feat/voice-and-filter`)
+
+### Added
+- `stt.py` (VC-02, VC-03, PV-03):
+  - faster-whisper `base.en` on CPU, loaded from local files only.
+  - Audio is decoded in memory with PyAV; only browser formats are accepted.
+  - Speech on both sides of a 3 s pause is kept, and silence returns "".
+  - Size cap 10 MB, length cap 300 s.
+  - `python -m sentinel_patient.stt --download` fetches the model once.
+- `tts.py` (VC-01, VC-07): one `Speaker` interface with macOS `say` (default) and Piper (`PATIENT_TTS_ENGINE`), returning WAV, with a slower rate option.
+- `filter.py` (PV-01): Presidio with spaCy `en_core_web_lg` plus regex patterns. It replaces names, addresses, phones, emails, dates of birth, places and ID numbers with placeholders, and keeps symptom, severity and relative-time words.
+- `extract.py` (PV-02, SE-01):
+  - Ollama `llama3.2:3b` on loopback only, with JSON-schema output limited to the term list in `schema/terms.json`.
+  - Unknown terms map to `SE_OTHER_REVIEW`.
+  - Severity is None when not stated (VC-10).
+- `survey.py`: today's questions from `survey_cache`, or the contract's example survey until A4.
+- Endpoints:
+  - `GET /checkin/question` and `GET /checkin/question/audio`: the question as text and as local speech.
+  - `POST /checkin/turn`: raw audio from localhost only; returns the transcript and coded symptoms. The model sees only the filtered text.
+- At startup, the runtime refuses a non-loopback model host and pre-loads the filter.
+- Tests: `test_voice.py`, `test_filter.py`, `test_extract.py` (including live Ollama cases) and `test_checkin_api.py`; 231 runtime tests in total.
+- Dependencies: `faster-whisper`, `presidio-analyzer`, `presidio-anonymizer`, `ollama`, `en-core-web-lg` 3.8.0 (pinned wheel).
+
+### Changed
+- Import guard: `huggingface_hub` and `ollama` are now on the network list; `ollama` is allowed only in `extract.py`.
+- Seeding test: expectations now come from `schema/demo_fixtures.json` for every device profile, instead of hard-coded values; Priya's fixture changed in PR #11.
+- `README.md` and `CLAUDE.md`: setup steps for the models, plus how to run the leakage eval and the patient screen.
+
 ## 2026-11-07: Task A1, runtime skeleton (branch `patient/feat/runtime-skeleton`)
 
 ### Added

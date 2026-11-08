@@ -15,8 +15,14 @@ Update both files in this folder before you report the task done:
 Only `apps/patient-runtime/`, `apps/patient-web/`, `evals/patient/` and `data/patient/`. Never root files, `schema/` or `docs/`; ask the company owner for those. Synthetic data only.
 
 ### Run and check
+Setup (models, once) is in `README.md`. Before every commit run the tests and the leakage evaluation; the eval must say PASS.
 ```bash
 cd apps/patient-runtime && uv sync
 uv run uvicorn sentinel_patient.main:app --port 8001   # binds 127.0.0.1; creates var/patient/patient.db
 uv run pytest -q
+cd ../.. && uv run --project apps/patient-runtime python evals/patient/leakage_eval.py
 ```
+
+### Rules learned
+- Only `egress_gate.py` leaves the device. `extract.py` may reach Ollama on loopback only; models load from local files only.
+- Never log, print or store transcripts, patient words, identifiers or audio, including in eval results. Audio stays in memory.
