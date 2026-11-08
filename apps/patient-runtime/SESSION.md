@@ -2,6 +2,27 @@
 
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
+## Morning summary (2026-11-08, overnight run, 01:40–02:45)
+
+**Merged (all tests, both evals and CI green; squash):**
+- **#31** Caregiver: alerts only. "Summary" is hidden on the screen and refused by the runtime. PR #26 had already been merged by nkousik18 before your caregiver change, so the change went in its own PR.
+- **#32** Network-log view (PV-06), plus D-088: config fetches are logged through `on_fetch`, and `egress_log` migrates to 2.3 on start.
+- **#33** Possible link (SE-04): a new symptom within 7 days of a new exposure is flagged "for review", never as a cause.
+- **#34** Restart safety: a half-finished check-in and the retry timing survive a runtime restart.
+- **#36** 40 held-out leakage transcripts (50 in total), with the filter not retuned. PV-01 PASS (0 of 244 in the output), but **19 of 185 held-out identifiers survive the filter** (14 names). They reach only the local model.
+- **#37** `DEMO.md` for the team.
+- **#39** Mobile-first chat redesign of the patient screen (430px, `strings.ts`, PWA).
+- **#41** One README for the patient feature, with screenshots and the capture script.
+
+**Open:** none of mine.
+
+**Needs you:**
+- **The filter result:** about 10% of held-out identifiers get through the filter (they never leave the device). Decide whether to improve the filter before the demo, using new cases, never the held-out set.
+- **The running service on 8000 is from before contract 2.3** (`/healthz` says 2.2), and **the runtime on 8001 is still the old A2 process** (PID 15222). Restart both from `main` before using the screen. I didn't touch them.
+- **Reset and reseed before the demo** (`scripts/reset_all.sh --seed`; service owner's step; I didn't run it). Tonight's live checks added synthetic records, sealed copies and consent changes, and replaced both hospitals' keys. Doctor-web must register keys again afterwards (see `DEMO.md`).
+- **Small screen fix:** at phone width, "Hear it again" wraps onto three lines.
+- **Old synthetic audio:** `apps/patient-runtime/{a,b,c,s}.wav` (from Nov 7, gitignored). Delete them when convenient.
+
 ## Done
 - **2026-11-08 (overnight), one README for the patient feature, with screenshots** (branch `patient/docs/patient-readme`). An agent captured the screenshots by driving the real app in headless Chrome at 390px. I wrote the README.
 - **2026-11-08 (overnight), mobile-first patient screen merged as PR #39** (`363f12c`).
@@ -195,31 +216,19 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - The Starlette `TestClient` deprecation warning is harmless; `apps/service` gets it too.
 
 ## Next
-- **Restart the runtime on port 8001** (PID 15222 still runs A2 code) before using the patient screen.
-- **Reseed the service before the demo** (`scripts/reset_all.sh --seed`): the live tests left synthetic Walter records for today.
-- **A4 items not yet built:**
-  - A network-log view on the screen (PV-06).
-  - Re-checking the receipt hash in the browser.
-  - Showing the exact record after the patient picks a missing severity (a preview call that takes the chosen severities).
+- **Before the demo:** restart the service and the runtime from `main` (see Needs you above), then follow `DEMO.md`. The service owner resets and reseeds, and doctor-web registers both hospital keys again.
+- **Filter misses on the held-out set:** 19 of 185, mostly names. Improve the filter on NEW cases written for that purpose, never on `leakage_held_out.json`; then rerun the held-out set once.
+- **Screen:** "Hear it again" wraps at 390px. Show who is answering on every screen (brief), typed input (`input_mode`), the check-in schedule and reminders (AL-04), and a Spanish strings table.
+- **Not yet built:** re-checking the receipt hash in the browser; the exact record preview after picking a missing severity; caregiver "summary" (hidden until it is defined and the service delivers it).
 - **Known extraction misses:**
   - The model sometimes drops a second symptom; the guard can remove codes but never add them.
   - "Cracked skin on my fingers" can become `SE_OTHER_REVIEW` instead of `SE_DRY_SKIN`.
   - Some curated cues are broad ("dry", "toilet").
-- **Filter misses on the held-out set:** 19 of 185, mostly names. Improve the filter on NEW cases written for that purpose, never on `leakage_held_out.json`; then rerun the held-out set once. Ask the company owner to add a source-and-licence row for `data/patient/` to `data/README.md` (Scoping Doc 16.1).
-- **Known rating misses** (from the rating agent's probes and the held-out eval):
+- **Known rating misses:**
   - Some vague answers are rated complete instead of partial.
   - "Took" counts as an adherence answer even in "I took the dog out".
-  - A long, detailed answer can be cut down to only the sentences containing symptom or time words.
-- **Grow the re-ask set** beyond 20 cases, and check the partial and off-topic labels with a second person.
-- **A7 PR:** get CI green, then the user merges it.
-- **Caregiver detail level** (CN-01, `alerts_only` or `summary`) is not on the screen yet.
-- **Reseed before the demo:** the live tests replaced Northgate's and Lakeside's keys with throwaway ones and added key grants, synthetic envelopes, an emergency access (with its alert) and consent changes (Walter's contacts now have new `ec_` ids). Doctor-web must register fresh keys after reseeding.
+  - A long answer can be cut down to only the sentences containing symptom or time words.
+- **Grow the re-ask set** beyond 20 cases, and check the labels with a second person.
 - **Ask the company owner** for an organization directory a patient device can read, for the setup screen.
-- **Caregiver "summary" detail:** hidden for now (alerts only). Turn it back on once the user decides what the summary contains and the service can deliver it.
-- **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
-- **Ask the company owner** for:
-  - CI jobs for `apps/patient-runtime` pytest, `evals/patient` and `apps/patient-web` `npm test`; CI runs none of them today.
-  - The loopback wording in the brief.
-  - Where config fetches should be logged for PV-06, given that `egress_log` requires an outbox row.
-- **Piper:** the command-line flags are untested against a real binary (Piper is not installed).
-- **Editor setup:** point VS Code's Python interpreter at `apps/patient-runtime/.venv` to clear the "could not be resolved" warnings.
+- **The PWA's install and offline opening** are untested in a real browser. Piper flags are untested (Piper isn't installed). A real microphone in a browser is untested.
+- **Editor setup:** point VS Code's Python interpreter at `apps/patient-runtime/.venv`.
