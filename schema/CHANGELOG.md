@@ -2,6 +2,13 @@
 
 Owner: company-side lead. Version rules (Scoping Doc 26.11): 1.x adds optional fields; 2.0 breaks existing payloads. The service accepts the old and new version until the next integration run.
 
+## 2.1 — 2026-11-07
+
+Additive; payloads unchanged (`schema_version` stays `"2.0"`). Responses carry `X-Schema-Version: 2.1`.
+
+- `company.sql`: `enrollment.synthetic` marks seeded patients, which the missed check-in scheduler skips (D-075).
+- `demo_fixtures.json`: Priya consents to an emergency contact (911) and has `demo_missed_tail: 2`, so today's missed window raises a level 3 alert in the demo (D-076).
+
 ## 2.0 — 2026-11-07 (breaking)
 
 Design: `docs/design/contract-2.0.md`. No teammate code depended on 1.x, so the service accepts only 2.0 (D-070).

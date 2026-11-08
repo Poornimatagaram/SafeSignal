@@ -269,3 +269,42 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Missed check-in scheduler with the 3-level escalation (`company/feat/missed-checkin-scheduler`).
 2. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates, OnSIDES terms, trial documents, infant program.
+
+---
+
+## Session 010 — 2026-11-08 (Sun) · Missed check-in scheduler
+
+**Goal:** Make the 1/2/3 missed check-in escalation live: alerts within a minute of a window closing, and a way to fire one on cue in the demo.
+
+**Outputs**
+- Scheduler module and in-service loop (30 s); demo CLI; contract 2.1 (`enrollment.synthetic`); Priya set up to reach level 3 on demo day.
+
+**Verification**
+- Service tests: 44 passed (9 new: due days and midnight-crossing windows, nothing while windows are open, level 3 reaching the emergency contact, idempotent runs, a check-in prevents the alert, synthetic patients never marked, cadence skips non-due days, the care team sees the level, demo window control). Contract-py 24 passed.
+- Live (service with a 5 s interval, real clock 2026-11-08 02:18 UTC): no false alerts while windows were open; `close-window` on Walter raised his miss at level 2 (continuing yesterday's seeded miss) within one interval; the service log has no names or phone numbers.
+
+**Decisions:** D-074 to D-076.
+
+**Open items**
+- A late device check-in after midnight UTC counts for the day it arrives (edge case; fine for the demo).
+- D-008, D-039; teammates' GitHub handles; branch protection on `main`.
+
+**Next**
+1. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates (FLAURA, MARIPOSA), OnSIDES-corrected terms, trial documents in the company `document` table, an infant program (MELODY).
+2. Company portal (`apps/company-web`).
+
+---
+
+## Session 011 — 2026-11-08 (Sun) · Scheduler merged; teammates active; CODEOWNERS
+
+**Outputs**
+- #11 (missed check-in scheduler) squash-merged; CI on `main` green with the teammates' work included.
+- Teammates' merged PRs #7, #8, #9 changed only their own folders (checked file by file). #10 open (patient).
+- `CODEOWNERS` handles filled in (D-077).
+
+**Note for the next session:** PR numbers are shared with teammates now; always read the PR number from `gh pr create` output rather than assuming the next one.
+
+**Next**
+1. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates (FLAURA, MARIPOSA), OnSIDES-corrected terms, trial documents in the company `document` table; an infant program (MELODY) needs new term codes, so it is a contract change.
+2. Company portal (`apps/company-web`).
+3. Ask the repo owner to protect `main` and require CI (D-045).

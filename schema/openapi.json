@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel service",
     "description": "SafeSignal / Sentinel API. Contract source of truth: schema/ in the repository. Every request except /healthz needs X-Role and X-Actor-Id headers.",
-    "version": "2.0"
+    "version": "2.1"
   },
   "paths": {
     "/healthz": {
