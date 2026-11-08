@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel service",
     "description": "SafeSignal / Sentinel API. Contract source of truth: schema/ in the repository. Every request except /healthz needs X-Role and X-Actor-Id headers.",
-    "version": "2.2"
+    "version": "2.3"
   },
   "paths": {
     "/healthz": {
@@ -2485,13 +2485,18 @@
           "routed_caregiver": {
             "type": "boolean",
             "title": "Routed Caregiver"
+          },
+          "payload_sha256": {
+            "type": "string",
+            "title": "Payload Sha256"
           }
         },
         "type": "object",
         "required": [
           "alert_id",
           "routed_care_team",
-          "routed_caregiver"
+          "routed_caregiver",
+          "payload_sha256"
         ],
         "title": "AlertAccepted"
       },
@@ -2754,6 +2759,10 @@
             "type": "integer",
             "title": "Emergency Contact Count"
           },
+          "payload_sha256": {
+            "type": "string",
+            "title": "Payload Sha256"
+          },
           "updated_at": {
             "type": "string",
             "title": "Updated At"
@@ -2770,6 +2779,7 @@
           "emergency_consent",
           "emergency_org_ids",
           "emergency_contact_count",
+          "payload_sha256",
           "updated_at"
         ],
         "title": "ConsentState"

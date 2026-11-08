@@ -312,7 +312,8 @@ def test_consent_sets_links_and_contacts_and_revocation_blocks_envelopes(c):
     client = walter_client()
     key = client.fetch_org_key(ids.NORTHGATE)
     consent = example("consent_update")
-    assert client.send_consent(consent).body["emergency_contact_count"] == 2
+    sent = client.send_consent(consent)  # the client raises SendRejected if the server hash differs from its own
+    assert sent.body["emergency_contact_count"] == 2 and sent.body["payload_sha256"] == payload_sha256(consent)
 
     no_emergency = dict(consent, emergency_consent=False, emergency_org_ids=[], emergency_contacts=[])
     client.send_consent(no_emergency)
@@ -336,6 +337,18 @@ def test_consent_rejects_care_team_listed_as_emergency(c):
     assert r.status_code == 422 and r.json()["errors"][0]["field"] == "/emergency_org_ids"
 
 
+def test_config_fetches_reach_on_fetch_with_request_hash_not_body(c):
+    seen = []
+    client = SentinelClient("http://testserver", ids.WALTER, http=TestClient(app), on_fetch=seen.append)
+    client.fetch_survey("cohort_B")
+    with pytest.raises(SendRejected):
+        client.fetch_survey("cohort_nope")
+    ok, bad = seen
+    assert (ok.method, ok.status_code, ok.fields_sent) == ("GET", 200, ["cohort_id"])
+    assert ok.payload_sha256 == payload_sha256({"cohort_id": "cohort_B"}) and ok.url.endswith("cohort_id=cohort_B")
+    assert bad.status_code == 404
+
+
 # ---------------- alerts ----------------
 
 def test_severe_alert_routed_to_care_team_and_caregiver(c):
@@ -343,6 +356,7 @@ def test_severe_alert_routed_to_care_team_and_caregiver(c):
     r = c.post("/v1/alerts", json=example("alert_event"), headers=PT)
     assert r.status_code == 201 and r.json()["routed_care_team"] and r.json()["routed_caregiver"]
     assert c.post("/v1/alerts", json=example("alert_event"), headers=PT).status_code == 200
+    assert r.json()["payload_sha256"] == payload_sha256(example("alert_event"))  # 2.3: the receipt hash
     north = c.get(f"/v1/orgs/{ids.NORTHGATE}/alerts", headers=dr(ids.DR_SHAH)).json()
     assert [(a["alert_type"], a["escalation_level"]) for a in north] == [("severe", None)]
     anna = c.get(f"/v1/caregivers/{ids.ANNA}/alerts", headers={"X-Role": "caregiver", "X-Actor-Id": ids.ANNA}).json()

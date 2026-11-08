@@ -79,6 +79,7 @@ class AlertAccepted(BaseModel):
     alert_id: str
     routed_care_team: bool
     routed_caregiver: bool
+    payload_sha256: str  # 2.3: hash of the alert the service received; equals the receipt hash
 
 
 class ConsentState(BaseModel):
@@ -91,6 +92,7 @@ class ConsentState(BaseModel):
     emergency_consent: bool
     emergency_org_ids: list[str]
     emergency_contact_count: int  # contacts themselves are never echoed back
+    payload_sha256: str  # 2.3: hash of the consent update the service received; equals the receipt hash
     updated_at: str
 
 

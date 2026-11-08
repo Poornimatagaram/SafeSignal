@@ -3,7 +3,7 @@
 // Uses Web Crypto (browsers and Node 18+), so payloadSha256 is async.
 
 export const SCHEMA_VERSION = "2.0"; // value of `schema_version` inside every payload
-export const CONTRACT_VERSION = "2.2"; // release of schema/ as a whole; the service sends it as X-Schema-Version
+export const CONTRACT_VERSION = "2.3"; // release of schema/ as a whole; the service sends it as X-Schema-Version
 
 export function canonical(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
