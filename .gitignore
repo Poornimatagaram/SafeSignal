@@ -31,6 +31,9 @@ dist/
 # OS
 .DS_Store
 
+# Local design-tool output (critiques reference scratchpad paths; not project docs)
+.impeccable/
+
 # Runtime databases for every app live here (wiped by scripts/reset_all.sh)
 var/
 

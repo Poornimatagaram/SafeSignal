@@ -439,3 +439,18 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Merge this PR, apply the Blueprint, check `/healthz` and the portal.
 2. Add teammates' origins as they arrive; run one check-in through every persona on the hosted service.
 
+---
+
+## Session 017 — 2026-11-08 (Sun) · Company UI brief
+
+**Goal:** Fix the visual direction for the company landing page and portal so the rebuild can start.
+
+**Outputs**
+- `docs/design/company-web-ui.md`: the build brief (decisions, users, product truths, Clinical Mist tokens, layout and views) (D-086).
+- `.gitignore`: `.impeccable/` local critique output is not committed.
+
+**Verification**
+- Docs only; no code changed.
+
+**Next**
+1. Build the landing page and portal redesign in `apps/company-web` from the brief.
