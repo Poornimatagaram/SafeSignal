@@ -1,0 +1,33 @@
+{
+  "voice": "heart_nicole",
+  "speed": 0.95,
+  "pause_scale": 1.0,
+  "split": "sentence",
+  "duration": 12.446,
+  "sentences": [
+    {
+      "i": 0,
+      "text": "Miss one day, and his caregiver and care team are alerted.",
+      "start": 0.0,
+      "end": 3.499
+    },
+    {
+      "i": 1,
+      "text": "Miss two, and it escalates.",
+      "start": 4.099,
+      "end": 5.854
+    },
+    {
+      "i": 2,
+      "text": "Miss three, and his emergency contacts are told.",
+      "start": 6.454,
+      "end": 9.629
+    },
+    {
+      "i": 3,
+      "text": "Nobody goes quiet alone.",
+      "start": 10.229,
+      "end": 11.846
+    }
+  ]
+}

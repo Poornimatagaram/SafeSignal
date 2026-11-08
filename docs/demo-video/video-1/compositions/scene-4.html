@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-4-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #e9eff4; }
+        #scene-4-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s4-layer { position: absolute; inset: 0; }
+        .s4-layer svg { width: 100%; height: 100%; display: block; }
+        #s4-back { left: -400px; right: -400px; }
+        #s4-fg { filter: blur(5px); }
+        #s4-cover { background: #f6f8fa; }
+        #s4-tag {
+          position: absolute; left: 120px; top: 108px; display: flex; align-items: center; gap: 22px;
+          padding: 22px 42px 22px 32px; background: #fff; border: 4px solid #13233a; border-radius: 22px;
+          box-shadow: 8px 10px 0 rgba(19, 35, 58, 0.18);
+        }
+        #s4-tag .s4-dot { display: block; width: 26px; height: 26px; border-radius: 50%; background: #64748b; }
+        #s4-tag .s4-name { display: block; font-size: 60px; font-weight: 700; letter-spacing: -0.01em; color: #13233a; line-height: 1; }
+      </style>
+      <div id="scene-4-root" data-composition-id="scene-4" data-width="1920" data-height="1080">
+        <div id="s4-cam" class="s4-layer">
+          <!-- back: office wall, window, dashboard -->
+          <div id="s4-back" class="s4-layer">
+            <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+              <rect x="-400" y="-400" width="2720" height="1200" fill="#e9eff4" />
+              <rect x="-400" y="800" width="2720" height="280" fill="#dde5ec" />
+              <rect x="-400" y="792" width="2720" height="14" fill="#cfd8e3" />
+              <ellipse cx="960" cy="880" rx="760" ry="40" fill="#13233a" opacity="0.10" />
+              <!-- window -->
+              <rect x="90" y="470" width="0" height="0" />
+              <!-- dashboard -->
+              <g id="s4-dash">
+                <rect x="1020" y="150" width="720" height="470" rx="18" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                <rect x="1020" y="150" width="720" height="64" rx="18" fill="#13233a" />
+                <rect x="1020" y="190" width="720" height="24" fill="#13233a" />
+                <text x="1060" y="196" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#f6f8fa">Side-effect reports</text>
+                <!-- axes -->
+                <line x1="1080" y1="560" x2="1700" y2="560" stroke="#cfd8e3" stroke-width="6" stroke-linecap="round" />
+                <line x1="1080" y1="250" x2="1080" y2="560" stroke="#cfd8e3" stroke-width="6" stroke-linecap="round" />
+                <line x1="1080" y1="330" x2="1700" y2="330" stroke="#eef2f6" stroke-width="4" />
+                <line x1="1080" y1="445" x2="1700" y2="445" stroke="#eef2f6" stroke-width="4" />
+                <!-- thin dotted line: few points, long gaps -->
+                <g id="s4-line">
+                  <path id="s4-dots" d="M1110 520 L1250 506 L1420 514 L1560 498" fill="none" stroke="#0e7c7b" stroke-width="7" stroke-dasharray="2 16" stroke-linecap="round" />
+                  <circle id="s4-p1" cx="1110" cy="520" r="13" fill="#0e7c7b" stroke="#13233a" stroke-width="4" />
+                  <circle id="s4-p2" cx="1420" cy="514" r="13" fill="#0e7c7b" stroke="#13233a" stroke-width="4" />
+                  <circle id="s4-p3" cx="1560" cy="498" r="13" fill="#0e7c7b" stroke="#13233a" stroke-width="4" />
+                </g>
+                <!-- gap between reports -->
+                <text id="s4-gap" x="1330" y="400" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="40" fill="#64748b">…</text>
+                <!-- late tag -->
+                <g id="s4-late">
+                  <rect x="1470" y="266" width="230" height="74" rx="37" fill="#fbf0cf" stroke="#13233a" stroke-width="5" />
+                  <circle cx="1512" cy="303" r="17" fill="#ffffff" stroke="#13233a" stroke-width="4" />
+                  <path d="M1512 292 L1512 303 L1521 308" fill="none" stroke="#13233a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                  <text x="1600" y="318" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="36" fill="#13233a">late</text>
+                </g>
+              </g>
+              <!-- side table where the scraps land -->
+              <rect x="1080" y="735" width="26" height="155" fill="#8d9bb0" stroke="#13233a" stroke-width="5" />
+              <rect x="1650" y="735" width="26" height="155" fill="#8d9bb0" stroke="#13233a" stroke-width="5" />
+              <rect x="1050" y="700" width="660" height="40" rx="8" fill="#d8c39a" stroke="#13233a" stroke-width="6" />
+            </svg>
+          </div>
+          <!-- mid: Dr. Lee, desk, scraps -->
+          <div id="s4-mid" class="s4-layer">
+            <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+              <!-- Dr. Lee -->
+              <g id="s4-lTorso">
+                <rect x="500" y="440" width="200" height="300" rx="56" fill="#2b3a52" stroke="#13233a" stroke-width="6" />
+                <rect x="580" y="418" width="40" height="44" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+                <polygon points="570,446 600,500 630,446" fill="#f6f8fa" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                <line x1="600" y1="500" x2="600" y2="740" stroke="#13233a" stroke-width="4" opacity="0.5" />
+              </g>
+              <g id="s4-lHead">
+                <circle cx="600" cy="352" r="70" fill="#e3b896" stroke="#13233a" stroke-width="6" />
+                <path d="M530 346 Q520 270 600 266 Q680 270 670 346 Q652 304 600 306 Q548 304 530 346 Z" fill="#3a2a22" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                <circle cx="600" cy="262" r="26" fill="#3a2a22" stroke="#13233a" stroke-width="5" />
+                <circle id="s4-lEyeL" cx="582" cy="353" r="4.5" fill="#13233a" />
+                <circle id="s4-lEyeR" cx="618" cy="353" r="4.5" fill="#13233a" />
+                <path id="s4-lMouth" d="M586 388 Q600 384 614 388" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+              </g>
+              <!-- desk with laptop -->
+              <rect x="350" y="728" width="560" height="170" fill="#c8b184" stroke="#13233a" stroke-width="5" />
+              <rect x="380" y="752" width="240" height="64" rx="8" fill="none" stroke="#13233a" stroke-width="4" opacity="0.55" />
+              <circle cx="500" cy="784" r="6" fill="#13233a" opacity="0.55" />
+              <rect x="330" y="700" width="600" height="30" rx="7" fill="#d8c39a" stroke="#13233a" stroke-width="6" />
+              <rect x="712" y="608" width="130" height="84" rx="9" fill="#cfd8e3" stroke="#13233a" stroke-width="5" />
+              <rect x="696" y="690" width="162" height="12" rx="5" fill="#cfd8e3" stroke="#13233a" stroke-width="4" />
+              <!-- arms -->
+              <path d="M514 484 Q496 590 548 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+              <path d="M514 484 Q496 590 548 688" stroke="#2b3a52" stroke-width="38" stroke-linecap="round" fill="none" />
+              <path d="M686 484 Q704 590 650 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+              <path d="M686 484 Q704 590 650 688" stroke="#2b3a52" stroke-width="38" stroke-linecap="round" fill="none" />
+              <circle cx="552" cy="694" r="22" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+              <circle cx="646" cy="694" r="22" fill="#e3b896" stroke="#13233a" stroke-width="5" />
+              <!-- a question mark above Dr. Lee: not enough to go on -->
+              <text id="s4-lq" x="760" y="300" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="80" fill="#64748b">?</text>
+
+              <!-- scraps of paper land on the side table, one at a time -->
+              <g id="s4-scrap1"><polygon points="1110,690 1190,676 1204,696 1198,700 1114,702" fill="#ffffff" stroke="#13233a" stroke-width="4" stroke-linejoin="round" /><line x1="1126" y1="690" x2="1180" y2="684" stroke="#cfd8e3" stroke-width="4" stroke-linecap="round" /></g>
+              <g id="s4-scrap2"><polygon points="1260,668 1330,682 1322,704 1262,700" fill="#fbf0cf" stroke="#13233a" stroke-width="4" stroke-linejoin="round" /><line x1="1274" y1="684" x2="1316" y2="690" stroke="#cfd8e3" stroke-width="4" stroke-linecap="round" /></g>
+              <g id="s4-scrap3"><polygon points="1400,684 1470,664 1490,684 1480,702 1404,702" fill="#ffffff" stroke="#13233a" stroke-width="4" stroke-linejoin="round" /><line x1="1418" y1="688" x2="1468" y2="678" stroke="#cfd8e3" stroke-width="4" stroke-linecap="round" /></g>
+              <g id="s4-scrap4"><polygon points="1540,678 1610,692 1600,704 1536,702" fill="#ffffff" stroke="#13233a" stroke-width="4" stroke-linejoin="round" /><line x1="1554" y1="692" x2="1594" y2="696" stroke="#cfd8e3" stroke-width="4" stroke-linecap="round" /></g>
+              <text id="s4-unstr" x="1380" y="782" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="34" fill="#4a5a70">scraps, no structure</text>
+            </svg>
+          </div>
+        </div>
+        <!-- front leaves -->
+        <div id="s4-fg" class="s4-layer">
+          <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <g fill="#0a5e5d">
+              <path d="M-40 1100 C20 900 120 780 260 720 C240 840 180 980 90 1100 Z" />
+              <path d="M40 1100 C140 960 280 900 420 900 C340 980 250 1060 190 1100 Z" opacity="0.92" />
+              <path d="M-40 1100 C-30 960 -10 860 40 780 C100 880 110 1000 90 1100 Z" fill="#0e7c7b" />
+            </g>
+          </svg>
+        </div>
+        <div id="s4-cover" class="s4-layer"></div>
+        <div id="s4-tag"><span class="s4-dot"></span><span class="s4-name">Company: thin, late signal</span></div>
+        <audio id="s4-narration" src="assets/audio/s4-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s4-narration
+          const N = window.NARRATION_S4.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 8.1;
+          if (L + window.NARRATION_S4.duration > SCENE_LEN) {
+            console.warn("scene 4 narration is longer than the scene: raise its data-duration in index.html");
+          }
+
+          const cam = (px, py, s) => ({ x: 960 - s * px, y: 540 - s * py, scale: s });
+          const WIDE = cam(960, 540, 1.0), DASH = cam(1150, 400, 1.2);
+
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s4-cam", { transformOrigin: "0 0", ...WIDE });
+          tl.to("#s4-cam", { ...DASH, duration: 1.4, ease: "power2.inOut" }, t(1) - 0.3);
+          tl.fromTo("#s4-fg", { x: 0 }, { x: -50, duration: SCENE_LEN, ease: "none" }, 0);
+          tl.fromTo("#s4-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          // breathing and blinks
+          gsap.set("#s4-lTorso", { svgOrigin: "600 740" });
+          tl.fromTo("#s4-lTorso", { scaleY: 1 }, { scaleY: 1.012, duration: 1.6, ease: "sine.inOut", yoyo: true, repeat: 4 }, 0);
+          gsap.set(["#s4-lEyeL", "#s4-lEyeR"], { svgOrigin: "600 353" });
+          tl.to(["#s4-lEyeL", "#s4-lEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 2.4);
+          tl.to(["#s4-lEyeL", "#s4-lEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 5.6);
+          gsap.set("#s4-lHead", { svgOrigin: "600 430" });
+          tl.fromTo("#s4-lHead", { rotation: -1 }, { rotation: 1, duration: 3.2, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0);
+
+          // "The drug company has to watch for side effects.": the dashboard comes up, Dr. Lee watches
+          gsap.set("#s4-dash", { svgOrigin: "1380 385", scale: 0.85, opacity: 0 });
+          tl.to("#s4-dash", { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.5)" }, t(0) + 0.15);
+          tl.fromTo("#s4-lHead", { x: 0 }, { x: 10, duration: 0.5, ease: "sine.inOut" }, t(0) + 0.2);
+
+          // "thin": a few dots, long gaps
+          const dots = document.getElementById("s4-dots");
+          const len = dots.getTotalLength();
+          gsap.set(dots, { strokeDasharray: "2 16" });
+          gsap.set(["#s4-p1", "#s4-p2", "#s4-p3"], { opacity: 0, scale: 0 });
+          gsap.set("#s4-p1", { svgOrigin: "1110 520" });
+          gsap.set("#s4-p2", { svgOrigin: "1420 514" });
+          gsap.set("#s4-p3", { svgOrigin: "1560 498" });
+          gsap.set(dots, { opacity: 0 });
+          const thinAt = t(1) + 0.55 * (e(1) - t(1)) * 0.0 + 0.9; // "thin"
+          tl.to(dots, { opacity: 1, duration: 0.4 }, t(0) + 0.9);
+          tl.to("#s4-p1", { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, t(0) + 1.0);
+          tl.to("#s4-p2", { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, t(0) + 1.5);
+          tl.to("#s4-p3", { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, t(0) + 2.0);
+          gsap.set("#s4-gap", { opacity: 0 });
+          tl.to("#s4-gap", { opacity: 1, duration: 0.4 }, thinAt);
+
+          // "late": the late tag drops in
+          const lateAt = t(1) + 0.38 * (e(1) - t(1));
+          gsap.set("#s4-late", { svgOrigin: "1585 303", scale: 0, opacity: 0, rotation: -6 });
+          tl.to("#s4-late", { scale: 1, opacity: 1, rotation: 0, duration: 0.45, ease: "back.out(2)" }, lateAt);
+
+          // "unstructured": scraps of paper arrive one at a time
+          const scraps = ["#s4-scrap1", "#s4-scrap2", "#s4-scrap3", "#s4-scrap4"];
+          const fromX = [500, 380, 300, 240], rots = [-14, 10, -8, 12];
+          const unAt = t(1) + 0.62 * (e(1) - t(1));
+          scraps.forEach((id, i) => {
+            gsap.set(id, { x: fromX[i], y: -520, rotation: rots[i] * 3, opacity: 0, transformOrigin: "50% 50%" });
+            tl.to(id, { x: 0, y: 0, rotation: rots[i] * 0.3, opacity: 1, duration: 0.55, ease: "power2.out" }, unAt + i * 0.28);
+          });
+          gsap.set("#s4-unstr", { opacity: 0 });
+          tl.to("#s4-unstr", { opacity: 1, duration: 0.4 }, unAt + 0.3);
+          gsap.set("#s4-lq", { svgOrigin: "760 280", scale: 0, opacity: 0 });
+          tl.to("#s4-lq", { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(2)" }, unAt + 0.9);
+          tl.fromTo("#s4-lq", { rotation: -8 }, { rotation: 8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 2, immediateRender: false }, unAt + 1.3);
+
+          tl.fromTo("#s4-tag", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.5, ease: "back.out(1.5)" }, t(1) + 0.1);
+
+          window.__timelines["scene-4"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

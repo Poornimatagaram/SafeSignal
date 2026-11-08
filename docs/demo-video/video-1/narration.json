@@ -2,5 +2,9 @@
   "_note": "Narration text per scene. The .wav files are gitignored; rebuild them with tools/build_narration.py. Voice: heart_nicole, speed 0.95, sentence-end pauses.",
   "s1": "Walter is ninety-two. Three weeks ago he started a new medicine.",
   "s2": "Now his hands shake, and a rash is spreading. Forms are hard. He doesn't want his words sent anywhere. So he says nothing.",
-  "s3": "His doctor gets ten minutes, every few months. How have you been? Fine. He's forgotten how he felt two months ago. So the months in between stay blank."
+  "s3": "His doctor gets ten minutes, every few months. How have you been? Fine. He's forgotten how he felt two months ago. So the months in between stay blank.",
+  "s4": "The drug company has to watch for side effects. What reaches them is thin, late and unstructured.",
+  "s5": "What if someone simply checked in, every day, at a time Walter chooses?",
+  "s6": "Miss one day, and his caregiver and care team are alerted. Miss two, and it escalates. Miss three, and his emergency contacts are told. Nobody goes quiet alone.",
+  "s7": "SafeSignal. Someone is looking out for you."
 }

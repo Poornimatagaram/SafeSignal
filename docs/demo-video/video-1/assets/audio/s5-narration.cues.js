@@ -1,0 +1,1 @@
+window.NARRATION_S5 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 5.241, "sentences": [{"i": 0, "text": "What if someone simply checked in, every day, at a time Walter chooses?", "start": 0.0, "end": 4.591}]};
