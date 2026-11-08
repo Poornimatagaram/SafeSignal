@@ -1,0 +1,1 @@
+window.NARRATION_S4 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 7.44, "sentences": [{"i": 0, "text": "The drug company has to watch for side effects.", "start": 0.0, "end": 2.982}, {"i": 1, "text": "What reaches them is thin, late and unstructured.", "start": 3.582, "end": 6.84}]};

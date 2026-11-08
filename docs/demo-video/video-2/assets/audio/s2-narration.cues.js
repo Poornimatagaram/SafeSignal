@@ -1,0 +1,1 @@
+window.NARRATION_S2 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 3.712, "sentences": [{"i": 0, "text": "Some people type.", "start": 0.0, "end": 1.18}, {"i": 1, "text": "Walter just talks.", "start": 1.78, "end": 3.112}]};

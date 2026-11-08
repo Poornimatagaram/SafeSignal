@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-7-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #e9eff4; }
+        #scene-7-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s7-layer { position: absolute; inset: 0; }
+        .s7-layer svg { width: 100%; height: 100%; display: block; }
+        .s7-back { left: -400px; right: -400px; }
+        #s7-cover { background: #f6f8fa; }
+      </style>
+      <div id="scene-7-root" data-composition-id="scene-7" data-width="1920" data-height="1080">
+
+        <!-- STAGE A: the sealed copy travels from the phone to Northgate -->
+        <div id="s7-A" class="s7-layer">
+          <div id="s7-camA" class="s7-layer">
+            <div class="s7-back s7-layer">
+              <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+                <rect x="-400" y="-400" width="2720" height="1200" fill="#e9eff4" />
+                <rect x="-400" y="800" width="2720" height="280" fill="#dde5ec" />
+                <rect x="-400" y="792" width="2720" height="14" fill="#cfd8e3" />
+                <ellipse cx="960" cy="880" rx="900" ry="40" fill="#13233a" opacity="0.10" />
+                <!-- Northgate clinic -->
+                <g id="s7-clinic">
+                  <rect x="1260" y="240" width="520" height="104" rx="16" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+                  <text x="1520" y="314" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="800" font-size="60" fill="#ffffff">Northgate</text>
+                  <rect x="1290" y="344" width="460" height="456" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                  <rect x="1330" y="390" width="120" height="120" rx="10" fill="#cfd8e3" stroke="#13233a" stroke-width="5" />
+                  <rect x="1590" y="390" width="120" height="120" rx="10" fill="#cfd8e3" stroke="#13233a" stroke-width="5" />
+                  <rect x="1460" y="560" width="120" height="240" rx="10" fill="#fbf0cf" stroke="#13233a" stroke-width="6" />
+                  <circle cx="1560" cy="690" r="8" fill="#13233a" />
+                  <g id="s7-key">
+                    <circle cx="1520" cy="640" r="44" fill="#ffffff" stroke="#13233a" stroke-width="5" opacity="0" />
+                  </g>
+                  <path d="M1500 436 H1540 M1520 416 V456" stroke="#0e7c7b" stroke-width="12" stroke-linecap="round" />
+                  <rect x="1500" y="396" width="40" height="0" fill="none" />
+                </g>
+                <!-- dotted path from phone to clinic -->
+                <path id="s7-trail" d="M330 470 C700 130 1100 130 1440 560" fill="none" stroke="#0e7c7b" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 18" opacity="0" />
+              </svg>
+            </div>
+            <div class="s7-layer">
+              <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+                <!-- his phone -->
+                <g id="s7-phone">
+                  <ellipse cx="320" cy="770" rx="130" ry="18" fill="#13233a" opacity="0.14" />
+                  <rect x="230" y="420" width="180" height="340" rx="30" fill="#13233a" />
+                  <rect x="240" y="432" width="160" height="316" rx="22" fill="#f6f8fa" />
+                  <circle cx="320" cy="560" r="46" fill="#0e7c7b" />
+                  <path d="M298 561 L314 578 L344 540" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+                  <rect x="262" y="660" width="116" height="16" rx="8" fill="#cfd8e3" />
+                  <rect x="262" y="690" width="76" height="16" rx="8" fill="#cfd8e3" />
+                </g>
+                <!-- sealed envelope -->
+                <g id="s7-env">
+                  <rect x="-110" y="-75" width="220" height="150" rx="14" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                  <path d="M-110 -62 L0 20 L110 -62" fill="none" stroke="#13233a" stroke-width="6" stroke-linejoin="round" />
+                  <circle cx="0" cy="20" r="34" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                  <path d="M-10 18 V12 Q-10 2 0 2 Q10 2 10 12 V18" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" />
+                  <rect x="-15" y="16" width="30" height="22" rx="5" fill="#ffffff" />
+                </g>
+                <!-- label -->
+                <g id="s7-sealLbl">
+                  <rect x="400" y="880" width="1120" height="96" rx="26" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                  <text x="960" y="945" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="42" fill="#13233a">Sealed: only his care team can open it</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAGE B: the doctor's cabin -->
+        <div id="s7-B" class="s7-layer">
+          <div id="s7-camB" class="s7-layer">
+            <div class="s7-back s7-layer">
+              <svg viewBox="-400 0 2720 1080" xmlns="http://www.w3.org/2000/svg">
+                <rect x="-400" y="-400" width="2720" height="1200" fill="#e9eff4" />
+                <rect x="-400" y="800" width="2720" height="280" fill="#dde5ec" />
+                <rect x="-400" y="792" width="2720" height="14" fill="#cfd8e3" />
+                <ellipse cx="1100" cy="880" rx="1000" ry="40" fill="#13233a" opacity="0.10" />
+                <!-- his weeks, opened on the wall screen -->
+                <g id="s7-panel">
+                  <rect x="760" y="130" width="680" height="330" rx="20" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                  <rect x="760" y="130" width="680" height="58" rx="20" fill="#13233a" />
+                  <rect x="760" y="168" width="680" height="20" fill="#13233a" />
+                  <text x="792" y="173" font-family="Montserrat, sans-serif" font-weight="700" font-size="30" fill="#f6f8fa">Walter's weeks</text>
+                  <line x1="790" y1="396" x2="1410" y2="396" stroke="#cfd8e3" stroke-width="6" stroke-linecap="round" />
+                  <g fill="#0e7c7b" stroke="#13233a" stroke-width="4">
+                    <rect id="s7-b0" x="800" y="358" width="52" height="38" rx="6" />
+                    <rect id="s7-b1" x="890" y="354" width="52" height="42" rx="6" />
+                    <rect id="s7-b2" x="980" y="360" width="52" height="36" rx="6" />
+                    <rect id="s7-b3" x="1070" y="352" width="52" height="44" rx="6" />
+                    <rect id="s7-b4" x="1160" y="338" width="52" height="58" rx="6" />
+                    <rect id="s7-b5" x="1250" y="320" width="52" height="76" rx="6" />
+                    <rect id="s7-b6" x="1340" y="284" width="52" height="112" rx="6" fill="#fbf0cf" stroke-width="6" />
+                  </g>
+                  <g font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#4a5a70" text-anchor="middle">
+                    <text x="826" y="438">W39</text><text x="916" y="438">W40</text><text x="1006" y="438">W41</text><text x="1096" y="438">W42</text>
+                    <text x="1186" y="438">W43</text><text x="1276" y="438">W44</text><text x="1366" y="438">W45</text>
+                  </g>
+                  <g id="s7-rashTag">
+                    <rect x="1150" y="204" width="270" height="52" rx="26" fill="#fbf0cf" stroke="#13233a" stroke-width="5" />
+                    <text x="1285" y="241" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#13233a">Rash, moderate</text>
+                  </g>
+                </g>
+              </svg>
+            </div>
+            <div class="s7-layer">
+              <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+                <!-- Dr. Shah -->
+                <g id="s7-dTorso">
+                  <rect x="500" y="440" width="200" height="300" rx="56" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                  <rect x="580" y="418" width="40" height="44" fill="#d9a98a" stroke="#13233a" stroke-width="5" />
+                  <polygon points="570,446 600,506 630,446" fill="#0e7c7b" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <line x1="600" y1="506" x2="600" y2="740" stroke="#cfd8e3" stroke-width="4" />
+                  <path d="M556 446 Q560 540 600 540 Q640 540 644 446" fill="none" stroke="#13233a" stroke-width="6" stroke-linecap="round" />
+                  <circle cx="600" cy="548" r="11" fill="#cfd8e3" stroke="#13233a" stroke-width="5" />
+                </g>
+                <g id="s7-dHead">
+                  <circle cx="600" cy="352" r="70" fill="#d9a98a" stroke="#13233a" stroke-width="6" />
+                  <path d="M532 342 Q526 282 600 272 Q674 282 668 342 Q648 310 600 312 Q552 310 532 342 Z" fill="#2b2f3a" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  <rect x="566" y="340" width="30" height="24" rx="7" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                  <rect x="604" y="340" width="30" height="24" rx="7" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                  <line x1="596" y1="351" x2="604" y2="351" stroke="#13233a" stroke-width="4" />
+                  <circle id="s7-dEyeL" cx="582" cy="353" r="4.5" fill="#13233a" />
+                  <circle id="s7-dEyeR" cx="618" cy="353" r="4.5" fill="#13233a" />
+                  <path id="s7-dMouth" d="M586 386 Q600 394 614 386" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                  <path id="s7-dSmile" d="M578 380 Q600 408 622 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                </g>
+                <rect x="350" y="728" width="560" height="170" fill="#c8b184" stroke="#13233a" stroke-width="5" />
+                <rect x="330" y="700" width="600" height="30" rx="7" fill="#d8c39a" stroke="#13233a" stroke-width="6" />
+                <path d="M514 484 Q496 590 548 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+                <path d="M514 484 Q496 590 548 688" stroke="#ffffff" stroke-width="38" stroke-linecap="round" fill="none" />
+                <path d="M686 484 Q704 590 650 688" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" />
+                <path d="M686 484 Q704 590 650 688" stroke="#ffffff" stroke-width="38" stroke-linecap="round" fill="none" />
+                <circle cx="552" cy="694" r="22" fill="#d9a98a" stroke="#13233a" stroke-width="5" />
+                <circle cx="646" cy="694" r="22" fill="#d9a98a" stroke="#13233a" stroke-width="5" />
+
+                <!-- exam bench -->
+                <g transform="translate(285 0)">
+                  <rect x="1090" y="766" width="26" height="124" fill="#8d9bb0" stroke="#13233a" stroke-width="5" />
+                  <rect x="1444" y="766" width="26" height="124" fill="#8d9bb0" stroke="#13233a" stroke-width="5" />
+                  <rect x="1060" y="696" width="440" height="72" rx="8" fill="#b7c4d2" stroke="#13233a" stroke-width="5" />
+                  <rect x="1040" y="660" width="480" height="38" rx="14" fill="#e8eef4" stroke="#13233a" stroke-width="6" />
+                </g>
+
+                <!-- Walter, seated (appears when he sits) -->
+                <g id="s7-wSeated" transform="translate(285 0)">
+                  <rect x="1214" y="690" width="34" height="112" rx="12" fill="#2b3a52" stroke="#13233a" stroke-width="5" />
+                  <rect x="1302" y="690" width="34" height="112" rx="12" fill="#2b3a52" stroke="#13233a" stroke-width="5" />
+                  <ellipse cx="1232" cy="814" rx="34" ry="14" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                  <ellipse cx="1320" cy="814" rx="34" ry="14" fill="#ffffff" stroke="#13233a" stroke-width="5" />
+                  <rect x="1198" y="648" width="154" height="44" rx="18" fill="#2b3a52" stroke="#13233a" stroke-width="5" />
+                  <g id="s7-wTorso">
+                    <rect x="1195" y="462" width="160" height="206" rx="58" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+                    <line x1="1275" y1="502" x2="1275" y2="650" stroke="#0a5e5d" stroke-width="5" />
+                    <circle cx="1292" cy="540" r="7" fill="#0a5e5d" />
+                    <circle cx="1292" cy="592" r="7" fill="#0a5e5d" />
+                    <rect x="1257" y="434" width="36" height="38" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                    <polygon points="1243,456 1275,504 1307,456" fill="#ffffff" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                  </g>
+                  <g transform="translate(455 27)">
+                    <g id="s7-wHead">
+                      <circle cx="820" cy="345" r="76" fill="#f2d6c0" stroke="#13233a" stroke-width="6" />
+                      <path d="M746 330 Q740 270 790 262 Q820 254 850 262 Q900 270 894 330 Q876 302 856 308 Q838 292 820 306 Q802 292 784 308 Q764 302 746 330 Z" fill="#c9d2dc" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                      <circle cx="792" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                      <circle cx="848" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                      <line x1="814" y1="346" x2="826" y2="346" stroke="#13233a" stroke-width="4" />
+                      <circle id="s7-wEyeL" cx="792" cy="348" r="5" fill="#13233a" />
+                      <circle id="s7-wEyeR" cx="848" cy="348" r="5" fill="#13233a" />
+                      <path d="M776 326 Q792 322 808 328 M832 328 Q848 322 864 326" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                      <path id="s7-wMouth" d="M804 388 Q820 384 836 388" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                      <path id="s7-wSmile" d="M796 380 Q820 408 844 380" stroke="#13233a" stroke-width="4.5" stroke-linecap="round" fill="none" />
+                    </g>
+                  </g>
+                  <!-- left arm with the rash -->
+                  <path d="M1210 504 Q1190 592 1226 660" stroke="#13233a" stroke-width="46" stroke-linecap="round" fill="none" />
+                  <path d="M1210 504 Q1190 592 1226 660" stroke="#0e7c7b" stroke-width="34" stroke-linecap="round" fill="none" />
+                  <g id="s7-wHandL"><circle cx="1228" cy="668" r="21" fill="#f2d6c0" stroke="#13233a" stroke-width="5" /></g>
+                  <g id="s7-rash" fill="#e9a08c" stroke="#13233a" stroke-width="3">
+                    <circle cx="1208" cy="596" r="9" /><circle cx="1226" cy="620" r="8" /><circle cx="1210" cy="634" r="7" /><circle cx="1230" cy="590" r="6" />
+                  </g>
+                  <!-- right arm, resting then pointing -->
+                  <g id="s7-rArm">
+                    <path d="M1340 504 Q1360 592 1324 660" stroke="#13233a" stroke-width="46" stroke-linecap="round" fill="none" />
+                    <path d="M1340 504 Q1360 592 1324 660" stroke="#0e7c7b" stroke-width="34" stroke-linecap="round" fill="none" />
+                    <circle cx="1322" cy="668" r="21" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                  </g>
+                  <g id="s7-pArm">
+                    <path d="M1340 504 Q1352 650 1262 628" stroke="#13233a" stroke-width="46" stroke-linecap="round" fill="none" />
+                    <path d="M1340 504 Q1352 650 1262 628" stroke="#0e7c7b" stroke-width="34" stroke-linecap="round" fill="none" />
+                    <circle cx="1260" cy="630" r="21" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                    <line x1="1248" y1="624" x2="1228" y2="608" stroke="#13233a" stroke-width="14" stroke-linecap="round" />
+                    <line x1="1248" y1="624" x2="1228" y2="608" stroke="#f2d6c0" stroke-width="7" stroke-linecap="round" />
+                  </g>
+                </g>
+
+                <!-- Walter, walking in -->
+                <g id="s7-wWalk">
+                  <g id="s7-wBob">
+                    <g id="s7-legL"><rect x="-62" y="730" width="40" height="130" rx="14" fill="#2b3a52" stroke="#13233a" stroke-width="5" /><ellipse cx="-42" cy="868" rx="34" ry="14" fill="#ffffff" stroke="#13233a" stroke-width="5" /></g>
+                    <g id="s7-legR"><rect x="22" y="730" width="40" height="130" rx="14" fill="#2b3a52" stroke="#13233a" stroke-width="5" /><ellipse cx="42" cy="868" rx="34" ry="14" fill="#ffffff" stroke="#13233a" stroke-width="5" /></g>
+                    <rect x="-100" y="462" width="200" height="290" rx="64" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+                    <line x1="0" y1="504" x2="0" y2="740" stroke="#0a5e5d" stroke-width="5" />
+                    <circle cx="18" cy="560" r="7" fill="#0a5e5d" />
+                    <circle cx="18" cy="620" r="7" fill="#0a5e5d" />
+                    <rect x="-20" y="434" width="40" height="42" fill="#f2d6c0" stroke="#13233a" stroke-width="5" />
+                    <polygon points="-34,456 0,508 34,456" fill="#ffffff" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                    <circle cx="0" cy="345" r="76" fill="#f2d6c0" stroke="#13233a" stroke-width="6" />
+                    <path d="M-74 330 Q-80 270 -30 262 Q0 254 30 262 Q80 270 74 330 Q56 302 36 308 Q18 292 0 306 Q-18 292 -36 308 Q-56 302 -74 330 Z" fill="#c9d2dc" stroke="#13233a" stroke-width="5" stroke-linejoin="round" />
+                    <circle cx="-28" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                    <circle cx="28" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="4" />
+                    <line x1="-6" y1="346" x2="6" y2="346" stroke="#13233a" stroke-width="4" />
+                    <circle cx="-26" cy="348" r="5" fill="#13233a" />
+                    <circle cx="30" cy="348" r="5" fill="#13233a" />
+                    <path d="M-44 326 Q-28 322 -12 328 M12 328 Q28 322 44 326" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <path d="M-14 388 Q0 384 14 388" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                    <g id="s7-armL"><path d="M-86 504 Q-110 600 -78 690" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" /><path d="M-86 504 Q-110 600 -78 690" stroke="#0e7c7b" stroke-width="38" stroke-linecap="round" fill="none" /><circle cx="-76" cy="698" r="22" fill="#f2d6c0" stroke="#13233a" stroke-width="5" /></g>
+                    <g id="s7-armR"><path d="M86 504 Q110 600 78 690" stroke="#13233a" stroke-width="50" stroke-linecap="round" fill="none" /><path d="M86 504 Q110 600 78 690" stroke="#0e7c7b" stroke-width="38" stroke-linecap="round" fill="none" /><circle cx="76" cy="698" r="22" fill="#f2d6c0" stroke="#13233a" stroke-width="5" /></g>
+                  </g>
+                </g>
+
+                <!-- Dr. Shah's suggested question -->
+                <g id="s7-sugg">
+                  <rect x="700" y="478" width="330" height="50" rx="25" fill="#0e7c7b" stroke="#13233a" stroke-width="5" />
+                  <text x="865" y="514" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="28" fill="#ffffff">Suggested question</text>
+                </g>
+                <g id="s7-bubble">
+                  <polygon points="704,578 664,596 704,614" fill="#ffffff" stroke="#13233a" stroke-width="6" stroke-linejoin="round" />
+                  <rect x="700" y="540" width="590" height="100" rx="26" fill="#ffffff" stroke="#13233a" stroke-width="6" />
+                  <rect x="696" y="568" width="12" height="50" fill="#ffffff" />
+                  <text x="995" y="605" text-anchor="middle" font-family="Montserrat, sans-serif" font-weight="700" font-size="38" fill="#13233a">Where did the rash start?</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div id="s7-cover" class="s7-layer"></div>
+        <audio id="s7-narration" src="assets/audio/s7-narration.wav" data-start="0.4" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.4; // matches data-start of #s7-narration
+          const N = window.NARRATION_S7.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 12.1;
+          if (L + window.NARRATION_S7.duration > SCENE_LEN) {
+            console.warn("scene 7 narration is longer than the scene: raise its data-duration in index.html");
+          }
+
+          const cam = (px, py, s) => ({ x: 960 - s * px, y: 540 - s * py, scale: s });
+          const tl = gsap.timeline({ paused: true });
+          const cut = t(1) - 0.3; // the cut to the doctor's cabin
+          gsap.set("#s7-camA", { transformOrigin: "0 0", ...cam(960, 540, 1.0) });
+          tl.to("#s7-camA", { ...cam(1000, 520, 1.04), duration: cut, ease: "sine.inOut" }, 0.2);
+          gsap.set("#s7-camB", { transformOrigin: "0 0", ...cam(1000, 540, 1.0) });
+          tl.to("#s7-camB", { ...cam(1060, 520, 1.05), duration: SCENE_LEN - cut - 0.2, ease: "sine.inOut" }, cut + 0.2);
+
+          // opening fade, then the cut: a quick fade through porcelain, stage A out, stage B in
+          tl.fromTo("#s7-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+          tl.to("#s7-cover", { opacity: 1, duration: 0.25, ease: "power1.in" }, cut - 0.25);
+          gsap.set("#s7-B", { opacity: 0 });
+          tl.set("#s7-A", { opacity: 0 }, cut);
+          tl.set("#s7-B", { opacity: 1 }, cut);
+          tl.to("#s7-cover", { opacity: 0, duration: 0.35, ease: "power2.out" }, cut + 0.02);
+
+          // ---- Stage A: "His doctor gets a sealed copy only his care team can open."
+          gsap.set("#s7-phone", { svgOrigin: "320 590", scale: 0.9, opacity: 0 });
+          tl.to("#s7-phone", { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(1.4)" }, 0.25);
+          gsap.set("#s7-clinic", { svgOrigin: "1520 570", scale: 0.95, opacity: 0 });
+          tl.to("#s7-clinic", { scale: 1, opacity: 1, duration: 0.5, ease: "power2.out" }, 0.3);
+          tl.fromTo("#s7-sealLbl", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.6)" }, t(0) + 0.9);
+          // the envelope rises out of the phone, seal snaps shut, then flies to Northgate along the dotted arc
+          gsap.set("#s7-env", { x: 320, y: 560, scale: 0.3, opacity: 0, rotation: -8 });
+          tl.to("#s7-env", { opacity: 1, scale: 1, y: 470, duration: 0.55, ease: "back.out(1.5)" }, t(0) + 0.5);
+          tl.to("#s7-trail", { opacity: 0.7, duration: 0.3 }, t(0) + 1.0);
+          tl.to("#s7-env", { x: 1440, duration: 1.5, ease: "power2.inOut" }, t(0) + 1.2);
+          tl.to("#s7-env", { y: 250, duration: 0.75, ease: "power2.out" }, t(0) + 1.2);
+          tl.to("#s7-env", { y: 560, duration: 0.75, ease: "power2.in" }, t(0) + 1.95);
+          tl.to("#s7-env", { rotation: 8, duration: 1.5, ease: "sine.inOut" }, t(0) + 1.2);
+          tl.to("#s7-env", { scale: 0.6, opacity: 0, duration: 0.3, ease: "power2.in" }, t(0) + 2.65);
+          tl.fromTo("#s7-clinic", { scale: 1 }, { scale: 1.03, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out", immediateRender: false }, t(0) + 2.85);
+
+          // ---- Stage B: "When Walter walks in, the history is already there, and the follow-up questions write themselves."
+          gsap.set("#s7-wSeated", { opacity: 0 });
+          gsap.set(["#s7-pArm", "#s7-rash", "#s7-wSmile", "#s7-dSmile"], { opacity: 0 });
+          gsap.set(["#s7-panel", "#s7-sugg", "#s7-bubble"], { opacity: 0 });
+          for (let i = 0; i < 7; i++) {
+            const cx = 826 + i * 90;
+            gsap.set("#s7-b" + i, { svgOrigin: cx + " 396", scaleY: 0 });
+          }
+          gsap.set("#s7-rashTag", { opacity: 0 });
+
+          // breathing and blinks
+          gsap.set("#s7-dTorso", { svgOrigin: "600 740" });
+          tl.fromTo("#s7-dTorso", { scaleY: 1 }, { scaleY: 1.012, duration: 1.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, cut);
+          gsap.set(["#s7-dEyeL", "#s7-dEyeR"], { svgOrigin: "600 353" });
+          tl.to(["#s7-dEyeL", "#s7-dEyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, cut + 2.2);
+          gsap.set("#s7-dHead", { svgOrigin: "600 430" });
+
+          // Walter walks in from the right, with a bobbing step and swinging legs and arms
+          const walkStart = t(1) + 0.1, walkLen = 1.5, sitAt = walkStart + walkLen + 0.15;
+          gsap.set("#s7-wWalk", { x: 2250, y: 0 });
+          tl.to("#s7-wWalk", { x: 1560, duration: walkLen, ease: "none" }, walkStart);
+          const steps = 6;
+          gsap.set(["#s7-legL", "#s7-legR"], { svgOrigin: "0 740" });
+          gsap.set(["#s7-armL", "#s7-armR"], { svgOrigin: "0 504" });
+          tl.fromTo("#s7-legL", { rotation: -14 }, { rotation: 14, duration: walkLen / steps, ease: "sine.inOut", yoyo: true, repeat: steps - 1, immediateRender: false }, walkStart);
+          tl.fromTo("#s7-legR", { rotation: 14 }, { rotation: -14, duration: walkLen / steps, ease: "sine.inOut", yoyo: true, repeat: steps - 1, immediateRender: false }, walkStart);
+          tl.fromTo("#s7-armL", { rotation: 10 }, { rotation: -10, duration: walkLen / steps, ease: "sine.inOut", yoyo: true, repeat: steps - 1, immediateRender: false }, walkStart);
+          tl.fromTo("#s7-armR", { rotation: -10 }, { rotation: 10, duration: walkLen / steps, ease: "sine.inOut", yoyo: true, repeat: steps - 1, immediateRender: false }, walkStart);
+          tl.fromTo("#s7-wBob", { y: 0 }, { y: -9, duration: walkLen / (steps * 2), ease: "sine.inOut", yoyo: true, repeat: steps * 2 - 1, immediateRender: false }, walkStart);
+          // he sits: the walking figure hands over to the seated one
+          tl.to("#s7-wWalk", { opacity: 0, duration: 0.01 }, sitAt);
+          tl.to("#s7-wSeated", { opacity: 1, duration: 0.01 }, sitAt);
+          gsap.set("#s7-wSeated", { svgOrigin: "1560 800" });
+          tl.fromTo("#s7-wSeated", { y: -24 }, { y: 0, duration: 0.25, ease: "bounce.out", immediateRender: false }, sitAt);
+          gsap.set("#s7-wTorso", { svgOrigin: "1560 668" });
+          tl.fromTo("#s7-wTorso", { scaleY: 1 }, { scaleY: 1.012, duration: 1.5, ease: "sine.inOut", yoyo: true, repeat: 2 }, sitAt);
+
+          // "the history is already there": his weeks open on the wall, bars rise, the rash week is tagged
+          gsap.set("#s7-panel", { svgOrigin: "1100 295", scale: 0.92 });
+          tl.to("#s7-panel", { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.4)" }, t(1) + 1.9);
+          for (let i = 0; i < 7; i++) {
+            tl.to("#s7-b" + i, { scaleY: 1, duration: 0.35, ease: "back.out(1.3)" }, t(1) + 2.3 + i * 0.12);
+          }
+          gsap.set("#s7-rashTag", { svgOrigin: "1285 256", scale: 0.6 });
+          tl.to("#s7-rashTag", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, t(1) + 3.3);
+
+          // "and the follow-up questions write themselves": Dr. Shah's suggested question appears
+          tl.fromTo("#s7-sugg", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, t(1) + 3.8);
+          gsap.set("#s7-bubble", { svgOrigin: "700 600", scale: 0.8 });
+          tl.to("#s7-bubble", { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" }, t(1) + 4.1);
+          tl.fromTo("#s7-dHead", { y: 0 }, { y: -6, duration: 0.2, ease: "power2.out", yoyo: true, repeat: 1, immediateRender: false }, t(1) + 4.1);
+
+          // Walter points to his arm, the rash shows; both smile
+          const pt = t(1) + 5.0;
+          tl.to("#s7-rArm", { opacity: 0, duration: 0.01 }, pt);
+          tl.to("#s7-pArm", { opacity: 1, duration: 0.01 }, pt);
+          tl.fromTo("#s7-pArm", { opacity: 0 }, { opacity: 1, duration: 0.25, immediateRender: false }, pt);
+          tl.to("#s7-rash", { opacity: 1, duration: 0.3 }, pt + 0.3);
+          const sm = pt + 0.7;
+          tl.to(["#s7-wMouth", "#s7-dMouth"], { opacity: 0, duration: 0.12 }, sm);
+          tl.to(["#s7-wSmile", "#s7-dSmile"], { opacity: 1, duration: 0.3 }, sm);
+
+          window.__timelines["scene-7"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "_note": "Narration text per scene. The .wav files are gitignored; rebuild them with tools/build_narration.py. Voice: heart_nicole, speed 0.95, sentence-end pauses.",
+  "s1": "Nine in the morning. Walter's phone says it's time for today's check-in.",
+  "s2": "Some people type. Walter just talks.",
+  "s3": "The questions are simple. He answers in his own words. The transcript appears right on his phone, and only there.",
+  "s4": "Names and details are stripped out on the device. Walter reads what would be shared, and he approves it.",
+  "s5": "Only coded fields leave: symptom, severity, week. No audio. No words. No name. And he gets a receipt.",
+  "s6": "The company sees patterns, never people. Groups under five are hidden.",
+  "s7": "His doctor gets a sealed copy only his care team can open. When Walter walks in, the history is already there, and the follow-up questions write themselves.",
+  "s8": "Walter feels looked after.",
+  "s9": "His doctor has more time to guide him. The company can follow its trial more closely.",
+  "s10": "SafeSignal. Someone is looking out for you."
+}

@@ -1,0 +1,21 @@
+{
+  "voice": "heart_nicole",
+  "speed": 0.95,
+  "pause_scale": 1.0,
+  "split": "sentence",
+  "duration": 7.382,
+  "sentences": [
+    {
+      "i": 0,
+      "text": "Names and details are stripped out on the device.",
+      "start": 0.0,
+      "end": 3.045
+    },
+    {
+      "i": 1,
+      "text": "Walter reads what would be shared, and he approves it.",
+      "start": 3.645,
+      "end": 6.782
+    }
+  ]
+}

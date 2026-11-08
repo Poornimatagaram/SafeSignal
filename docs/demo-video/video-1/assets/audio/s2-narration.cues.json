@@ -1,0 +1,33 @@
+{
+  "voice": "heart_nicole",
+  "speed": 0.95,
+  "pause_scale": 1.0,
+  "split": "sentence",
+  "duration": 9.623,
+  "sentences": [
+    {
+      "i": 0,
+      "text": "Now his hands shake, and a rash is spreading.",
+      "start": 0.0,
+      "end": 2.776
+    },
+    {
+      "i": 1,
+      "text": "Forms are hard.",
+      "start": 3.376,
+      "end": 4.493
+    },
+    {
+      "i": 2,
+      "text": "He doesn't want his words sent anywhere.",
+      "start": 5.093,
+      "end": 7.285
+    },
+    {
+      "i": 3,
+      "text": "So he says nothing.",
+      "start": 7.885,
+      "end": 9.023
+    }
+  ]
+}

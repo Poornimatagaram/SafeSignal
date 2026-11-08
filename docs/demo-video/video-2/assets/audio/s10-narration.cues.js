@@ -1,0 +1,1 @@
+window.NARRATION_S10 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 3.9, "sentences": [{"i": 0, "text": "SafeSignal.", "start": 0.0, "end": 0.935}, {"i": 1, "text": "Someone is looking out for you.", "start": 1.535, "end": 3.3}]};

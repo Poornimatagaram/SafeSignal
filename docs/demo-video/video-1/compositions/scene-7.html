@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #scene-7-root { position: absolute; inset: 0; overflow: hidden; font-family: "Montserrat", sans-serif; background: #fbf0cf; }
+        #scene-7-root * { margin: 0; padding: 0; box-sizing: border-box; }
+        .s7-layer { position: absolute; inset: 0; }
+        .s7-layer svg { width: 100%; height: 100%; display: block; }
+        #s7-cover { background: #f6f8fa; }
+      </style>
+      <div id="scene-7-root" data-composition-id="scene-7" data-width="1920" data-height="1080">
+        <div id="s7-cam" class="s7-layer">
+          <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <rect width="1920" height="1080" fill="#fbf0cf" />
+            <circle id="s7-sun" cx="480" cy="470" r="360" fill="#ffe9a8" opacity="0.85" />
+            <rect y="990" width="1920" height="90" fill="#f3e3b5" />
+            <!-- Walter, bust, drawn at 1.9x: local (500,345) is the head centre -->
+            <g transform="translate(-390 -186) scale(1.9)">
+              <g id="s7-torso">
+                <rect x="400" y="462" width="200" height="400" rx="64" fill="#0e7c7b" stroke="#13233a" stroke-width="4" />
+                <line x1="500" y1="504" x2="500" y2="860" stroke="#0a5e5d" stroke-width="4" />
+                <circle cx="518" cy="560" r="6" fill="#0a5e5d" /><circle cx="518" cy="620" r="6" fill="#0a5e5d" />
+                <rect x="480" y="434" width="40" height="42" fill="#f2d6c0" stroke="#13233a" stroke-width="4" />
+                <polygon points="466,456 500,508 534,456" fill="#ffffff" stroke="#13233a" stroke-width="4" stroke-linejoin="round" />
+              </g>
+              <g id="s7-head">
+                <circle cx="500" cy="345" r="76" fill="#f2d6c0" stroke="#13233a" stroke-width="4" />
+                <path d="M426 330 Q420 270 470 262 Q500 254 530 262 Q580 270 574 330 Q556 302 536 308 Q518 292 500 306 Q482 292 464 308 Q444 302 426 330 Z" fill="#c9d2dc" stroke="#13233a" stroke-width="4" stroke-linejoin="round" />
+                <circle cx="472" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="3" />
+                <circle cx="528" cy="346" r="22" fill="#ffffff" fill-opacity="0.45" stroke="#13233a" stroke-width="3" />
+                <line x1="494" y1="346" x2="506" y2="346" stroke="#13233a" stroke-width="3" />
+                <circle id="s7-eyeL" cx="474" cy="350" r="5" fill="#13233a" />
+                <circle id="s7-eyeR" cx="530" cy="350" r="5" fill="#13233a" />
+                <path id="s7-brows" d="M456 326 Q472 322 488 328 M512 328 Q528 322 544 326" stroke="#13233a" stroke-width="3.5" stroke-linecap="round" fill="none" />
+                <path id="s7-mouthFlat" d="M486 388 Q500 384 514 388" stroke="#13233a" stroke-width="3.5" stroke-linecap="round" fill="none" />
+                <path id="s7-mouthSmile" d="M474 380 Q500 410 526 380" stroke="#13233a" stroke-width="4" stroke-linecap="round" fill="none" />
+                <g id="s7-cheeks"><circle cx="456" cy="378" r="9" fill="#e9a08c" opacity="0.55" /><circle cx="544" cy="378" r="9" fill="#e9a08c" opacity="0.55" /></g>
+              </g>
+            </g>
+            <!-- title card -->
+            <g id="s7-mark">
+              <circle cx="940" cy="330" r="52" fill="#0e7c7b" stroke="#13233a" stroke-width="6" />
+              <path id="s7-pulse" d="M910 332 L926 332 L934 306 L948 354 L956 332 L972 332" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+            </g>
+            <text id="s7-word" x="880" y="520" font-family="Montserrat, sans-serif" font-weight="800" font-size="140" letter-spacing="-2" fill="#13233a">SafeSignal</text>
+            <text id="s7-line" x="886" y="610" font-family="Montserrat, sans-serif" font-weight="600" font-size="50" fill="#0a5e5d">Someone is looking out for you.</text>
+          </svg>
+        </div>
+        <div id="s7-cover" class="s7-layer"></div>
+        <audio id="s7-narration" src="assets/audio/s7-narration.wav" data-start="0.8" data-track-index="1" data-volume="1"></audio>
+      </div>
+      <script>
+        (function () {
+          const L = 0.8; // matches data-start of #s7-narration: Walter looks up before the voice comes in
+          const N = window.NARRATION_S7.sentences;
+          const t = (i) => L + N[i].start;
+          const e = (i) => L + N[i].end;
+          const SCENE_LEN = 5.5;
+          if (L + window.NARRATION_S7.duration > SCENE_LEN) {
+            console.warn("scene 7 narration is longer than the scene: raise its data-duration in index.html");
+          }
+          const tl = gsap.timeline({ paused: true });
+          gsap.set("#s7-cam", { transformOrigin: "50% 50%" });
+          tl.fromTo("#s7-cam", { scale: 1.0 }, { scale: 1.03, duration: SCENE_LEN, ease: "none" }, 0);
+          tl.fromTo("#s7-cover", { opacity: 1 }, { opacity: 0, duration: 0.4, ease: "power2.out" }, 0);
+
+          // Walter: a held breath, then he looks up and lets it go
+          gsap.set("#s7-head", { svgOrigin: "560 631" });
+          tl.fromTo("#s7-head", { rotation: 1, y: 0 }, { rotation: -3, y: -1, duration: 0.7, ease: "power2.inOut" }, 0.2);
+          tl.to(["#s7-eyeL", "#s7-eyeR"], { y: -6, x: 3, duration: 0.5, ease: "power2.out" }, 0.25);
+          tl.to("#s7-brows", { y: -4, duration: 0.5, ease: "power2.out" }, 0.25);
+          tl.to("#s7-torso", { y: 8, duration: 0.8, ease: "sine.inOut" }, 0.5); // shoulders drop: relief
+          gsap.set(["#s7-mouthSmile", "#s7-cheeks"], { opacity: 0 });
+          tl.to("#s7-mouthFlat", { opacity: 0, duration: 0.2 }, 0.6);
+          tl.to(["#s7-mouthSmile", "#s7-cheeks"], { opacity: 1, duration: 0.4 }, 0.6);
+          gsap.set(["#s7-eyeL", "#s7-eyeR"], { transformOrigin: "50% 50%" });
+          tl.to(["#s7-eyeL", "#s7-eyeR"], { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 1.9);
+          gsap.set("#s7-sun", { svgOrigin: "480 470", scale: 0.7, opacity: 0 });
+          tl.to("#s7-sun", { scale: 1, opacity: 0.85, duration: 1.6, ease: "power1.out" }, 0);
+
+          // "SafeSignal.": the mark pulses in, the name rises
+          gsap.set("#s7-mark", { svgOrigin: "940 330", scale: 0, opacity: 0 });
+          tl.to("#s7-mark", { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)" }, t(0));
+          const pulse = document.getElementById("s7-pulse");
+          const plen = pulse.getTotalLength();
+          gsap.set(pulse, { strokeDasharray: plen, strokeDashoffset: plen });
+          tl.to(pulse, { strokeDashoffset: 0, duration: 0.5, ease: "power1.inOut" }, t(0) + 0.25);
+          gsap.set("#s7-word", { y: 40, opacity: 0 });
+          tl.to("#s7-word", { y: 0, opacity: 1, duration: 0.55, ease: "power3.out" }, t(0) + 0.05);
+
+          // "Someone is looking out for you.": the line fades in under the name
+          gsap.set("#s7-line", { y: 24, opacity: 0 });
+          tl.to("#s7-line", { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, t(1));
+
+          window.__timelines["scene-7"] = tl;
+          tl.seek(0);
+        })();
+      </script>
+    </template>
+  </body>
+</html>

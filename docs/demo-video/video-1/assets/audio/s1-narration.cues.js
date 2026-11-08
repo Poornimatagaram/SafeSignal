@@ -1,0 +1,1 @@
+window.NARRATION_S1 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 5.235, "sentences": [{"i": 0, "text": "Walter is ninety-two.", "start": 0.0, "end": 1.526}, {"i": 1, "text": "Three weeks ago he started a new medicine.", "start": 2.126, "end": 4.635}]};

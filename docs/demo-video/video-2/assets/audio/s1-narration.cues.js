@@ -1,0 +1,1 @@
+window.NARRATION_S1 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 5.617, "sentences": [{"i": 0, "text": "Nine in the morning.", "start": 0.0, "end": 1.183}, {"i": 1, "text": "Walter's phone says it's time for today's check-in.", "start": 1.783, "end": 5.017}]};

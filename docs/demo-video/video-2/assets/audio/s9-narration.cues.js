@@ -1,0 +1,1 @@
+window.NARRATION_S9 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 6.443, "sentences": [{"i": 0, "text": "His doctor has more time to guide him.", "start": 0.0, "end": 2.394}, {"i": 1, "text": "The company can follow its trial more closely.", "start": 2.994, "end": 5.843}]};

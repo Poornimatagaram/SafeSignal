@@ -1,0 +1,1 @@
+window.NARRATION_S6 = {"voice": "heart_nicole", "speed": 0.95, "pause_scale": 1.0, "split": "sentence", "duration": 5.515, "sentences": [{"i": 0, "text": "The company sees patterns, never people.", "start": 0.0, "end": 2.627}, {"i": 1, "text": "Groups under five are hidden.", "start": 3.227, "end": 4.915}]};
