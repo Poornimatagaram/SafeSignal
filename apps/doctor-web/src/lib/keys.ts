@@ -10,6 +10,7 @@ const pair = (k: { public_key: string; private_key: string }): KeyPair => ({ pub
 
 export interface OrgStatus extends OrgMembership {
   hasLocalKey: boolean
+  grantMismatch: boolean // a grant exists but was made for this doctor's key in another browser
 }
 
 // First launch: pick the identity and create the personal key pair (DW-19).
@@ -38,13 +39,19 @@ export async function refreshOrgs(api: DoctorApi, me: DrKey): Promise<OrgStatus[
       await db.forgetOrg(o.org_id) // grant withdrawn
       local = undefined
     }
+    let grantMismatch = false
     if (!local && o.has_key_grant) {
       const grant = await api.myKeyGrant(o.org_id)
-      const kp = await unwrapOrgKey(grant.wrapped_key, pair(me))
-      await db.putOrgKey({ org_id: o.org_id, public_key: kp.publicKey, private_key: kp.privateKey, obtained_at: now() })
-      local = await db.orgKey(o.org_id)
+      try {
+        const kp = await unwrapOrgKey(grant.wrapped_key, pair(me))
+        await db.putOrgKey({ org_id: o.org_id, public_key: kp.publicKey, private_key: kp.privateKey, obtained_at: now() })
+        local = await db.orgKey(o.org_id)
+      } catch {
+        // The grant was sealed to this doctor's key in another browser (DW-19). Keep the other orgs working.
+        grantMismatch = true
+      }
     }
-    out.push({ ...o, hasLocalKey: !!local })
+    out.push({ ...o, hasLocalKey: !!local, grantMismatch })
   }
   return out
 }
