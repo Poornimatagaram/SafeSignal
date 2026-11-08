@@ -2,6 +2,10 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Network log view (PV-06)
+- Added: "What this computer sent" (`NetworkLogScreen.tsx`, `networkLog.ts`), reached from the start screen. Under "Only these went out. Nothing else leaves this computer: no recordings, no words you said.", one box per request, newest first. Each box says in plain words what was sent or downloaded, when, and the answer (Accepted, Refused, or Service error, will try again), with "Show details" for method, URL, field names and fingerprint.
+- Tests: `tests/networkLog.test.tsx`; 247 in total.
+
 ## 2026-11-08: Task A7, consent switches and setup, and the sealed copies
 - Added: "Set up who I share with" (`SetupScreen.tsx`, `setupFlow.ts`), opened by "Change my choices". Four steps: care team, caregiver (alerts only for now; the "summary" option is hidden), emergencies (yes/no, up to 3 hospitals, up to 3 contacts with an optional name that stays on this computer), then a review with "What will be sent" and one "Save and send" (`PUT /consent/setup`). The runtime's 422 message is shown in plain words.
 - Added: one sealed copy per organization on the receipt (`envelopes`), and on the summary: "Also sealed for <hospital>: they can open it only in an emergency, and that is logged."

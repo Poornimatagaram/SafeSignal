@@ -176,3 +176,9 @@ export function setupSaveMessage(error: unknown): string {
   }
   return 'I could not save your choices. Nothing was changed. Please try again.'
 }
+
+/** For problems reading "What this computer sent". Reading it never sends anything. */
+export function networkLogMessage(error: unknown): string {
+  if (error instanceof RuntimeError && error.kind === 'runtime-down') return RUNTIME_DOWN
+  return 'I could not show what this computer sent. Please try again.'
+}
