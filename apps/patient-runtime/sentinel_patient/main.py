@@ -22,10 +22,10 @@ from fastapi.responses import Response
 
 from sentinel_contract import SCHEMA_VERSION, ContractError
 
-from . import egress_gate, extract, rating, stt, tts
+from . import commands, egress_gate, extract, rating, stt, summary, tts
 from . import filter as pii_filter
-from .checkin import (DESTINATION_LABEL, SYMPTOM_PURPOSES, AlreadyShared, CheckinStore, NeedsSeverity,
-                      NoTerms, UnknownQuestion, UnknownSession)
+from .checkin import (DESTINATION_LABEL, SYMPTOM_PURPOSES, AlreadyShared, CheckinStore, CorrectionUsed,
+                      NeedsSeverity, NoTerms, UnknownQuestion, UnknownSession)
 from .config import Settings
 from .db import connect, init_db
 from .survey import NoSurvey, latest_survey, term_labels
@@ -38,8 +38,9 @@ SESSION_ID = r"^ses_[a-f0-9]{8}$"
 def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber | None = None,
                speaker: tts.Speaker | None = None, redactor: Callable[[str], Any] | None = None,
                extractor: Callable[[str], list] | None = None, rater: Callable[..., Any] | None = None,
-               sentinel_client: Any = None) -> FastAPI:
-    """Pass fakes for the speech, filter, model and service client in tests; by default they load lazily."""
+               sentinel_client: Any = None, retry_interval: float | None = 1.0) -> FastAPI:
+    """Pass fakes for the speech, filter, model and service client in tests; by default they load lazily.
+    `retry_interval` runs the outbox retry worker (PV-07); None turns it off (tests drive it by hand)."""
     settings = settings or Settings.from_env()
     store = CheckinStore(settings.db_path, settings.patient_ref)
     clients: list = [sentinel_client] if sentinel_client else []
@@ -56,11 +57,17 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
             extract.ollama_host()  # fail fast: refuses a model server that is not on this device
         if redactor is None:
             await run_in_threadpool(pii_filter.warm_up)  # load spaCy now, not during the first answer
+        if retry_interval:
+            worker.start(retry_interval)  # PV-07: queued records and alerts go out by themselves once back online
         yield
+        worker.stop()
         if clients and sentinel_client is None:
             clients[0].close()
 
+    # The worker closes the client it gets after each pass, so it gets its own, never the shared one.
+    worker = egress_gate.RetryWorker(settings.db_path, lambda: sentinel_client or egress_gate.make_client(settings))
     app = FastAPI(title="Sentinel patient runtime", version=SCHEMA_VERSION, lifespan=lifespan)
+    app.state.retry_worker = worker
     app.state.settings = settings
     app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins,
                        allow_methods=["GET", "POST", "PUT"], allow_headers=["Content-Type"])
@@ -159,6 +166,10 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
         finally:
             audio.clear()  # PV-03: the recording is never written to disk and is dropped here
 
+        command = commands.detect_command(transcript)  # VC-07: "repeat" / "slower" at any time; not an answer
+        if command:
+            return {"transcript": transcript, "symptoms": [], "extraction": "ok", "rating": None, "command": command,
+                    "next": {"action": command, "ask": ask}}
         extraction, answer_text, found, rated = "ok", "", [], "no_answer"
         if transcript.strip():
             filtered = await run_in_threadpool(redact, transcript)  # PV-01: before any model sees anything
@@ -185,17 +196,76 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
         """What would be shared, in plain words and as the exact record. Sends nothing (PV-04)."""
         return _session_errors(store.summary, session_id, settings.sentinel_base_url)
 
+    @app.get("/checkin/sessions/{session_id}/summary/audio")
+    def checkin_summary_audio(session_id: str = Path(..., pattern=SESSION_ID), slow: bool = False) -> Response:
+        """VC-08: the summary read back by local text-to-speech. Template text from coded fields, never model text."""
+        text = _session_errors(store.summary, session_id, settings.sentinel_base_url)["spoken"]
+        try:
+            wav = get_speaker().synthesize(text, slow=slow)
+        except tts.TTSUnavailable:
+            raise HTTPException(503, "text-to-speech unavailable")
+        return Response(wav, media_type="audio/wav", headers={"Cache-Control": "no-store"})
+
+    @app.post("/checkin/sessions/{session_id}/correction")
+    async def checkin_correction(request: Request, session_id: str = Path(..., pattern=SESSION_ID)) -> dict:
+        """VC-08: one correction before sharing, tapped (JSON) or spoken (raw audio, like a turn)."""
+        content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+        if content_type == "application/json":
+            body = await request.json()
+            if not isinstance(body, dict) or not isinstance(body.get("term_code"), str):
+                raise HTTPException(422, "name the symptom to change")
+            change = {"severity": body.get("severity"), "onset": body.get("onset"), "remove": bool(body.get("remove"))}
+            term_code = body["term_code"]
+        else:
+            if not request.client or request.client.host not in LOOPBACK_CLIENTS:
+                raise HTTPException(403, "audio is accepted from this device only")
+            if not (content_type.startswith("audio/") or content_type in ("video/webm", "application/octet-stream")):
+                raise HTTPException(415, "send the change as JSON or as audio")
+            audio = await request.body()
+            if not audio or len(audio) > stt.MAX_AUDIO_BYTES:
+                raise HTTPException(413 if audio else 400, "recording too large" if audio else "no audio received")
+            try:
+                transcript = await run_in_threadpool(get_transcriber().transcribe, audio)
+            except stt.ModelUnavailable:
+                raise HTTPException(503, "speech model unavailable")
+            except stt.TranscriptionError:
+                raise HTTPException(422, "audio not understood")
+            finally:
+                audio = b""
+            filtered = await run_in_threadpool(redact, transcript)
+            items = _session_errors(store.correction_items, session_id)
+            parsed = summary.parse_correction(filtered.text, items)
+            if parsed is None:  # not understood: the one correction is not used up
+                raise HTTPException(422, {"message": "I did not understand the change", "understood": False})
+            term_code = parsed.term_code
+            change = {"severity": parsed.severity, "onset": parsed.onset, "remove": parsed.remove}
+        _session_errors(store.correct, session_id, term_code, **change)
+        return _session_errors(store.summary, session_id, settings.sentinel_base_url)
+
     @app.post("/checkin/sessions/{session_id}/approve")
     def checkin_approve(session_id: str = Path(..., pattern=SESSION_ID),
                         severities: dict[str, str] = Body(default_factory=dict, embed=True)) -> dict:
         """The patient tapped "Share this": the only route that sends. Returns the egress receipt (PV-05)."""
-        receipt = _session_errors(store.approve, session_id, severities, client=get_client())
-        return {"status": receipt.status, "record_id": receipt.outbox_id, "destination": DESTINATION_LABEL,
-                "method": receipt.method, "url": receipt.url, "fields_sent": receipt.fields_sent,
-                "payload_sha256": receipt.payload_sha256, "sent_at": receipt.sent_at,
-                "response_code": receipt.response_code}
+        record, alert = _session_errors(store.approve, session_id, severities, client=get_client())
+        return _receipt(record, alert)
+
+    @app.get("/checkin/sessions/{session_id}/receipt")
+    def checkin_receipt(session_id: str = Path(..., pattern=SESSION_ID)) -> dict:
+        """The receipt as it stands now: a queued record turns "sent" once the retry worker gets it through."""
+        record, alert = _session_errors(store.receipts, session_id, settings.sentinel_base_url)
+        if record is None:
+            raise HTTPException(404, "this check-in has not been shared")
+        return _receipt(record, alert)
 
     return app
+
+
+def _receipt(record, alert) -> dict:
+    return {"status": record.status, "record_id": record.outbox_id, "destination": DESTINATION_LABEL,
+            "method": record.method, "url": record.url, "fields_sent": record.fields_sent,
+            "payload_sha256": record.payload_sha256, "sent_at": record.sent_at, "response_code": record.response_code,
+            "alert": None if alert is None else {"status": alert.status, "alert_id": alert.outbox_id,
+                                                 "sent_at": alert.sent_at}}
 
 
 def _session_errors(fn, *args, **kwargs):
@@ -206,6 +276,8 @@ def _session_errors(fn, *args, **kwargs):
         raise HTTPException(404, "unknown check-in")
     except AlreadyShared:
         raise HTTPException(409, "this check-in was already shared")
+    except CorrectionUsed:
+        raise HTTPException(409, "one change is allowed, and it was already made")
     except NeedsSeverity as e:
         raise HTTPException(409, {"message": "choose how bad each problem is before sharing",
                                   "needs_severity": e.term_codes})

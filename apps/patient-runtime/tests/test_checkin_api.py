@@ -28,7 +28,7 @@ class FakeClient:
     """Shaped like SentinelClient: service-shaped config responses, records kept in `sent`."""
 
     def __init__(self, online=True):
-        self.online, self.sent, self.fetches = online, [], 0
+        self.online, self.sent, self.alerts, self.fetches = online, [], [], 0
 
     def fetch_survey(self, cohort_id):
         self.fetches += 1
@@ -43,6 +43,14 @@ class FakeClient:
         return {"program_id": program_id, "drug_name": "Tagrisso",
                 "terms": [{k: t[k] for k in ("term_code", "label_term", "everyday_words", "severe_trigger")}
                           | {"known_for_program": "Tagrisso" in t.get("drug_scope", [])} for t in TERMS]}
+
+    def send_alert(self, alert):
+        if not self.online:
+            raise SendRetryable("no network")
+        self.alerts.append(alert)
+        digest = payload_sha256(alert)
+        return SendResult("POST", "http://127.0.0.1:8000/v1/alerts", 201, digest, field_names(alert),
+                          {"alert_id": alert["alert_id"], "payload_sha256": digest})
 
     def send_record(self, record):
         if not self.online:
@@ -98,8 +106,8 @@ class FakePipeline:
 
 
 def fake_rate(question, ask, text):
-    """Stand-in for rating.rate_answer: 'pardon' = no answer, 'weather' = off topic, 'A | B' = rambling with B relevant."""
-    if not text.strip() or "pardon" in text:
+    """Stand-in for rating.rate_answer: 'um' = no answer, 'weather' = off topic, 'A | B' = rambling with B relevant."""
+    if not text.strip() or text.strip(" .?") in ("um", "erm", "um erm"):
         return SimpleNamespace(rating="no_answer", relevant_text="", source="rules")
     if "|" in text:
         return SimpleNamespace(rating="rambling", relevant_text=text.split("|", 1)[1].strip(), source="rules")
@@ -114,7 +122,7 @@ def make_client(tmp_path, **kw):
     app = create_app(Settings(db_path=tmp_path / "patient.db", patient_ref=WALTER),
                      transcriber=EchoTranscriber(), speaker=kw.get("speaker", FakeSpeaker()),
                      redactor=pipeline.redact, extractor=pipeline.extract, rater=kw.get("rater", fake_rate),
-                     sentinel_client=sentinel)
+                     sentinel_client=sentinel, retry_interval=None)
     return TestClient(app, client=kw.get("client", LOCAL)), pipeline, sentinel
 
 
@@ -346,8 +354,8 @@ def test_unclear_answers_are_reasked_twice_then_given_up(tmp_path):
     c, pipeline, _ = make_client(tmp_path)
     with c:
         sid = start(c)
-        first = answer(c, sid, "q2", "pardon?").json()
-        second = answer(c, sid, "q2", "pardon, what?", ask=1).json()
+        first = answer(c, sid, "q2", "um").json()
+        second = answer(c, sid, "q2", "erm", ask=1).json()
         third = answer(c, sid, "q2", "the weather is lovely", ask=2).json()
         summary = c.get(f"/checkin/sessions/{sid}/summary").json()
     assert (first["rating"], first["next"]) == ("no_answer", {"action": "reask", "ask": 1,
@@ -376,8 +384,99 @@ def test_complete_answer_moves_on_and_a_reasked_complete_answer_counts(tmp_path)
     c, _, _ = make_client(tmp_path)
     with c:
         sid = start(c)
-        assert answer(c, sid, "q1", "pardon?").json()["next"]["action"] == "reask"
+        assert answer(c, sid, "q1", "um").json()["next"]["action"] == "reask"
         done = answer(c, sid, "q1", "I feel fine", ask=1).json()
         summary = c.get(f"/checkin/sessions/{sid}/summary").json()
     assert (done["rating"], done["next"]) == ("complete", {"action": "next"})
     assert summary["unanswered_questions"] == 5
+
+
+# ---------- voice commands, spoken summary and correction, severe alerts, offline retry (A6) ----------
+
+def test_repeat_and_slower_are_commands_not_answers(tmp_path):
+    c, pipeline, _ = make_client(tmp_path)
+    with c:
+        sid = start(c)
+        again = answer(c, sid, "q2", "say that again", ask=1).json()
+        slower = answer(c, sid, "q2", "slower please", ask=1).json()
+    assert (again["command"], again["next"]) == ("repeat", {"action": "repeat", "ask": 1})
+    assert (slower["command"], slower["next"]) == ("slower", {"action": "slower", "ask": 1})
+    assert rows(tmp_path, "SELECT * FROM answer_turn") == [] and pipeline.model_saw == []
+
+
+def test_summary_is_spoken_from_a_template_and_one_correction_is_allowed(tmp_path):
+    speaker = FakeSpeaker()
+    c, _, _ = make_client(tmp_path, speaker=speaker)
+    with c:
+        sid = start(c)
+        answer(c, sid, "q2", "I am tired")
+        first = c.get(f"/checkin/sessions/{sid}/summary").json()
+        audio = c.get(f"/checkin/sessions/{sid}/summary/audio", params={"slow": "true"})
+        fixed = c.post(f"/checkin/sessions/{sid}/correction", json={"term_code": "SE_FATIGUE", "severity": "moderate"})
+        second = c.post(f"/checkin/sessions/{sid}/correction", json={"term_code": "SE_FATIGUE", "remove": True})
+    assert first["correction_used"] is False and first["spoken"].startswith("Here is what I heard")
+    assert audio.status_code == 200 and speaker.calls == [(first["spoken"], True)]
+    assert fixed.status_code == 200 and fixed.json()["correction_used"] is True
+    assert [(i["term_code"], i["severity"]) for i in fixed.json()["items"]] == [("SE_FATIGUE", "moderate")]
+    assert second.status_code == 409
+
+
+def test_spoken_correction_and_not_understood_does_not_use_it_up(tmp_path):
+    c, _, _ = make_client(tmp_path)
+    with c:
+        sid = start(c)
+        answer(c, sid, "q2", "I am tired")
+        unclear = c.post(f"/checkin/sessions/{sid}/correction", content=b"hmm", headers=WEBM)
+        spoken = c.post(f"/checkin/sessions/{sid}/correction", content=b"I'm not tired, I don't have that",
+                        headers=WEBM)
+    assert unclear.status_code == 422 and unclear.json()["detail"]["understood"] is False
+    assert spoken.status_code == 200 and spoken.json()["items"] == [] and spoken.json()["correction_used"] is True
+
+
+def test_severe_symptom_sends_a_minimal_alert_first_after_approval(tmp_path):
+    c, _, sentinel = make_client(tmp_path)
+    with c:
+        sid = start(c)
+        answer(c, sid, "q2", "I am tired")
+        c.post(f"/checkin/sessions/{sid}/correction", json={"term_code": "SE_FATIGUE", "severity": "severe"})
+        assert sentinel.alerts == []  # nothing before approval
+        receipt = c.post(f"/checkin/sessions/{sid}/approve", json={}).json()
+    assert receipt["alert"]["status"] == "sent" and len(sentinel.alerts) == 1 and len(sentinel.sent) == 1
+    assert set(sentinel.alerts[0]) == {"schema_version", "alert_id", "patient_ref", "alert_type", "created_at"}
+    assert sentinel.alerts[0]["alert_type"] == "severe"  # AL-03: no symptom details
+    assert sorted(r["destination"] for r in rows(tmp_path, "SELECT destination FROM outbox")) == ["alert", "company_record"]
+
+
+def test_severe_trigger_term_alerts_even_when_mild_and_no_alert_without_consent(tmp_path):
+    class Breathless(FakePipeline):
+        def extract(self, filtered_text):
+            return [SimpleNamespace(term_code="SE_DYSPNEA", severity="mild", onset="today")]
+
+    c, _, sentinel = make_client(tmp_path, pipeline=Breathless())
+    with c:
+        sid = start(c)
+        answer(c, sid, "q2", "a bit out of breath")
+        assert c.post(f"/checkin/sessions/{sid}/approve", json={}).json()["alert"]["status"] == "sent"
+        with closing(connect(tmp_path / "patient.db")) as conn, conn:  # the patient withdraws all sharing
+            conn.execute("INSERT INTO consent (share_care_team, emergency_consent, share_caregiver, caregiver_detail, "
+                         "updated_at) VALUES (0, 0, 0, 'alerts_only', '2026-11-08T00:00:00Z')")
+        sid2 = start(c)
+        answer(c, sid2, "q2", "out of breath again")
+        assert c.post(f"/checkin/sessions/{sid2}/approve", json={}).json()["alert"] is None
+    assert len(sentinel.alerts) == 1
+
+
+def test_offline_check_in_is_sent_by_the_retry_worker_when_back_online(tmp_path):
+    sentinel = FakeClient()
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        sid = start(c)
+        sentinel.online = False  # network goes off mid check-in: everything keeps working locally
+        answer(c, sid, "q2", "I am tired")
+        queued = c.post(f"/checkin/sessions/{sid}/approve", json={}).json()
+        assert queued["status"] == "queued" and c.get(f"/checkin/sessions/{sid}/receipt").json()["status"] == "queued"
+        sentinel.online = True
+        c.app.state.retry_worker.run_once()  # the background worker does this on its own every second
+        now = c.get(f"/checkin/sessions/{sid}/receipt").json()
+    assert now["status"] == "sent" and now["response_code"] == 201
+    assert now["payload_sha256"] == queued["payload_sha256"] == payload_sha256(sentinel.sent[0])

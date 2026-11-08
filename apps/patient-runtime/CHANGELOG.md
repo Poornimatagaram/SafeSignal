@@ -2,6 +2,24 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Task A6, spoken summary, voice commands, network-off queue, severe alerts (branch `patient/feat/summary-offline`)
+
+### Added
+- `summary.py` (VC-08):
+  - The spoken summary is built from coded fields by a template, never from model text.
+  - `parse_correction` reads one spoken change (new severity, new onset, or "I don't have that"); anything unclear returns None.
+- `commands.py` (VC-07): "repeat" and "slower" at any time, only when the utterance is just the command.
+- Endpoints:
+  - `GET /checkin/sessions/{id}/summary/audio`: the summary read aloud.
+  - `POST /checkin/sessions/{id}/correction`: one change, by tap (JSON) or by voice (audio). A change that isn't understood doesn't use up the one correction.
+  - `GET /checkin/sessions/{id}/receipt`: the current receipt, for polling.
+- `/checkin/turn` returns `command` and `next.action` "repeat" or "slower" without storing an answer.
+- Severe alerts (AL-02, SE-03):
+  - Approving a check-in that has a severe symptom, or any term with `severe_trigger`, queues a minimal `alert_event` and sends it first through the egress gate.
+  - Only if the patient shares with the care team or the caregiver.
+- `egress_gate.RetryWorker` (PV-07): queued records and alerts are retried automatically with backoff (2, 4, 8, 16, 32, 60, 60 s) until accepted. It starts with the app.
+- Tests: `test_summary.py`, `test_commands.py`, plus alert and retry tests in `test_egress_gate.py` and new flow tests in `test_checkin_api.py`; 650 runtime tests in total.
+
 ## 2026-11-08: Task A5, answer rating and re-asking (branch `patient/feat/reask`)
 
 ### Added

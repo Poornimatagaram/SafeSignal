@@ -9,6 +9,10 @@ This is the ONLY module allowed to import sentinel_contract.client or any HTTP l
   service in `egress_log` (PV-06) and returns the receipt (PV-05). `SendRetryable` keeps the payload queued for a
   retry with the same `rec_` id; `SendRejected` marks it failed and it is never retried. A sent payload is never sent
   twice: the stored receipt comes back instead.
+- `build_alert` builds the 2.0 severe alert (AL-02, SE-03): ids and a timestamp only, never symptom details (AL-03).
+  It is queued and sent like a record (destination "alert", `send_alert`), with the same receipt and egress_log.
+- `RetryWorker` retries every queued record and alert automatically until the service accepts it (PV-07), with the
+  backoff of `BACKOFF_SECONDS` (2, 4, 8, 16, 32, 60, 60 ... seconds); alerts go first. Refused rows are never retried.
 - `refresh_config` fetches the survey and term list (configuration only; no patient data in the request) into
   `survey_cache` and `term_cache`; offline keeps the cache.
 
@@ -23,6 +27,7 @@ import re
 import secrets
 import sqlite3
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import closing
 from dataclasses import asdict, dataclass
@@ -31,7 +36,7 @@ from pathlib import Path
 from typing import Any
 
 from sentinel_contract import SCHEMA_VERSION, canonical, payload_sha256, validate
-from sentinel_contract.client import (ContractError, SendRejected, SendRetryable, SentinelClient,
+from sentinel_contract.client import (BACKOFF_SECONDS, ContractError, SendRejected, SendRetryable, SentinelClient,
                                       field_names)
 
 from .db import connect, utc_now
@@ -39,7 +44,8 @@ from .db import connect, utc_now
 log = logging.getLogger(__name__)
 
 __all__ = ["Receipt", "ConfigRefresh", "make_client", "field_names", "new_record_id", "records_url",
-           "build_company_record", "queue_payload", "send_queued", "receipt_for", "refresh_config"]
+           "build_company_record", "queue_payload", "send_queued", "receipt_for", "refresh_config",
+           "new_alert_id", "alerts_url", "build_alert", "RetryWorker", "BACKOFF_SECONDS"]
 
 # outbox.destination -> payload kind in schema/ (schema/enums.json -> outbox_destination)
 PAYLOAD_KINDS = {"company_record": "company_record", "care_envelope": "care_envelope", "alert": "alert_event",
@@ -47,7 +53,7 @@ PAYLOAD_KINDS = {"company_record": "company_record", "care_envelope": "care_enve
 # outbox_id must equal the payload's own ID, so a retry reuses it (brief "Always")
 ID_FIELDS = {"company_record": "record_id", "care_envelope": "envelope_id", "alert": "alert_id"}
 # destinations this gate sends today -> SentinelClient method
-SENDERS = {"company_record": "send_record"}
+SENDERS = {"company_record": "send_record", "alert": "send_alert"}
 
 # SentinelClient raises SendRetryable(f"{status} from {path}") for a 5xx reply (the request reached the service)
 # and chains the httpx.TransportError for no network (it reached nothing).
@@ -86,6 +92,14 @@ def new_record_id() -> str:
 
 def records_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/v1/records"
+
+
+def new_alert_id() -> str:
+    return "alt_" + secrets.token_hex(4)
+
+
+def alerts_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/v1/alerts"
 
 
 # ---------- build ----------
@@ -135,6 +149,26 @@ def build_company_record(*, record_id: str, profile: Mapping, consent: Mapping, 
     }
     validate("company_record", record)  # ContractError names fields only, never values
     return record
+
+
+def build_alert(*, alert_id: str, patient_ref: str, now: datetime | None = None) -> dict:
+    """The 2.0 severe alert with exactly the schema's fields; raises ContractError if it is not valid.
+
+    Devices send only "severe" (D-016). It carries no symptom, term, severity or words (AL-03): the care team and
+    caregiver learn only that a severe alert was raised. A naive `now` is taken as UTC.
+    """
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    alert = {
+        "schema_version": SCHEMA_VERSION,
+        "alert_id": alert_id,
+        "patient_ref": patient_ref,
+        "alert_type": "severe",
+        "created_at": now.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    validate("alert_event", alert)  # ContractError names fields only, never values
+    return alert
 
 
 # ---------- outbox ----------
@@ -251,6 +285,128 @@ def send_queued(db_path: Path, outbox_id: str, *, client) -> Receipt:
         log.info("egress %s %s -> %s (%s)", result.method, path, result.status_code, outbox_id)
         return Receipt("sent", outbox_id, destination, result.method, result.url, list(result.fields_sent),
                        result.payload_sha256, sent_at, result.status_code)
+
+
+# ---------- automatic retry (PV-07) ----------
+
+class RetryWorker:
+    """Retries every queued record and alert until the service accepts it (201 or 200).
+
+    After the n-th failed attempt of a row (no network or 5xx) the next one is due `backoff[min(n-1, len-1)]`
+    seconds later: 2, 4, 8, 16, 32, 60, 60 ... A newly queued row is due at once. Refused ("failed") and "sent" rows
+    are never touched. Attempt counts live in memory only, so a restart begins again at 2 s. Alerts go before
+    records. Sending goes through `send_queued`, so receipts, egress_log and never-twice are the same as for a
+    send from the approve route; a row being sent by one caller is skipped by the others.
+    """
+
+    PRIORITY = ("alert", "company_record")  # alerts first (AL-02)
+
+    def __init__(self, db_path: Path, client_factory: Callable[[], Any], *, backoff: Sequence[int] = BACKOFF_SECONDS,
+                 clock: Callable[[], float] = time.monotonic):
+        if not backoff:
+            raise ValueError("backoff needs at least one delay")
+        self.db_path, self.client_factory = Path(db_path), client_factory
+        self.backoff, self.clock = tuple(backoff), clock
+        self._state: dict[str, tuple[int, float]] = {}   # outbox_id -> (failed attempts, next attempt due at)
+        self._in_flight: set[str] = set()
+        self._guard = threading.Lock()
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def _queued(self) -> list[tuple[str, str]]:
+        order = " ".join(f"WHEN '{d}' THEN {i}" for i, d in enumerate(self.PRIORITY))
+        marks = ",".join("?" * len(self.PRIORITY))
+        with closing(connect(self.db_path)) as conn:
+            return [(r[0], r[1]) for r in conn.execute(
+                f"SELECT outbox_id, destination FROM outbox WHERE status = 'queued' AND destination IN ({marks}) "
+                f"ORDER BY CASE destination {order} END, created_at, outbox_id", self.PRIORITY).fetchall()]
+
+    def _claim_due(self) -> list[str]:
+        queued = self._queued()
+        now = self.clock()
+        with self._guard:
+            ids = {oid for oid, _ in queued}
+            for gone in [oid for oid in self._state if oid not in ids and oid not in self._in_flight]:
+                del self._state[gone]  # sent or refused elsewhere (e.g. the approve route)
+            due = [oid for oid, _ in queued
+                   if oid not in self._in_flight and self._state.get(oid, (0, now))[1] <= now]
+            self._in_flight.update(due)
+        return due
+
+    def _finish(self, outbox_id: str, still_queued: bool) -> None:
+        with self._guard:
+            self._in_flight.discard(outbox_id)
+            if not still_queued:
+                self._state.pop(outbox_id, None)
+                return
+            attempts = self._state.get(outbox_id, (0, 0.0))[0] + 1
+            delay = self.backoff[min(attempts - 1, len(self.backoff) - 1)]
+            self._state[outbox_id] = (attempts, self.clock() + delay)
+
+    def run_once(self) -> list[Receipt]:
+        """Send every queued row whose next attempt is due; returns their receipts (sent, queued or failed)."""
+        due = self._claim_due()
+        if not due:
+            return []
+        receipts: list[Receipt] = []
+        pending = list(due)
+        client = None
+        try:
+            client = self.client_factory()
+            for outbox_id in due:
+                still_queued = True
+                try:
+                    receipt = send_queued(self.db_path, outbox_id, client=client)
+                    receipts.append(receipt)
+                    still_queued = receipt.status == "queued"
+                except KeyError:  # the row is gone
+                    still_queued = False
+                except Exception as e:  # never the message: it could quote a value
+                    log.error("egress retry of %s failed with %s; backing off", outbox_id, type(e).__name__)
+                finally:
+                    pending.remove(outbox_id)
+                    self._finish(outbox_id, still_queued)
+        finally:
+            for outbox_id in pending:  # the client could not be built (or a pass was cut short): back these off
+                self._finish(outbox_id, True)
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+        return receipts
+
+    def status(self, outbox_id: str) -> dict | None:
+        """{"attempts": n, "next_attempt_in": seconds} for a queued row this worker would send; else None."""
+        with closing(connect(self.db_path)) as conn:
+            row = conn.execute("SELECT status, destination FROM outbox WHERE outbox_id = ?", (outbox_id,)).fetchone()
+        if row is None or row["status"] != "queued" or row["destination"] not in self.PRIORITY:
+            return None
+        now = self.clock()
+        with self._guard:
+            attempts, due_at = self._state.get(outbox_id, (0, now))
+        return {"attempts": attempts, "next_attempt_in": max(0.0, due_at - now)}
+
+    def start(self, interval: float = 1.0) -> None:
+        """Run `run_once` every `interval` seconds on a daemon thread until `stop`."""
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._stop.clear()
+
+        def loop() -> None:
+            while not self._stop.is_set():
+                try:
+                    self.run_once()
+                except Exception as e:  # e.g. the database is busy; try again next tick
+                    log.error("egress retry pass failed with %s", type(e).__name__)
+                self._stop.wait(interval)
+
+        self._thread = threading.Thread(target=loop, name="egress-retry", daemon=True)
+        self._thread.start()
+
+    def stop(self, timeout: float | None = 5.0) -> None:
+        self._stop.set()
+        thread, self._thread = self._thread, None
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout)
 
 
 def receipt_for(db_path: Path, outbox_id: str, *, base_url: str = "") -> Receipt | None:

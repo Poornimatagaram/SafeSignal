@@ -6,6 +6,8 @@ Live tests run against the local Sentinel service and skip when it is not reacha
 
 import json
 import logging
+import threading
+import time
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 
@@ -38,20 +40,33 @@ BODY_MARKER = "body-text-that-must-not-be-logged"
 class FakeService:
     """Stand-in for the Sentinel service behind the real SentinelClient; records every request that reached it."""
 
-    def __init__(self, *, status: int = 201, get_status: int = 200, down: bool = False, survey=None, terms=None):
+    def __init__(self, *, status: int = 201, get_status: int = 200, down: bool = False, survey=None, terms=None,
+                 failures: int = 0, delay: float = 0.0):
         self.status, self.get_status, self.down = status, get_status, down
         self.survey, self.terms = survey or SURVEY, terms or TERMS
+        self.failures, self.delay = failures, delay  # the first `failures` POSTs get a 503
         self.requests: list[tuple[str, str, bytes]] = []
+        self._lock = threading.Lock()
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         if self.down:
             raise httpx.ConnectError("connection refused", request=request)
-        self.requests.append((request.method, request.url.path, request.content))
+        with self._lock:
+            self.requests.append((request.method, request.url.path, request.content))
+            flaky = request.method == "POST" and self.failures > 0
+            self.failures -= flaky
+        if self.delay:
+            time.sleep(self.delay)
+        if flaky:
+            return httpx.Response(503, json={"error": BODY_MARKER})
         path = request.url.path
-        if path == "/v1/records":
+        if path in ("/v1/records", "/v1/alerts"):
             if self.status >= 400:
                 return httpx.Response(self.status, json={"error": BODY_MARKER})
             body = json.loads(request.content)
+            if path == "/v1/alerts":  # the service answers alerts without a payload_sha256
+                return httpx.Response(self.status, json={"alert_id": body["alert_id"], "routed_care_team": True,
+                                                         "routed_caregiver": True})
             return httpx.Response(self.status, json={"record_id": body["record_id"],
                                                      "payload_sha256": payload_sha256(body)})
         if self.get_status != 200:
@@ -310,11 +325,11 @@ def test_rejected_is_failed_logged_and_never_retried(db_path, status):
 
 
 def test_other_destinations_are_not_sent_yet(db_path):
-    alert = json.loads((SCHEMA_DIR / "examples" / "alert_event.valid.json").read_text())
-    queue(db_path, alert, destination="alert", outbox_id=alert["alert_id"])
+    envelope = json.loads((SCHEMA_DIR / "examples" / "care_envelope.valid.json").read_text())
+    queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])
     service = FakeService()
     with pytest.raises(NotImplementedError):
-        gate.send_queued(db_path, alert["alert_id"], client=service.client())
+        gate.send_queued(db_path, envelope["envelope_id"], client=service.client())
     assert service.requests == [] and rows(db_path, "SELECT status FROM outbox") == [{"status": "queued"}]
 
 
@@ -334,6 +349,244 @@ def test_logs_carry_no_payload_or_response_body(db_path, caplog):
     assert "rec_0a1b2c3d" in caplog.text and "/v1/records" in caplog.text
     for secret in (BODY_MARKER, "SE_RASH", "moderate", "1_3_days") + LOCAL_ONLY:
         assert secret not in caplog.text
+
+
+# ---------- severe alerts (AL-02, SE-03) ----------
+
+ALERT_FIELDS = set(json.loads((SCHEMA_DIR / "alert_event.json").read_text())["properties"])
+
+
+def make_alert(alert_id="alt_0a1b2c3d", now=DEMO_DAY):
+    return gate.build_alert(alert_id=alert_id, patient_ref=WALTER, now=now)
+
+
+def queue_alert(db_path, alert):
+    queue(db_path, alert, destination="alert", outbox_id=alert["alert_id"])
+
+
+def test_alert_ids_and_url():
+    ids = {gate.new_alert_id() for _ in range(20)}
+    assert len(ids) == 20
+    assert all(i.startswith("alt_") and len(i) == 12 and set(i[4:]) <= set("0123456789abcdef") for i in ids)
+    assert gate.alerts_url("http://127.0.0.1:8000/") == "http://127.0.0.1:8000/v1/alerts"
+
+
+def test_build_alert_has_exactly_the_schema_fields_and_no_symptom_details():
+    alert = make_alert()
+    assert set(alert) == ALERT_FIELDS
+    assert alert == {"schema_version": "2.0", "alert_id": "alt_0a1b2c3d", "patient_ref": WALTER,
+                     "alert_type": "severe", "created_at": "2026-11-07T15:00:00Z"}
+    assert make_alert(now=datetime(2026, 11, 7, 10, 0, tzinfo=timezone(timedelta(hours=-5))))["created_at"] == \
+        "2026-11-07T15:00:00Z"
+    assert make_alert(now=datetime(2026, 11, 7, 15, 0))["created_at"] == "2026-11-07T15:00:00Z"  # naive is UTC
+    assert make_alert(now=None)["created_at"].endswith("Z")
+    for word in ("SE_", "severity", "term", "symptom", "words") + LOCAL_ONLY:
+        assert word not in json.dumps(alert).replace('"severe"', "")
+
+
+@pytest.mark.parametrize("kwargs", [{"alert_id": "rec_0a1b2c3d"}, {"alert_id": "alt_XYZ"},
+                                    {"patient_ref": "Walter"}])
+def test_build_alert_refuses_bad_ids(kwargs):
+    args = {"alert_id": "alt_0a1b2c3d", "patient_ref": WALTER, **kwargs}
+    with pytest.raises(ContractError) as exc:
+        gate.build_alert(**args, now=DEMO_DAY)
+    assert next(iter(kwargs.values())) not in str(exc.value)
+
+
+def test_alert_is_queued_sent_logged_and_receipted(db_path):
+    alert = make_alert()
+    queue_alert(db_path, alert)
+    [row] = rows(db_path, "SELECT * FROM outbox")
+    assert (row["outbox_id"], row["destination"], row["status"]) == ("alt_0a1b2c3d", "alert", "queued")
+    assert row["payload"] == canonical(alert).decode() and row["payload_sha256"] == payload_sha256(alert)
+
+    service = FakeService()
+    receipt = gate.send_queued(db_path, "alt_0a1b2c3d", client=service.client())
+    assert (receipt.status, receipt.response_code, receipt.destination) == ("sent", 201, "alert")
+    assert (receipt.method, receipt.url) == ("POST", f"{BASE}/v1/alerts")
+    assert receipt.payload_sha256 == payload_sha256(alert)
+    assert receipt.fields_sent == client_field_names(alert)
+    assert service.sends() == [("POST", "/v1/alerts", canonical(alert))]
+    [entry] = rows(db_path, "SELECT * FROM egress_log")
+    assert (entry["outbox_id"], entry["url"], entry["response_code"]) == ("alt_0a1b2c3d", f"{BASE}/v1/alerts", 201)
+    assert gate.receipt_for(db_path, "alt_0a1b2c3d") == receipt
+    assert gate.send_queued(db_path, "alt_0a1b2c3d", client=service.client()) == receipt  # never twice
+    assert len(service.sends()) == 1
+
+
+def test_alert_retry_and_reject_semantics(db_path):
+    queue_alert(db_path, make_alert())
+    service = FakeService(down=True)
+    assert gate.send_queued(db_path, "alt_0a1b2c3d", client=service.client()).status == "queued"
+    service.down, service.failures = False, 1
+    assert gate.send_queued(db_path, "alt_0a1b2c3d", client=service.client()).status == "queued"
+    assert gate.send_queued(db_path, "alt_0a1b2c3d", client=service.client()).status == "sent"
+    assert [r["response_code"] for r in rows(db_path, "SELECT * FROM egress_log ORDER BY log_id")] == [503, 201]
+
+    queue_alert(db_path, make_alert("alt_11111111"))
+    refused = gate.send_queued(db_path, "alt_11111111", client=FakeService(status=403).client())
+    assert (refused.status, refused.response_code) == ("failed", 403)
+    assert gate.send_queued(db_path, "alt_11111111", client=service.client()) == refused
+
+
+def test_queue_alert_needs_the_alert_id_as_outbox_id(db_path):
+    with pytest.raises(ValueError, match="alert_id"):
+        queue(db_path, make_alert(), destination="alert", outbox_id="alt_ffffffff")
+    with pytest.raises(ContractError):
+        queue_alert(db_path, {**make_alert(), "alert_type": "missed"})  # devices send only severe (D-016)
+
+
+# ---------- retry worker (PV-07) ----------
+
+class FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+def worker_for(db_path, service, clock=None):
+    return gate.RetryWorker(db_path, service.client, clock=clock or FakeClock())
+
+
+def test_retry_backs_off_2_4_8_16_32_60_60_and_stops_after_201(db_path):
+    queue(db_path, make_record(db_path))
+    clock, service = FakeClock(), FakeService(failures=7)
+    worker = worker_for(db_path, service, clock)
+    assert worker.status("rec_0a1b2c3d") == {"attempts": 0, "next_attempt_in": 0.0}  # due at once
+    delays = []
+    for attempt in range(1, 8):
+        [receipt] = worker.run_once()
+        assert receipt.status == "queued"
+        state = worker.status("rec_0a1b2c3d")
+        assert state["attempts"] == attempt
+        delays.append(state["next_attempt_in"])
+        clock.now += state["next_attempt_in"] - 0.5
+        assert worker.run_once() == []  # not due yet
+        clock.now += 0.5
+    assert delays == [2, 4, 8, 16, 32, 60, 60]
+
+    [receipt] = worker.run_once()
+    assert (receipt.status, receipt.response_code) == ("sent", 201)
+    assert worker.status("rec_0a1b2c3d") is None
+    clock.now += 1000
+    assert worker.run_once() == [] and len(service.sends()) == 8
+    assert [r["response_code"] for r in rows(db_path, "SELECT * FROM egress_log ORDER BY log_id")] == [503] * 7 + [201]
+
+
+def test_retry_with_no_network_then_back_online(db_path):
+    queue(db_path, make_record(db_path))
+    clock, service = FakeClock(), FakeService(down=True)
+    worker = worker_for(db_path, service, clock)
+    assert [r.status for r in worker.run_once()] == ["queued"]
+    assert rows(db_path, "SELECT * FROM egress_log") == []
+    service.down = False
+    clock.now += 2
+    assert [r.status for r in worker.run_once()] == ["sent"]
+
+
+def test_retry_never_touches_failed_or_sent_rows(db_path):
+    queue(db_path, make_record(db_path))
+    queue(db_path, make_record(db_path, record_id="rec_11111111"))
+    gate.send_queued(db_path, "rec_0a1b2c3d", client=FakeService(status=422).client())   # refused
+    gate.send_queued(db_path, "rec_11111111", client=FakeService().client())             # sent
+    service = FakeService()
+    worker = worker_for(db_path, service)
+    assert worker.run_once() == [] and service.requests == []
+    assert worker.status("rec_0a1b2c3d") is None and worker.status("rec_11111111") is None
+
+    # refused by the service during a retry: failed, then never again
+    queue(db_path, make_record(db_path, record_id="rec_22222222"))
+    clock, refusing = FakeClock(), FakeService(status=409)
+    worker = worker_for(db_path, refusing, clock)
+    assert [r.status for r in worker.run_once()] == ["failed"]
+    clock.now += 1000
+    assert worker.run_once() == [] and len(refusing.sends()) == 1
+
+
+def test_retry_sends_alerts_before_records(db_path):
+    queue(db_path, make_record(db_path))
+    queue(db_path, make_record(db_path, record_id="rec_11111111"))
+    queue_alert(db_path, make_alert())
+    service = FakeService()
+    receipts = worker_for(db_path, service).run_once()
+    assert [r.outbox_id for r in receipts] == ["alt_0a1b2c3d", "rec_0a1b2c3d", "rec_11111111"]
+    assert [p for _, p, _ in service.sends()] == ["/v1/alerts", "/v1/records", "/v1/records"]
+    assert all(r.status == "sent" for r in receipts)
+
+
+def test_retry_skips_destinations_it_cannot_send(db_path):
+    envelope = json.loads((SCHEMA_DIR / "examples" / "care_envelope.valid.json").read_text())
+    queue(db_path, envelope, destination="care_envelope", outbox_id=envelope["envelope_id"])
+    service = FakeService()
+    worker = worker_for(db_path, service)
+    assert worker.run_once() == [] and service.requests == []
+    assert worker.status(envelope["envelope_id"]) is None
+
+
+def test_concurrent_run_once_never_double_sends(db_path):
+    for i in range(3):
+        queue(db_path, make_record(db_path, record_id=f"rec_{i}{i}{i}{i}{i}{i}{i}{i}"))
+    queue_alert(db_path, make_alert())
+    service = FakeService(delay=0.05)
+    worker = worker_for(db_path, service)
+    other = worker_for(db_path, service)  # a second worker as well: the per-outbox lock still holds
+    results, start = [], threading.Barrier(4)
+
+    def run(w):
+        start.wait()
+        results.extend(w.run_once())
+
+    threads = [threading.Thread(target=run, args=(w,)) for w in (worker, worker, other, other)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    paths = [p for _, p, _ in service.sends()]
+    assert sorted(paths) == ["/v1/alerts"] + ["/v1/records"] * 3
+    assert len(rows(db_path, "SELECT * FROM egress_log")) == 4
+    assert rows(db_path, "SELECT DISTINCT status FROM outbox") == [{"status": "sent"}]
+
+
+def test_retry_survives_a_client_factory_error_and_backs_off(db_path):
+    queue(db_path, make_record(db_path))
+    clock = FakeClock()
+
+    def broken():
+        raise RuntimeError("no client")
+
+    worker = gate.RetryWorker(db_path, broken, clock=clock)
+    with pytest.raises(RuntimeError):
+        worker.run_once()
+    assert worker.status("rec_0a1b2c3d") == {"attempts": 1, "next_attempt_in": 2}
+
+
+def test_retry_logs_carry_no_payload(db_path, caplog):
+    caplog.set_level(logging.DEBUG)
+    queue(db_path, make_record(db_path))
+    queue_alert(db_path, make_alert())
+    worker_for(db_path, FakeService(failures=1)).run_once()
+    assert "alt_0a1b2c3d" in caplog.text and "/v1/alerts" in caplog.text
+    for secret in (BODY_MARKER, "SE_RASH", "moderate", "2026-11-07T15:00:00Z") + LOCAL_ONLY:
+        assert secret not in caplog.text
+
+
+def test_start_and_stop_the_retry_thread(db_path):
+    service = FakeService(failures=1)
+    worker = gate.RetryWorker(db_path, service.client, backoff=[0])
+    worker.start(interval=0.01)
+    try:
+        queue(db_path, make_record(db_path))  # queued after start: picked up on the next tick
+        deadline = time.monotonic() + 5
+        while rows(db_path, "SELECT status FROM outbox") != [{"status": "sent"}] and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert rows(db_path, "SELECT status FROM outbox") == [{"status": "sent"}]
+    finally:
+        worker.stop()
+    assert worker._thread is None
+    assert not any(t.name == "egress-retry" and t.is_alive() for t in threading.enumerate())
+    assert len(service.sends()) == 2
 
 
 # ---------- configuration ----------
@@ -455,3 +708,30 @@ def test_live_send_walter_record(db_path, live, live_client):
 
     assert gate.send_queued(db_path, record["record_id"], client=live_client) == receipt  # not re-sent
     assert [r["response_code"] for r in rows(db_path, "SELECT * FROM egress_log")] == [201]
+
+
+def test_live_send_walter_severe_alert(db_path, live, live_client):
+    """Sends one real severe alert for Walter. The service answers alerts without a payload_sha256, so the
+    receipt hash is checked against the contract's canonical hash and the service's idempotent replay (200)."""
+    alert = gate.build_alert(alert_id=gate.new_alert_id(), patient_ref=WALTER)
+    queue_alert(db_path, alert)
+    receipt = gate.send_queued(db_path, alert["alert_id"], client=live_client)
+    assert (receipt.status, receipt.response_code) == ("sent", 201)
+    assert receipt.url == f"{live}/v1/alerts" and receipt.payload_sha256 == payload_sha256(alert)
+
+    again = httpx.post(f"{live}/v1/alerts", content=canonical(alert), timeout=5,
+                       headers={"Content-Type": "application/json", "X-Role": "patient_device", "X-Actor-Id": WALTER})
+    assert again.status_code == 200 and again.json()["alert_id"] == alert["alert_id"]
+    assert again.json().get("payload_sha256", receipt.payload_sha256) == receipt.payload_sha256
+
+    assert gate.send_queued(db_path, alert["alert_id"], client=live_client) == receipt  # not re-sent
+    assert [r["response_code"] for r in rows(db_path, "SELECT * FROM egress_log")] == [201]
+
+
+def test_live_retry_worker_sends_a_queued_alert(db_path, live):
+    alert = gate.build_alert(alert_id=gate.new_alert_id(), patient_ref=WALTER)
+    queue_alert(db_path, alert)
+    worker = gate.RetryWorker(db_path, lambda: gate.make_client(
+        Settings(db_path=db_path, patient_ref=WALTER, sentinel_base_url=live)))
+    [receipt] = worker.run_once()
+    assert (receipt.status, receipt.response_code, receipt.outbox_id) == ("sent", 201, alert["alert_id"])
