@@ -3,6 +3,14 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08, A5: answer rating and re-asking** (branch `patient/feat/reask`). Built by three parallel agents (rating, re-ask eval, patient screen); I owned the turn wiring in `checkin.py` and `main.py`, and its tests.
+  - **Re-ask eval** (20 held-out synthetic cases; the rating agent never saw them): **PASS**, 17 of 20 rated correctly against a target of 16.
+    - Misses: 2 partial answers rated complete, and 1 no-answer rated off-topic.
+    - Rambling extraction (VC-06) kept the right part in 4 of 5 cases.
+    - The rules decided 14 cases and the model 6.
+  - **Leakage eval:** PASS (0 of 59 identifiers; term F1 0.909).
+  - **Tests:** 541 runtime, 54 eval and 128 patient-web, with a clean build and `npm audit`.
+- **2026-11-08, A4 merged as PR #20** (squash, `fc786fb`). Before merging I confirmed live: the service answered 201, and resending the same record got 200, which proves the service's stored hash equals the receipt hash. Branch deleted.
 - **2026-11-08, A4: egress gate, approve before sharing, receipt** (branch `patient/feat/egress-gate`). Built by three parallel agents (egress gate, extract fix, patient screen); I owned `checkin.py`, `survey.py`, `main.py` and their tests.
   - **Checks:**
     - Runtime: 450 tests pass after rebasing onto contract 2.2, including live egress tests against `apps/service` on port 8000.
@@ -36,6 +44,14 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **Rating rules override the model.**
+  - Only the rules can return `no_answer`; when the model says "no answer" about real words, that becomes `off_topic`.
+  - Rambling means a long answer (over 40 words, or several sentences over 30 words) in which at least 40% of the words are off topic; an answer of 20 words or fewer is never rambling.
+  - The model chooses sentence numbers, and the rater copies those sentences from the patient's own words.
+- **`rating.py` imports no network code.** It reaches the model only through `extract.py`'s loopback-checked client, so the guard still allows `ollama` in `extract.py` alone.
+- **Any answer that isn't complete is re-asked (VC-05), rambling included.** The relevant part of a rambling answer is still used, and after 2 re-asks the question counts as unanswered.
+  - On the patient screen, moving on after a give-up waits for a tap.
+  - A re-ask plays the simpler wording automatically, with "Let me ask that more simply."
 - **Only `POST /checkin/sessions/{id}/approve` sends** (PV-04). The summary shows the exact record that will go, and approval sends that same record (same `record_id`, same hash). Approving again returns the stored receipt; a record kept while offline is resent unchanged (D-021).
 - **The survey and term list are fetched at the start of each check-in**, through `egress_gate.refresh_config`. If offline, the cache is used. With no cache, the check-in can't start (503); there is no stand-in survey any more.
 - **A missing severity is never guessed** (VC-10). The summary lists it in `needs_severity`, and the patient picks Mild, Moderate or Severe; approval is refused until then.
@@ -102,7 +118,6 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - The Starlette `TestClient` deprecation warning is harmless; `apps/service` gets it too.
 
 ## Next
-- **A4 PR:** get CI green, then the user merges it (not merged by me).
 - **Restart the runtime on port 8001** (PID 15222 still runs A2 code) before using the patient screen.
 - **Reseed the service before the demo** (`scripts/reset_all.sh --seed`): the live tests left synthetic Walter records for today.
 - **A4 items not yet built:**
@@ -115,7 +130,12 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - "Cracked skin on my fingers" can become `SE_OTHER_REVIEW` instead of `SE_DRY_SKIN`.
   - Some curated cues are broad ("dry", "toilet").
 - **Grow the leakage set to the 50 transcripts in Scoping Doc 17.3**, including held-out cases the filter was never tuned on. Ask the company owner to add a source-and-licence row for `data/patient/` to `data/README.md` (Scoping Doc 16.1).
-- **A5:** answer rating and re-asking (`asks[1]`, `asks[2]`), wired into the screen.
+- **A5 PR:** get CI green, then the user merges it.
+- **Known rating misses** (from the rating agent's probes and the held-out eval):
+  - Some vague answers are rated complete instead of partial.
+  - "Took" counts as an adherence answer even in "I took the dog out".
+  - A long, detailed answer can be cut down to only the sentences containing symptom or time words.
+- **Grow the re-ask set** beyond 20 cases, and check the partial and off-topic labels with a second person.
 - **A6:**
   - Spoken summary with one correction (VC-08); the summary `text` is ready for text-to-speech.
   - Retry queued records with `BACKOFF_SECONDS`.

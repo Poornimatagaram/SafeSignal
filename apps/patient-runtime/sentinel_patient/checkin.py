@@ -92,25 +92,39 @@ class CheckinStore:
             if self._outbox(conn, session_id):
                 raise AlreadyShared(session_id)
 
-    def asks_about_symptoms(self, session_id: str, question_id: str) -> bool:
-        """Whether this question may add symptoms (and so whether the model needs to run for its answer)."""
+    def question(self, session_id: str, question_id: str) -> dict:
+        """The survey question {question_id, purpose, asks} this session is answering."""
         with closing(connect(self.db_path)) as conn:
-            return self._question(conn, self._session(conn, session_id), question_id)["purpose"] in SYMPTOM_PURPOSES
+            return self._question(conn, self._session(conn, session_id), question_id)
 
-    def record_turn(self, session_id: str, question_id: str, ask: int, transcript: str, filtered_text: str,
-                    extracted: list | None) -> list | None:
-        """Store the answer and update the draft. Returns the symptoms taken from this answer (None if the model
-        was unavailable)."""
+    @staticmethod
+    def next_step(question: dict, ask: int, rating: str) -> dict:
+        """VC-05: complete -> next question; otherwise re-ask with asks[1], then asks[2]; after 2 re-asks give up
+        (the question counts as unanswered) and move on."""
+        if rating == "complete":
+            return {"action": "next"}
+        if ask < 2:
+            return {"action": "reask", "ask": ask + 1, "text": question["asks"][ask + 1]}
+        return {"action": "next", "unanswered": True}
+
+    def record_turn(self, session_id: str, question_id: str, ask: int, transcript: str, answer_text: str,
+                    extracted: list | None, rating: str | None = None) -> list | None:
+        """Store the answer (with its rating) and update the draft. `answer_text` is the filtered part of the answer
+        that answers the question (the relevant sentences of a rambling reply). Returns the symptoms taken from this
+        answer (None if the model was unavailable)."""
         with self._lock, closing(connect(self.db_path)) as conn, conn:
             session = self._session(conn, session_id)
             if self._outbox(conn, session_id):
                 raise AlreadyShared(session_id)
             question = self._question(conn, session, question_id)
             conn.execute("INSERT INTO answer_turn (session_id, question_id, attempt, prompt_text, transcript_text, "
-                         "created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                         (session_id, question_id, ask, question["asks"][ask], transcript, utc_now()))
+                         "rating, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                         (session_id, question_id, ask, question["asks"][ask], transcript, rating, utc_now()))
             draft = self._drafts.setdefault(session_id, Draft())
             draft.record_id = None  # the record changes with every answer
+            filtered_text = answer_text
+            if rating in ("off_topic", "no_answer"):
+                return []  # nothing in it answers the question: no symptoms, no severity, no onset
             accepted = extracted if question["purpose"] in SYMPTOM_PURPOSES else []
             for s in accepted or []:
                 d = draft.symptoms.setdefault(s.term_code, {"severity": None, "onset": "unknown"})
@@ -226,9 +240,10 @@ class CheckinStore:
 
     @staticmethod
     def _unanswered(conn, session_id: str, config_id: str) -> int:
+        # Answered = some turn was rated complete (unrated turns with words count, for turns stored before A5).
         answered = {r["question_id"] for r in conn.execute(
-            "SELECT question_id FROM answer_turn WHERE session_id = ? AND trim(coalesce(transcript_text, '')) != ''",
-            (session_id,))}
+            "SELECT question_id FROM answer_turn WHERE session_id = ? AND (rating = 'complete' OR "
+            "(rating IS NULL AND trim(coalesce(transcript_text, '')) != ''))", (session_id,))}
         return sum(1 for q in survey_questions(conn, config_id) if q["question_id"] not in answered)
 
     def _record(self, conn, record_id: str, items: list[dict], unanswered: int, *, validate: bool = True) -> dict:
