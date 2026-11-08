@@ -2,6 +2,22 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Possible link (SE-04; branch `patient/feat/possible-link`)
+
+### Added
+- `exposure.py`: a deterministic rule, never a model. A new symptom that started 0 to 7 days after a new exposure is flagged `possible_link`, which screens word as "for review", never as a cause.
+  - New symptom: not in the previous approved check-in.
+  - New exposure: one reported in this check-in's exposure answer, or stored in the last 30 days.
+  - Onsets are compared as day ranges. An unknown symptom onset is never linked.
+- `checkin.py`:
+  - An exposure answer that says something new is recorded in the draft; at approval it goes into `exposure_event`. The description stays on the device.
+  - Summary items carry `possible_link`. `possible_link_flag` reaches the symptom rows, the company record and the doctor payload.
+  - The plain and spoken summaries say "Marked for review … That does not mean one caused the other."
+- Tests: `test_exposure.py` and link tests in `test_checkin_api.py`; 757 runtime tests.
+
+### Changed
+- An answer to the exposure question no longer adds `SE_OTHER_REVIEW`. "I started a new hand cream" made the model invent a symptom in the live run; only symptoms the answer names are kept.
+
 ## 2026-11-08: Network log and config fetches (PV-06, contract 2.3; branch `patient/feat/network-log`)
 
 ### Added
