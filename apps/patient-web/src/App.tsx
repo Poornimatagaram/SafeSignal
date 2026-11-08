@@ -10,6 +10,7 @@ import {
   symptomText,
   voiceErrorMessage,
 } from './messages.ts'
+import { afterTurn, createQuestionVoice } from './questionFlow.ts'
 import { createShareFlow, type ShareFlow } from './shareFlow.ts'
 import { ShareScreen } from './ShareScreen.tsx'
 import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
@@ -20,6 +21,8 @@ const client = createRuntimeClient()
 type Screen = 'start' | 'question' | 'share'
 /** Push-to-talk is a toggle (tap to start, tap to stop): holding a button is hard with a hand tremor. */
 type Talk = 'idle' | 'starting' | 'listening' | 'sending'
+/** A short kind line above the question: the runtime asked again more simply, or gave the question up (VC-05). */
+type Notice = 'reask' | 'move-on' | null
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('start')
@@ -37,12 +40,16 @@ export default function App() {
   const [voiceNote, setVoiceNote] = useState<string | null>(null)
   const [voiceLoading, setVoiceLoading] = useState(false)
   const [speaking, setSpeaking] = useState(false)
+  const [notice, setNotice] = useState<Notice>(null)
 
   const session = useRef<CheckinSession | null>(null) // today's check-in; every answer is sent with its id
   const player = useRef<Player | null>(null)
   const recording = useRef<ActiveRecording | null>(null)
   const talkNow = useRef<Talk>('idle')
-  const audioCache = useRef(new Map<string, Blob>()) // question audio only, for "Hear it again"
+  // Question audio at its current wording (ask 0, 1 or 2), cached for "Hear it again" and "Slower".
+  const voice = useRef(
+    createQuestionVoice(client, (audio) => player.current?.play(audio) ?? Promise.resolve()),
+  )
   const generation = useRef(0) // bumps on every question change; late results from an old question are dropped
   const mounted = useRef(true)
 
@@ -66,22 +73,13 @@ export default function App() {
   }, [])
 
   const speak = useCallback(async (q: Question, slow: boolean) => {
-    const audioPlayer = player.current
-    if (!audioPlayer) return
+    if (!player.current) return
     const gen = generation.current
-    const key = `${q.index}:${q.ask}:${slow}`
     setVoiceNote(null)
     try {
-      let audio = audioCache.current.get(key)
-      if (!audio) {
-        setVoiceLoading(true)
-        audio = await client.getQuestionAudio(q.index, q.ask, slow)
-        if (gen !== generation.current) return
-        audioCache.current.set(key, audio)
-      }
-      // Never play over the patient while they are answering.
-      if (talkNow.current !== 'idle') return
-      await audioPlayer.play(audio)
+      if (!voice.current.has(q, slow)) setVoiceLoading(true)
+      // Never play a stale question, and never over the patient while they are answering.
+      await voice.current.speak(q, slow, () => gen === generation.current && talkNow.current === 'idle')
     } catch (error) {
       if (gen === generation.current && mounted.current) setVoiceNote(voiceErrorMessage(error))
     } finally {
@@ -91,10 +89,11 @@ export default function App() {
 
   const resetForQuestionChange = useCallback(() => {
     generation.current += 1
-    audioCache.current.clear()
+    voice.current.clear()
     player.current?.stop()
     setQuestion(null)
     setReply(null)
+    setNotice(null)
     setAnswerError(null)
     setVoiceNote(null)
     setVoiceLoading(false)
@@ -212,7 +211,23 @@ export default function App() {
         const audio = await active.stop() // also releases the microphone
         const sessionId = session.current?.session_id ?? ''
         const result = await client.postTurn(sessionId, question.question_id, question.ask, audio)
-        if (gen === generation.current && mounted.current) setReply(result)
+        if (gen !== generation.current || !mounted.current) return
+        const step = afterTurn(question, result)
+        if (step.kind === 'reask') {
+          // Same question, simpler wording: shown and spoken right away (Start already unlocked audio; no tap).
+          generation.current += 1
+          player.current?.stop()
+          updateTalk('idle')
+          setReply(null)
+          setNotice('reask')
+          setQuestion(step.question)
+          void speak(step.question, false)
+        } else if (step.kind === 'move-on') {
+          setNotice('move-on')
+        } else {
+          setNotice(null)
+          setReply(result)
+        }
       } catch (error) {
         if (gen === generation.current && mounted.current) {
           setAnswerError({ message: answerErrorMessage(error), restart: needsRestart(error) })
@@ -224,7 +239,9 @@ export default function App() {
     // 'starting' and 'sending': the button is marked disabled; ignore the tap.
   }
 
-  const heard = reply !== null && reply.transcript.trim() !== ''
+  const movingOn = notice === 'move-on'
+  // "Next question" is the next step after a heard answer, and after a question given up (VC-05).
+  const heard = (reply !== null && reply.transcript.trim() !== '') || movingOn
   const busy = talk !== 'idle'
 
   // Keyboard users land on the next thing to do.
@@ -306,6 +323,8 @@ export default function App() {
         </div>
       )}
 
+      {question && notice === 'reask' && <p className="notice">Let me ask that more simply.</p>}
+
       {question && <h1 className="question">{question.text}</h1>}
 
       {question && (
@@ -345,6 +364,8 @@ export default function App() {
 
           {reply && <Reply reply={reply} />}
 
+          {movingOn && <p className="notice">That's okay, let's move on.</p>}
+
           {answerError && (
             <div className="alert" role="alert">
               <AlertIcon className="icon" />
@@ -369,7 +390,7 @@ export default function App() {
             </button>
           )}
 
-          {reply && (
+          {(reply || movingOn) && (
             <button
               type="button"
               ref={nextButton}

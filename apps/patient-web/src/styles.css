@@ -240,6 +240,15 @@ ul {
   }
 }
 
+/* A short kind line from the screen (VC-05): "Let me ask that more simply.", "That's okay, let's move on." */
+.notice {
+  font-size: 1.25rem; /* 30 px */
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+  color: var(--ink);
+}
+
 .note {
   font-size: 1rem;
   color: var(--ink-soft);
