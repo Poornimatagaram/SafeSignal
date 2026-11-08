@@ -2,6 +2,21 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 022: centered company portal (branch `company/feat/company-web-centered-redesign`)
+
+### Changed
+- `apps/company-web`: centered product-page layout (D-092): thin frosted top bar, centered hero with drug name and one blue action, this week's three figures, sticky centered section switcher, centered section headings over borderless rounded tiles, centered privacy close. System SF face with Inter fallback; light, dark and system. Section links scroll to their section. Data, endpoints and roles unchanged.
+- `apps/company-web/PRODUCT.md`: product context for design work.
+- `apps/company-web`: hero drops the explanation line and the "View side effects" button; the side-effects section drops its subtitle. The cohort chart's tooltip shows each cohort's change from the week before; the "All side effects" table shows a cell's change only while that cell is hovered.
+- `apps/company-web`: tiles are lifted with a soft layered shadow (light) or a faint edge (dark); the privacy section sits on the grey page so its tiles lift too.
+
+## 2026-11-08 — Session 021: company portal in the SafeSignal look
+
+### Changed
+- `apps/company-web`: restyled to match the doctor and patient apps (D-090, supersedes D-086). Warm paper and coral theme with light, dark and system modes; bundled Fredoka, DM Sans and DM Mono; floating pill nav with program picker, appearance menu and Refresh; hero with a "this week" panel (patients reporting, check-in completion, off-label terms); hash-routed pill tabs; rounded cards and tables; privacy strip; toast. Data, endpoints and roles unchanged.
+- `docs/design/company-web-ui.md`: marked superseded by D-090.
+- `apps/company-web`: professional look on the same layout (D-091). Inter and IBM Plex Mono replace Fredoka, DM Sans and DM Mono; cool slate and clinical-blue palette in light and dark; hairline borders, quiet shadows, flat logo, calmer motion; more space between KPI tiles, cards and privacy tiles. Pill controls, rounding, nav and tabs unchanged.
+
 ## 2026-11-08 — Session 020: patient brief and data licence (branch `company/docs/patient-brief-loopback`)
 
 ### Changed

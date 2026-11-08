@@ -508,3 +508,44 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 **Next**
 1. Landing page and portal redesign in `apps/company-web` (`docs/design/company-web-ui.md`).
+
+## Session 021 — 2026-11-08 (Sun) · Company portal in the SafeSignal look
+
+**Goal:** Give the company portal the same UI as the doctor portal and patient app (product owner request).
+
+**Outputs**
+- `apps/company-web` restyled with the doctor view's theme and shell (D-090, supersedes D-086): `src/styles.css`, `src/App.tsx`, new `src/components/Nav.tsx`, `src/components/icons.tsx`, `src/lib/theme.ts`; `@fontsource` fonts added.
+- Then a professional look on the same layout (D-091): Inter / IBM Plex Mono, slate and clinical-blue tokens (`--accent*` replaces `--coral*`), hairline borders, quiet shadows, flat logo, wider tile and card spacing.
+
+**Verification**
+- `npm run lint` and `npm run build` pass in `apps/company-web`.
+- Checked in Chrome against the seeded local service: all four tabs in light and dark; 390 px width has no horizontal scroll.
+
+**Open items**
+- The landing page from the old spec is not built; decide whether it is still wanted.
+- Role-gated actions still fail on click instead of showing disabled with a reason.
+
+**Next**
+1. Saved on branch `company/feat/company-web-professional-look`; PR on request.
+
+## Session 022 — 2026-11-08 (Sun) · Centered company portal
+
+**Goal:** Product owner found the D-091 look still AI-generated; wanted the feel and button placement of Apple and Samsung product pages, center-aligned. Keep the previous look on its own branch.
+
+**Outputs**
+- Previous look committed on `company/feat/company-web-professional-look` (724590d), so it can be restored.
+- `apps/company-web` redesigned on `company/feat/company-web-centered-redesign` (D-092): `src/App.tsx`, `src/styles.css`, `src/components/Nav.tsx`, `src/components/icons.tsx`, `src/views/Signals.tsx`, `src/views/Survey.tsx`; `apps/company-web/PRODUCT.md`; design brief in `.impeccable/surfaces/` (local only, gitignored).
+
+- Follow-up from the product owner: removed the hero explanation, the "View side effects" button and the side-effects subtitle; week-over-week changes now appear on hover only (chart tooltip, and per cell in the "All side effects" table).
+- Tiles lifted with a soft shadow (`--tile-shadow`; a faint edge in dark mode), on request.
+
+**Verification**
+- `tsc -b` and `eslint` pass; Impeccable design detector reports no findings.
+- Checked in Chrome against the seeded local service: desktop light and dark, all sections, section links scroll to content; 390 px frames have no horizontal scroll.
+
+**Open items**
+- Impeccable finish review and DESIGN.md not run yet.
+- Role-gated actions still fail on click instead of showing disabled with a reason.
+
+**Next**
+1. Product owner picks a branch; push and open a PR on request.

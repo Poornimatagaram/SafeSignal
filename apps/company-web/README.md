@@ -7,6 +7,9 @@
 - **Contract:** read `schema/`; never edit it. API types come from `@sentinel/contract/api` (`packages/contract-ts`).
 - **Brief:** Scoping Doc 12.6 (CO-01 to CO-07) and 26.8 (company layer).
 
+## Look
+Centered product-page layout (D-092): frosted top bar, centered hero and weekly figures, a sticky section switcher, borderless rounded tiles; system SF face with bundled Inter fallback; light / dark / system. Tabs are hash routes: `#/signals`, `#/completion`, `#/survey`, `#/program`.
+
 ## What it shows
 
 | Tab | Requirement | Endpoint | Role |
