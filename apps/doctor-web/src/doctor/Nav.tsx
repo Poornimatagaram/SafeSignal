@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { doctorName } from '../lib/config'
 import type { OrgStatus } from '../lib/keys'
 import { THEME_LABEL, useTheme, type ThemeMode } from '../lib/theme'
+import type { ViewMode } from '../lib/viewMode'
 import { Chevron, Logo, Menu, Monitor, Moon, Sun, SyncIcon } from './icons'
 import { SECTIONS, keyStatus } from './navModel'
 import { goSection } from './routes'
@@ -22,6 +23,8 @@ export function Nav(props: {
   detailHref: string
   activeSection: string | null
   onToast: (msg: string) => void
+  view: ViewMode
+  onView: (v: ViewMode) => void
 }) {
   const { mode, choose } = useTheme()
   const [open, setOpen] = useState<null | 'org' | 'theme' | 'menu'>(null)
@@ -63,10 +66,14 @@ export function Nav(props: {
             <a href={props.detailHref} className={props.activeSection === 'detail' ? 'on' : ''}>Detailed view</a>
           </nav>
           <div className="nav-right">
+            <div className="seg mode-seg" role="group" aria-label="View">
+              <button type="button" aria-pressed={props.view === 'guided'} title="Full tour: for new doctors and the demo" onClick={() => props.onView('guided')}>Guided</button>
+              <button type="button" aria-pressed={props.view === 'clinic'} title="Compact daily view" onClick={() => props.onView('clinic')}>Clinic</button>
+            </div>
             <div className="org">
               <button type="button" className="org-btn" aria-haspopup="menu" aria-expanded={open === 'org'} onClick={() => setOpen(open === 'org' ? null : 'org')}>
                 <span className="dot" style={{ background: needsSetup ? 'var(--mild)' : 'var(--good)' }} />
-                <span className="org-name">{orgLabel}</span>
+                <span className="org-name" title={orgLabel}>{orgLabel}</span>
                 <Chevron />
               </button>
               {open === 'org' && (
@@ -119,7 +126,7 @@ export function Nav(props: {
             </div>
             <button type="button" className={`btn btn-dark sync ${props.syncing ? 'spinning' : ''}`} onClick={props.onSync} disabled={props.syncing}>
               <SyncIcon />
-              <span className="sync-label">{props.syncing ? 'Syncing…' : 'Sync now'}</span>
+              <span className="sync-label">{props.syncing ? 'Syncing…' : <><span className="sl-long">Sync now</span><span className="sl-short">Sync</span></>}</span>
             </button>
             <button type="button" className="menu-btn" aria-label="Open menu" aria-expanded={open === 'menu'} onClick={() => setOpen(open === 'menu' ? null : 'menu')}>
               <Menu />
@@ -128,7 +135,17 @@ export function Nav(props: {
         </header>
         {open === 'menu' && (
           <div className="mobile-menu">
-            {SECTIONS.map(([id, label]) => (
+            <div className="m-theme m-view">
+              <span id="m-view-lbl">View</span>
+              <div className="m-seg two" role="radiogroup" aria-labelledby="m-view-lbl">
+                {(['guided', 'clinic'] as const).map((v) => (
+                  <button key={v} type="button" role="radio" aria-checked={props.view === v} onClick={() => { setOpen(null); props.onView(v) }}>
+                    {v === 'guided' ? 'Guided' : 'Clinic'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {props.view === 'guided' && SECTIONS.map(([id, label]) => (
               <a key={id} href="#/" onClick={(e) => { e.preventDefault(); go(id) }}>{label}{id === 'alerts' && props.unseen > 0 ? ` (${props.unseen})` : ''}</a>
             ))}
             <a href={props.detailHref} onClick={() => setOpen(null)}>Detailed view</a>

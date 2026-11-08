@@ -2,6 +2,10 @@
 
 Newest first. Per session: what was done, state at the end, next steps.
 
+## 2026-11-08 · Session 5 (Clinic view)
+**Done**
+- Split the doctor UI into Guided (tour and demo) and Clinic (daily use) after sorting every component by whether a regular doctor needs it. Prototyped Clinic in the artifact (23/23 checks), then built it on `doctor/feat/clinic-view`. Headless check on a freshly seeded service: 72/72 (52 earlier plus Clinic, widths 390 to 1920). Contrast audit on Clinic: no failures in light or dark.
+
 ## 2026-11-08 · Session 4 (doctor UI redesign)
 **Done**
 - Designed the doctor UI as a prototype artifact (Flip Ads layout as reference, doctor content only); iterated on alignment, arrows and a labelled light/dark/system switch. User confirmed it.
