@@ -2,6 +2,12 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 018: patient tests in CI (branch `company/ci/patient-tests`)
+
+### Added
+- CI job `patient-runtime`: `apps/patient-runtime` pytest and `evals/patient`, with the uv cache keyed on the runtime's lockfile. Tests needing Ollama, the Whisper model, `say`, ffmpeg or a live service skip on the runner (D-087).
+- CI job `patient-web`: `npm ci`, `npm test` and `npm run build` for the patient screen (D-087).
+
 ## 2026-11-08 — Session 017: company UI brief (branch `company/docs/company-web-ui-brief`)
 
 ### Added

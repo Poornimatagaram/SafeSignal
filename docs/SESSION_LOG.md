@@ -454,3 +454,21 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 **Next**
 1. Build the landing page and portal redesign in `apps/company-web` from the brief.
+
+## Session 018 — 2026-11-08 (Sun) · Unblocking the patient side
+
+**Goal:** Review the merged patient PRs (#10, #20, #21, #23) end to end and do the company-side items they asked for.
+
+**Outputs**
+- CI jobs `patient-runtime` (runtime pytest and `evals/patient`) and `patient-web` (tests and build) (D-087), PR #25.
+
+**Verification**
+- PR #25 checks: runtime 621 passed, 29 skipped (Ollama, Whisper model, `say`, ffmpeg, live service); `evals/patient` 54 passed; patient-web tests and build pass.
+
+**Open items found in the review (patient-owned)**
+- A7 care envelopes are not built: the device sends no `POST /v1/care-envelopes`, so today's check-in never reaches Northgate or Lakeside.
+- No consent setup (`PUT /v1/consent`), typed input (`input_mode` is always `voice`), proxy display, schedule or reminder (AL-04), or `possible_link_flag` (SE-04).
+
+**Next**
+1. Contract 2.3: alert and consent replies carry `payload_sha256`; config fetches logged in `egress_log` (PV-06).
+2. Patient brief: loopback wording for the local model; `data/README.md` row for `data/patient/`.
