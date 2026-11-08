@@ -10,6 +10,6 @@ You need the Sentinel service on `127.0.0.1:8000` (seeded), Ollama with `llama3.
 node apps/patient-web/docs/screenshots/capture.mjs
 ```
 
-The script starts its own patient runtime on port 8011 with a temporary database, builds the screen into a temporary folder and serves it on port 4179. It then clicks through the real screens in headless Chrome. The answers are synthetic lines spoken by macOS `say`. Each check-in run shares one synthetic record with the service. When it finishes, the script stops everything it started and deletes the temporary folder, including the audio. It overwrites the PNGs in this folder.
+The script starts its own patient runtime on port 8011 with a temporary database, builds the screen into a temporary folder and serves it on port 4179. It then clicks through the real screens in headless Chrome. The answers are synthetic lines spoken by macOS `say`. Each check-in run shares one synthetic record with the service. When it finishes, the script stops everything it started and deletes the temporary folder, including the audio. It overwrites the PNGs in this folder. `before-after.png` is not made by the script: it compares the screens before and after the 2026-11-08 restyle.
 
 You can change these settings: `CHROME` (the browser path), `SCRATCH`, `RUNTIME_PORT`, `WEB_PORT` and `CDP_PORT`.
