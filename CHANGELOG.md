@@ -7,7 +7,7 @@ All changes to the project, newest first. Schema-only history is also kept in `s
 ### Changed
 - `README.md`: rewritten as a project overview: logo header, badges, the combined demo video (Video 1 and Video 2, 2:15), a Mermaid flow diagram of the check-in from device to company, doctor and alerts, a who-gets-what table, a repository map with ports, quick start, checks and a documentation index. The ownership table is removed; ownership lives in `CODEOWNERS` only (`CLAUDE.md` and `CONTRIBUTING.md` now say so).
 - `docs/brand/logo-light.png`, `docs/brand/logo-dark.png`: added for the README header.
-- The demo video is hosted as a GitHub attachment, not committed (renders stay gitignored).
+- The demo video is hosted on YouTube (https://youtu.be/cJERNi1LbZQ) and linked from a thumbnail; it is not committed (renders stay gitignored).
 
 ## 2026-11-08 — Session 022: centered company portal (branch `company/feat/company-web-centered-redesign`)
 

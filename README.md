@@ -23,7 +23,13 @@ Built at **HACK1984** · Privacy-First track
 
 ## Demo
 
-VIDEO_URL
+<div align="center">
+
+[![Watch the SafeSignal demo (2:15)](https://img.youtube.com/vi/cJERNi1LbZQ/maxresdefault.jpg)](https://youtu.be/cJERNi1LbZQ)
+
+**[▶ Watch the demo on YouTube (2:15)](https://youtu.be/cJERNi1LbZQ)**
+
+</div>
 
 <sub>Part 1 (0:00-1:01): the problem, with patient, doctor and drug company each failing quietly. Part 2 (1:01-2:15): one morning with SafeSignal from start to finish. Every person, company and hospital in the video is fictional.</sub>
 
