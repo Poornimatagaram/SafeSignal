@@ -27,7 +27,7 @@ Videos 1 and 2 are built and approved separately, so each gets time and care. Pi
 - **Place names:** Northgate Medical Center for the clinic. Halvaren Therapeutics for the company (fictional, per D-078).
 - **Phone screen:** the real patient screen's layout, simplified. Large text, large buttons.
 
-## 2. Sound plan (you control every cue)
+## 2. Sound plan (SUPERSEDED: no music or sound effects, see decision 6; kept for reference)
 
 Every cue has an ID so you can change one without touching the rest. Levels are relative: music bed 0.15 under voice, 0.4 when alone.
 
@@ -73,19 +73,29 @@ Narration is about 120 words, with gaps for effects.
 
 How the safety net really works (so the animation is honest): missed check-ins escalate at 1, 2 and 3 consecutive misses (D-060, D-068). Levels 1 and 2 notify the patient, caregiver and care team; level 3 also notifies the emergency contacts the patient chose, with consent. In the current build these are in-app notifications. Real calls and texts are version 1.
 
-## 4. Video 2: The story (60 s)
+## 4. Video 2: The story (about 73 s as built)
 
-Narration is about 115 words.
+Narration is about 115 words for scenes 1-7, plus about 30 words for the closing scenes 8-10 added on 2026-11-08. Scene lengths as built follow the narration (see `docs/demo-video/video-2/index.html`): 6.2, 4.4, 9.2, 8.0, 11.4, 6.1, 12.1, 3.6, 7.1 and 5.0 s, 73.1 s in total.
 
 | # | Time | Picture | Narration (V-01) | On-screen text | Sound |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 0:00-0:05 | Bedroom, sunrise. A clock turns to 9:00. Walter's phone lights: "Good morning, Walter. Time for today's check-in." | "Nine a.m. Walter's phone: time for today's check-in." | "9:00 AM" | S-01, S-02, S-03 |
+| 1 | 0:00-0:05 | Bedroom, sunrise. A clock turns to 9:00. Walter's phone lights: "Good morning, Walter. Time for today's check-in." | "Nine in the morning. Walter's phone says it's time for today's check-in." | "9:00 AM" | S-01, S-02, S-03 |
 | 2 | 0:05-0:11 | Screen splits into two sides. **Left:** a second patient (Priya, 58, at a desk) taps **Type** and types on her phone, small and brief. **Right:** Walter taps **Speak** and lifts the phone; this side is larger and brighter, and the camera drifts toward it. | "Some people type. Walter just talks." | "Type or speak" | S-04, S-05 (left, quiet), S-04 (right) |
 | 3 | 0:11-0:22 | Split screen. Left: Walter speaking to the phone, a soft waveform. Right: the question card ("Have you noticed any new symptoms?"). His words appear as a transcript on the phone with a small lock icon and the label "stays on this phone". | "The questions are simple. He answers in his own words. The transcript appears right on his phone, and only there." | "Stays on this phone" | S-06, S-07, S-08 |
 | 4 | 0:22-0:28 | The transcript is scrubbed: a name and a place become blocks. A plain-words summary appears: "Rash, moderate, started 1-3 days ago." Walter taps **Share**. | "Names and details are stripped out on the device. Walter reads what would be shared, and he approves it." | "He approves every send" | S-09, S-04 |
 | 5 | 0:28-0:37 | The phone splits in two. The transcript and a microphone icon stay behind a padlock. A small JSON card flies out (real fields: symptom code, severity, onset, week, cohort, a random patient ID). A receipt prints with a short hash. | "Only coded fields leave: symptom, severity, week. No audio. No words. No name. And he gets a receipt." | "Leaves: coded fields. Stays: everything he said." | S-10, S-08, S-11 |
 | 6 | 0:37-0:46 | The JSON lands in a dashboard (Halvaren Therapeutics). Bars grow week by week, a trend line bends. A box greys out: "under 5 hidden". Dr. Lee nods. | "The company sees patterns, never people. Groups under five are hidden." | "Patterns, not people" | S-12 (one per bar) |
 | 7 | 0:46-1:00 | A sealed envelope leaves the phone and reaches Northgate. Cut to the doctor's cabin: Walter walks in and sits. Dr. Shah opens a timeline of his past weeks and asks about the rash. Walter points to his arm. Both smile. | "His doctor gets a sealed copy only his care team can open. When Walter walks in, the history is already there, and the follow-up questions write themselves." | "Sealed: only his care team can open it" | S-13, S-14, S-15 |
+
+Closing scenes (added 2026-11-08, approved by the owner; narration only, no sound column):
+
+| # | Picture | Narration | On-screen text |
+| --- | --- | --- | --- |
+| 8 | Walter at home in the evening light, relaxed in an armchair with tea. His phone on the side table shows a grid of check-in ticks filling in. A message from Anna ("Thinking of you") arrives, a small heart floats up, and he smiles. | "Walter feels looked after." | "Looked after" |
+| 9 | Split screen, echoing scene 2. **Left:** Dr. Shah at his desk, Walter's weeks already open with "Summary ready", leaning in to guide Walter. **Right:** Dr. Lee at the dashboard, a flag and an "Early signal" tag on W45, smiling. Each half is bright while its line is spoken. | "His doctor has more time to guide him. The company can follow its trial more closely." | "More time to guide" (left), "Earlier signals" (right) |
+| 10 | Title card, as in Video 1 scene 7: the SafeSignal mark pulses in, the name rises, Walter, Dr. Shah and Dr. Lee appear as round portraits on a dotted ring around it. | "SafeSignal. Someone is looking out for you." (repeats the closing line of Video 1 on purpose, as a bookend) | The mark, "SafeSignal", the tagline |
+
+Wording as built: scene 4's summary reads "Rash, moderate, 1-3 days ago" (shortened to fit the phone at a readable size); the phone transcript is synthetic ("A rash on my arm since Tuesday. My daughter Anna drove me to Oakfield to see it.") so that scene 4 can block out a name and a place; scene 5's card uses real fields from `schema/company_record.json` (`term_code`, `severity`, `onset`, `iso_week`, `cohort_id`, `patient_ref`) and the receipt hash is the SHA-256 of `schema/examples/company_record.valid.json`; scene 6 shows Halvaren Therapeutics with synthetic cohort counts (23, 31, and a cohort of 3 that greys out as "Under 5 hidden"). The closing scenes carry no figures or percentages.
 
 Rules used here: no audio or transcript leaves the device; the company sees only coded fields and ISO weeks; groups under 5 patients are hidden; the doctor copy is sealed to the care-team organization's key and sent only with consent. Both viewers' screens are mock-ups made from the real UI styles, with synthetic data.
 
@@ -133,3 +143,6 @@ Record on the real apps (patient screen, company portal, doctor view) with synth
 | 3 | Type or speak: two patients side by side, Priya types on the left, Walter speaks on the right, focus on Walter | Decided |
 | 4 | Closing lines: written by the owner | Decided |
 | 5 | Video 1 scene 6: emergency contact shown as a checklist (a person you trust, a hospital or clinic, emergency services) | Decided |
+| 6 | No music and no sound effects in either video; narration only (owner tried generated music and effects on Video 1 on 2026-11-08 and preferred it without). Section 2 is kept for reference only. | Decided |
+| 7 | Video 2 gets three closing scenes (8-10: Walter looked after, doctor and company benefit, SafeSignal logo close) on top of scenes 1-7, so it runs about 73 s instead of 60 s. The tagline repeats Video 1's closing line. | Decided (owner approved the script on 2026-11-08) |
+| 8 | Time budget: Video 1 (61.5 s) + Video 2 (73.1 s) + Piece 3 (about 60 s) is about 195 s, about 15 s over the 3-minute slot. Options: Video 1 to 60 s, tighter pauses (`--scale 0.85`), a shorter Piece 3, or trimming a Video 2 scene. | Open |
