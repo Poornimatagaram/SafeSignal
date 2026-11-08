@@ -1354,3 +1354,42 @@ def test_network_log_lists_sends_and_fetches_newest_first(db_path):
     assert set(entries[0]) == {"log_id", "kind", "outbox_id", "destination", "org_id", "method", "url",
                                "fields_sent", "payload_sha256", "response_code", "sent_at"}
     assert "SE_RASH" not in json.dumps(entries) and "\"payload\"" not in json.dumps(entries)  # no payload content
+
+
+# ---------- restart safety: retry timing survives a restart ----------
+
+def test_retry_state_survives_a_restart(db_path, tmp_path):
+    queue(db_path, make_record(db_path))
+    state = tmp_path / "retry_state.json"
+    service, wall = FakeService(down=True), [5_000.0]
+    first = gate.RetryWorker(db_path, service.client, clock=FakeClock(), state_path=state,
+                             wall_clock=lambda: wall[0])
+    for _ in range(3):  # three failures: next attempt in 8 s
+        first.run_once()
+        first.clock.now += 100
+    assert first.status("rec_0a1b2c3d")["attempts"] == 3
+    assert oct(state.stat().st_mode & 0o777) == "0o600"
+
+    wall[0] += 100 + 3  # the runtime was down for 3 s after the last pass... and the clock was reset
+    second = gate.RetryWorker(db_path, service.client, clock=FakeClock(), state_path=state,
+                              wall_clock=lambda: wall[0])
+    resumed = second.status("rec_0a1b2c3d")
+    assert resumed["attempts"] == 3 and resumed["next_attempt_in"] == 0.0  # overdue: due now, not back to 2 s
+    second.run_once()
+    assert second.status("rec_0a1b2c3d") == {"attempts": 4, "next_attempt_in": 16}
+
+    service.down = False
+    second.run_once()  # not due yet
+    second.clock.now += 16
+    [receipt] = second.run_once()
+    assert receipt.status == "sent" and gate.RetryWorker(
+        db_path, service.client, state_path=state).status("rec_0a1b2c3d") is None
+    assert json.loads(state.read_text()) == {}
+
+
+def test_an_unreadable_retry_state_file_starts_fresh(db_path, tmp_path):
+    state = tmp_path / "retry_state.json"
+    state.write_text("{not json")
+    queue(db_path, make_record(db_path))
+    worker = gate.RetryWorker(db_path, FakeService().client, clock=FakeClock(), state_path=state)
+    assert worker.status("rec_0a1b2c3d") == {"attempts": 0, "next_attempt_in": 0.0}

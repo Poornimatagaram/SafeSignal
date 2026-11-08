@@ -3,6 +3,10 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08 (overnight), restart safety** (branch `patient/feat/restart-safety`).
+  - **Tests:** 762 runtime, 54 eval and 251 web; both evals pass.
+  - **Live check:** I stopped the runtime mid check-in (rash, moderate) and restarted it. The summary showed the same items and the same record id. Approval sent that id (201), and the draft file was removed.
+- **2026-11-08 (overnight), SE-04 possible link merged as PR #33** (`5813610`).
 - **2026-11-08 (overnight), SE-04 possible link** (branch `patient/feat/possible-link`). I wrote the rule and its wiring; the screen agent added the "for review" line.
   - **Tests:** 757 runtime, 54 eval and 251 web; both evals pass.
   - **Live check:** a rash that "started two days ago" and "a new hand cream about five days ago" was flagged for review, and the record (201) carried `possible_link_flag: true`.
@@ -81,6 +85,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **Restart state lives in JSON files beside the database, not in new tables**, because the schema is the contract. They are local-only like the database, 0600 and atomic. The drafts can hold an exposure description, so they are deleted at approval. Envelope "waiting" reasons are not saved: after a restart they read "no_key" until the next attempt.
 - **Possible link rule (SE-04):** a new symptom (not in the previous approved check-in) that started 0 to 7 days after a new exposure (this check-in, or stored in the last 30 days). Onset buckets are compared as day ranges. An exposure given without a time counts as within the last week. An unknown symptom onset is never linked. The exposure description stays on the device; only the flag leaves.
 - **The `egress_log` migration recreates the table** instead of `ALTER TABLE ADD COLUMN`, because 2.3 also makes `outbox_id` nullable, which SQLite can't change in place.
 - **An envelope that can't be sealed yet is not stored as plaintext.** When the org key is missing (404) or the network is off, nothing is queued. The session counts as pending (approved while sharing, no envelope yet), and the retry worker rebuilds the payload from the stored coded rows, which gives the same payload every time, then seals it. The outbox only ever holds the sealed envelope.
@@ -197,7 +202,6 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Reseed before the demo:** the live tests replaced Northgate's and Lakeside's keys with throwaway ones and added key grants, synthetic envelopes, an emergency access (with its alert) and consent changes (Walter's contacts now have new `ec_` ids). Doctor-web must register fresh keys after reseeding.
 - **Ask the company owner** for an organization directory a patient device can read, for the setup screen.
 - **Caregiver "summary" detail:** hidden for now (alerts only). Turn it back on once the user decides what the summary contains and the service can deliver it.
-- **Persist the check-in draft** so a runtime restart mid check-in loses nothing; the retry state is in memory too.
 - **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
 - **Ask the company owner** for:
   - CI jobs for `apps/patient-runtime` pytest, `evals/patient` and `apps/patient-web` `npm test`; CI runs none of them today.

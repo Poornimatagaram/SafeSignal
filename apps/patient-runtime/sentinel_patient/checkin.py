@@ -15,8 +15,9 @@
   if emergency consent is on (D-064, D-065). An organization whose key can't be fetched yet (not registered, offline)
   waits on its own; the retry worker seals and sends it later.
 
-The draft lives in memory: if the runtime restarts mid check-in, the transcripts are kept but the coded symptoms of
-earlier answers are lost (to be persisted with the network-off work in A6).
+The draft (coded symptoms, exposures, the one correction) is kept in memory and saved after every change to
+var/patient/drafts/<session_id>.json (state_store), so a check-in survives a runtime restart; the file is deleted
+once the check-in is approved.
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from . import egress_gate, exposure as exposures, extract, summary as spoken
 
 from .consent import options as consent_options
 from .db import connect, utc_now
+from .state_store import JsonFile
 from .survey import latest_survey, survey_questions, term_labels
 
 SEVERITIES = ("mild", "moderate", "severe")
@@ -105,11 +107,25 @@ class Draft:
     correction_used: bool = False                            # VC-08: one correction before sharing
     exposures: dict = field(default_factory=dict)            # question_id -> (local description, Exposure) (SE-04)
 
+    def to_dict(self) -> dict:
+        return {"symptoms": self.symptoms, "last_reported": self.last_reported, "record_id": self.record_id,
+                "correction_used": self.correction_used,
+                "exposures": {q: [text, list(e.days_ago)] for q, (text, e) in self.exposures.items()}}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Draft":
+        return cls(symptoms={k: dict(v) for k, v in d.get("symptoms", {}).items()},
+                   last_reported=list(d.get("last_reported", [])), record_id=d.get("record_id"),
+                   correction_used=bool(d.get("correction_used")),
+                   exposures={q: (text, exposures.Exposure(tuple(days)))
+                              for q, (text, days) in d.get("exposures", {}).items()})
+
 
 class CheckinStore:
     def __init__(self, db_path: Path, patient_ref: str):
         self.db_path, self.patient_ref = db_path, patient_ref
         self._drafts: dict[str, Draft] = {}
+        self._draft_dir = Path(db_path).parent / "drafts"
         self._lock = threading.Lock()
         self._envelope_wait: dict[tuple[str, str], str] = {}  # (session_id, org_id) -> why it is still waiting
 
@@ -126,6 +142,7 @@ class CheckinStore:
                          "VALUES (?, ?, ?, 'partial', ?, 'voice')",
                          (session_id, config_id, utc_now(), reporter["reporter_default"] if reporter else "self"))
             self._drafts[session_id] = Draft()
+        self._save_draft(session_id)
         return session_id, len(questions)
 
     def check_open(self, session_id: str) -> None:
@@ -162,39 +179,47 @@ class CheckinStore:
             conn.execute("INSERT INTO answer_turn (session_id, question_id, attempt, prompt_text, transcript_text, "
                          "rating, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                          (session_id, question_id, ask, question["asks"][ask], transcript, rating, utc_now()))
-            draft = self._drafts.setdefault(session_id, Draft())
+            draft = self._draft(session_id)
             draft.record_id = None  # the record changes with every answer
-            filtered_text = answer_text
-            if rating in ("off_topic", "no_answer"):
-                return []  # nothing in it answers the question: no symptoms, no severity, no onset
-            accepted = extracted if question["purpose"] in SYMPTOM_PURPOSES else []
-            if question["purpose"] == "exposure" and accepted:
-                # "I started a new hand cream" is an exposure, not a symptom: the model invents one for it, and the
-                # guard turns that into SE_OTHER_REVIEW. Keep only symptoms the answer names (a cue-backed code).
-                accepted = [s for s in accepted if s.term_code != extract.OTHER_REVIEW]
-            for s in accepted or []:
-                d = draft.symptoms.setdefault(s.term_code, {"severity": None, "onset": "unknown"})
-                if s.severity:
-                    d["severity"] = s.severity
-                if s.onset and s.onset != "unknown":
-                    d["onset"] = s.onset
-            if accepted:
-                draft.last_reported = [s.term_code for s in accepted]
-            latest = [draft.symptoms[c] for c in draft.last_reported if c in draft.symptoms]
-            if question["purpose"] == "severity" and (sev := extract.severity_in_text(filtered_text)):
-                for d in latest:
-                    d["severity"] = d["severity"] or sev
-            if question["purpose"] == "exposure":  # SE-04: the latest answer to this question decides
-                if exposures.is_new_exposure(filtered_text):
-                    draft.exposures[question_id] = (filtered_text, exposures.exposure_from_answer(
-                        extract.onset_in_text(filtered_text)))
-                else:
-                    draft.exposures.pop(question_id, None)
-            if question["purpose"] == "onset" and (onset := extract.onset_in_text(filtered_text)):
-                for d in latest:
-                    if d["onset"] == "unknown":
-                        d["onset"] = onset
-            return accepted
+            try:
+                return self._apply_turn(draft, question, question_id, answer_text, extracted, rating)
+            finally:
+                self._save_draft(session_id)
+
+    @staticmethod
+    def _apply_turn(draft: Draft, question: dict, question_id: str, answer_text: str, extracted: list | None,
+                    rating: str | None) -> list | None:
+        filtered_text = answer_text
+        if rating in ("off_topic", "no_answer"):
+            return []  # nothing in it answers the question: no symptoms, no severity, no onset
+        accepted = extracted if question["purpose"] in SYMPTOM_PURPOSES else []
+        if question["purpose"] == "exposure" and accepted:
+            # "I started a new hand cream" is an exposure, not a symptom: the model invents one for it, and the
+            # guard turns that into SE_OTHER_REVIEW. Keep only symptoms the answer names (a cue-backed code).
+            accepted = [s for s in accepted if s.term_code != extract.OTHER_REVIEW]
+        for s in accepted or []:
+            d = draft.symptoms.setdefault(s.term_code, {"severity": None, "onset": "unknown"})
+            if s.severity:
+                d["severity"] = s.severity
+            if s.onset and s.onset != "unknown":
+                d["onset"] = s.onset
+        if accepted:
+            draft.last_reported = [s.term_code for s in accepted]
+        latest = [draft.symptoms[c] for c in draft.last_reported if c in draft.symptoms]
+        if question["purpose"] == "severity" and (sev := extract.severity_in_text(filtered_text)):
+            for d in latest:
+                d["severity"] = d["severity"] or sev
+        if question["purpose"] == "exposure":  # SE-04: the latest answer to this question decides
+            if exposures.is_new_exposure(filtered_text):
+                draft.exposures[question_id] = (filtered_text, exposures.exposure_from_answer(
+                    extract.onset_in_text(filtered_text)))
+            else:
+                draft.exposures.pop(question_id, None)
+        if question["purpose"] == "onset" and (onset := extract.onset_in_text(filtered_text)):
+            for d in latest:
+                if d["onset"] == "unknown":
+                    d["onset"] = onset
+        return accepted
 
     # ---------- summary and approval ----------
 
@@ -202,13 +227,15 @@ class CheckinStore:
         with self._lock, closing(connect(self.db_path)) as conn:
             session = self._session(conn, session_id)
             shared = self._outbox(conn, session_id) is not None
-            draft = self._drafts.setdefault(session_id, Draft())
+            draft = self._draft(session_id)
             items = self._flag_links(conn, session_id, draft, self._items(conn, draft))
             needs = [i["term_code"] for i in items if i["severity"] is None]
             unanswered = self._unanswered(conn, session_id, session["config_id"])
             record = None
             if not needs:
-                draft.record_id = draft.record_id or egress_gate.new_record_id()
+                if draft.record_id is None:  # the id shown is the id sent, even after a restart
+                    draft.record_id = egress_gate.new_record_id()
+                    self._save_draft(session_id)
                 record = self._record(conn, draft.record_id, items, unanswered)
             # Field names only (no values) even while a severity is missing, so the screen can say what will go.
             fields = egress_gate.field_names(record or self._record(
@@ -226,7 +253,7 @@ class CheckinStore:
         """Current items, for parsing a spoken correction against them."""
         with self._lock, closing(connect(self.db_path)) as conn:
             self._session(conn, session_id)
-            draft = self._drafts.setdefault(session_id, Draft())
+            draft = self._draft(session_id)
             return self._flag_links(conn, session_id, draft, self._items(conn, draft))
 
     def correct(self, session_id: str, term_code: str, *, severity: str | None = None, onset: str | None = None,
@@ -236,7 +263,7 @@ class CheckinStore:
             self._session(conn, session_id)
             if self._outbox(conn, session_id):
                 raise AlreadyShared(session_id)
-            draft = self._drafts.setdefault(session_id, Draft())
+            draft = self._draft(session_id)
             if draft.correction_used:
                 raise CorrectionUsed(session_id)
             changes = sum([severity is not None, onset is not None, bool(remove)])
@@ -254,6 +281,7 @@ class CheckinStore:
             else:
                 draft.symptoms[term_code]["onset"] = onset
             draft.correction_used, draft.record_id = True, None
+            self._save_draft(session_id)
 
     def receipts(self, session_id: str, base_url: str) -> Shared | None:
         """The receipts as they stand now (the retry worker may have sent a queued one since); None if not shared."""
@@ -315,13 +343,14 @@ class CheckinStore:
                     record = egress_gate.receipt_for(self.db_path, existing["outbox_id"])
                 return Shared(record, alert, self._send_envelopes(session_id, client))
 
-            draft = self._drafts.setdefault(session_id, Draft())
+            draft = self._draft(session_id)
             for code, sev in severities.items():
                 if code not in draft.symptoms or sev not in SEVERITIES:
                     raise ValueError("severities must name reported symptoms and use mild, moderate or severe")
                 if draft.symptoms[code]["severity"] is None:
                     draft.symptoms[code]["severity"] = sev
                     draft.record_id = None
+            self._save_draft(session_id)
             with closing(connect(self.db_path)) as conn, conn:
                 session = self._session(conn, session_id)
                 items = self._flag_links(conn, session_id, draft, self._items(conn, draft))
@@ -351,6 +380,7 @@ class CheckinStore:
                     egress_gate.queue_payload(conn, outbox_id=alert_id, session_id=session_id, destination=ALERT,
                                               payload=egress_gate.build_alert(alert_id=alert_id,
                                                                               patient_ref=self.patient_ref))
+            self._draft_file(session_id).delete()  # approved: everything needed is in the database now
             # The alert goes first: it is the urgent one. Both are already safe in the outbox if the network is off.
             alert = egress_gate.send_queued(self.db_path, alert_id, client=client) if alert_id else None
             record = egress_gate.send_queued(self.db_path, record_id, client=client)
@@ -358,6 +388,25 @@ class CheckinStore:
             return Shared(record, alert, self._send_envelopes(session_id, client))
 
     # ---------- helpers ----------
+
+    def _draft_file(self, session_id: str) -> JsonFile:
+        return JsonFile(self._draft_dir / f"{session_id}.json")
+
+    def _draft(self, session_id: str) -> Draft:
+        """The session's draft: in memory, else from its file (after a restart), else empty."""
+        draft = self._drafts.get(session_id)
+        if draft is None:
+            saved = self._draft_file(session_id).load()
+            try:
+                draft = Draft.from_dict(saved) if isinstance(saved, dict) else Draft()
+            except (KeyError, TypeError, ValueError):
+                log.error("check-in draft for %s unreadable; starting it empty", session_id)
+                draft = Draft()
+            self._drafts[session_id] = draft
+        return draft
+
+    def _save_draft(self, session_id: str) -> None:
+        self._draft_file(session_id).save(self._draft(session_id).to_dict())
 
     def _session(self, conn, session_id: str):
         row = conn.execute("SELECT * FROM checkin_session WHERE session_id = ?", (session_id,)).fetchone()

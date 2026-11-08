@@ -70,7 +70,8 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
 
     # The worker closes the client it gets after each pass, so it gets its own, never the shared one.
     worker = egress_gate.RetryWorker(settings.db_path, lambda: sentinel_client or egress_gate.make_client(settings),
-                                     patient_ref=settings.patient_ref)
+                                     patient_ref=settings.patient_ref,
+                                     state_path=settings.db_path.parent / "retry_state.json")
     app = FastAPI(title="Sentinel patient runtime", version=SCHEMA_VERSION, lifespan=lifespan)
     app.state.retry_worker = worker
     app.state.settings = settings
