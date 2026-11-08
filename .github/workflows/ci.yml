@@ -67,6 +67,41 @@ jobs:
         working-directory: apps/company-web
         run: npm run lint && npm run build
 
+  # Patient side (D-087). Tests that need Ollama, the cached Whisper model, macOS `say`, ffmpeg or a live
+  # service on 127.0.0.1:8000 skip themselves here; everything else (filter, rules, egress gate with a fake
+  # transport, privacy guards, leakage and re-ask harnesses) runs on every PR.
+  patient-runtime:
+    name: Patient runtime and evals (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/patient-runtime/uv.lock
+      - name: Runtime tests
+        working-directory: apps/patient-runtime
+        run: uv run --frozen pytest -q
+      - name: Patient evals
+        run: uv run --frozen --project apps/patient-runtime pytest -q evals/patient
+
+  patient-web:
+    name: Patient screen (tests and build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/patient-web/package-lock.json
+      - name: Install
+        working-directory: apps/patient-web
+        run: npm ci
+      - name: Tests and build
+        working-directory: apps/patient-web
+        run: npm test && npm run build
+
   contract-ts:
     name: Contract (TypeScript)
     runs-on: ubuntu-latest
