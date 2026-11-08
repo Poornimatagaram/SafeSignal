@@ -97,9 +97,17 @@ export function canCorrect(state: ShareState): boolean {
   return state.phase === 'review' && state.summary !== null && !state.summary.correction_used && !state.summary.shared
 }
 
-/** True while the record (or the severe-symptom alert) is saved on this computer, waiting for the connection. */
+/**
+ * True while the record, the severe-symptom alert or the care team's sealed record is still on this computer and
+ * the runtime will send it later by itself. A sealed record the service refused is not retried, so it is not watched.
+ */
 export function isWaitingToSend(receipt: EgressReceipt | null): boolean {
-  return receipt !== null && (receipt.status === 'queued' || receipt.alert?.status === 'queued')
+  if (receipt === null) return false
+  const envelope = receipt.envelope
+  const envelopeWaiting =
+    envelope !== null &&
+    (envelope.status === 'queued' || (envelope.status === 'waiting' && envelope.reason !== 'refused'))
+  return receipt.status === 'queued' || receipt.alert?.status === 'queued' || envelopeWaiting
 }
 
 /** Term codes that still need a severity from the patient. */

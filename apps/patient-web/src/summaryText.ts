@@ -1,6 +1,6 @@
 // Plain words for the summary, the "what will be shared" box and the egress receipt.
 // Symptoms are always "for review", never described as caused by anything.
-import type { Onset, ReceiptAlert, ReceiptStatus, Severity, SummaryItem } from './api.ts'
+import type { EnvelopeState, Onset, ReceiptAlert, ReceiptStatus, Severity, SummaryItem } from './api.ts'
 
 const ONSET_WORDS: Record<string, string> = {
   today: 'today',
@@ -116,4 +116,65 @@ export const ONSET_CHOICES: Record<Onset, string> = {
   '4_7_days': '4 to 7 days ago',
   over_7_days: 'More than a week ago',
   unknown: 'Not sure',
+}
+
+/** What is inside the care team's sealed record, in plain words (it holds the name: only the care team can open it). */
+const CARE_PARTS: ReadonlyArray<{ text: string; matches: (field: string) => boolean }> = [
+  { text: 'Your name', matches: (field) => field === 'display_name' },
+  { text: 'Your age', matches: (field) => field === 'age_years' },
+  { text: 'The date of this check-in', matches: (field) => field === 'checkin_date' },
+  { text: 'Your medicine', matches: (field) => field === 'drug_name' || field === 'drug_version' },
+  {
+    text: 'Your symptoms: what each one is, how bad, and when it started',
+    matches: (field) => field.startsWith('symptoms[]'),
+  },
+  { text: 'How you are doing compared with before', matches: (field) => field === 'trend' },
+  { text: 'Who answered', matches: (field) => field === 'reporter' || field === 'input_mode' },
+  { text: 'Whether the check-in was finished', matches: (field) => field === 'status' },
+  {
+    text: 'A code for your file, and the version of this record format',
+    matches: (field) => field === 'patient_ref' || field === 'schema_version',
+  },
+]
+
+/** The plain-words list of what is inside the care team's sealed record. */
+export function careTeamPartsText(fields: readonly string[]): string[] {
+  const parts = CARE_PARTS.filter((part) => fields.some(part.matches)).map((part) => part.text)
+  const unexplained = fields.some((field) => !CARE_PARTS.some((part) => part.matches(field)))
+  if (unexplained) parts.push('Other details (see the exact list)')
+  return parts
+}
+
+export const CARE_TEAM_SEALED = 'Sent to your care team, sealed: only your doctors can read it.'
+export const CARE_TEAM_OFF = 'Your doctor gets nothing from this check-in: sharing with your doctor is off.'
+
+/** Where the care team's sealed record goes, when the runtime gives no name for it. */
+export const CARE_TEAM_DESTINATION = 'Your care team (sealed: only your doctors can read it)'
+
+/**
+ * One plain line about the care team's sealed record on the receipt, or null when there is none (not sharing).
+ * A sent record shows its details (destination, time, fingerprint) instead of a waiting line.
+ */
+export function envelopeText(envelope: EnvelopeState): string | null {
+  if (envelope === null) return null
+  if (envelope.status === 'waiting') {
+    switch (envelope.reason) {
+      case 'no_key':
+        return "Your doctors' sealed copy is waiting: their hospital has not set up its lock yet. It will be sent later by itself."
+      case 'offline':
+        return "Your doctors' sealed copy is saved on this computer. It will be sent when you're back online."
+      case 'refused':
+        return "The service did not accept your doctors' sealed copy. Please tell your helper."
+      default:
+        return "Your doctors' sealed copy is waiting on this computer. It will be sent later by itself."
+    }
+  }
+  switch (envelope.status) {
+    case 'sent':
+      return 'Your doctors got a sealed copy: only they can read it.'
+    case 'queued':
+      return "Your doctors' sealed copy is saved on this computer. It will be sent when you're back online."
+    case 'failed':
+      return "The service did not accept your doctors' sealed copy. Please tell your helper."
+  }
 }

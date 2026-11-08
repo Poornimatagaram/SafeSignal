@@ -148,3 +148,20 @@ export function voiceErrorMessage(error: unknown): string {
 export function symptomText(symptom: NotedSymptom): string {
   return symptom.severity ? `${symptom.label}, ${symptom.severity}` : symptom.label
 }
+
+/** For problems loading "Who I share with". */
+export function consentLoadMessage(error: unknown): string {
+  if (error instanceof RuntimeError && error.kind === 'runtime-down') return RUNTIME_DOWN
+  return 'I could not show who you share with. Nothing was changed. Please try again.'
+}
+
+/** For a switch change that did not go through. */
+export function consentChangeMessage(error: unknown): string {
+  if (error instanceof RuntimeError) {
+    if (error.kind === 'runtime-down') return RUNTIME_DOWN
+    if (error.kind === 'consent-unavailable') {
+      return 'This cannot be turned on: nobody is set up for it on this computer yet. Please ask your helper.'
+    }
+  }
+  return 'I could not change this. Nothing was changed. Please try again.'
+}

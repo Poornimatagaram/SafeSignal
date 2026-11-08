@@ -8,6 +8,7 @@ import {
   type CheckinSummary,
   type CorrectionChange,
   type EgressReceipt,
+  type EnvelopeState,
   type Severity,
   type SummaryItem,
 } from './api.ts'
@@ -29,6 +30,11 @@ import {
 } from './messages.ts'
 import {
   alertText,
+  CARE_TEAM_DESTINATION,
+  CARE_TEAM_OFF,
+  CARE_TEAM_SEALED,
+  careTeamPartsText,
+  envelopeText,
   formatLocalTime,
   itemLabel,
   NOTHING_TO_REPORT,
@@ -635,6 +641,26 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
           <li key={text}>{text}</li>
         ))}
       </ul>
+      <section className="care-box" aria-labelledby="care-heading">
+        <h3 id="care-heading" className="subtitle subtitle--small">
+          Your doctor
+        </h3>
+        {share.care ? (
+          <>
+            <p>
+              <strong>{CARE_TEAM_SEALED}</strong>
+            </p>
+            <p>Inside the sealed copy:</p>
+            <ul className="parts">
+              {careTeamPartsText(share.care.fields).map((text) => (
+                <li key={text}>{text}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p>{CARE_TEAM_OFF}</p>
+        )}
+      </section>
       <button
         type="button"
         className="button button--secondary"
@@ -663,6 +689,23 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
               The record is completed with your answers to “How bad” when you tap Share this. The receipt then shows
               its fingerprint.
             </p>
+          )}
+          {share.care && (
+            <>
+              <h3 className="subtitle subtitle--small">Sealed copy for your care team</h3>
+              <p>
+                <strong>Sent with:</strong> <span className="mono">{`${share.care.method} ${share.care.url}`}</span>
+              </p>
+              <p>
+                <strong>Locked for:</strong> <span className="mono">{share.care.org_id}</span>
+              </p>
+              <h3 className="subtitle subtitle--small">Inside the sealed copy ({share.care.fields.length})</h3>
+              <ul className="mono fields">
+                {share.care.fields.map((field) => (
+                  <li key={field}>{field}</li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       )}
@@ -703,6 +746,7 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
           {alertText(receipt.alert)}
         </p>
       )}
+      <EnvelopeLine envelope={receipt.envelope} />
 
       <dl className="receipt">
         <div>
@@ -747,11 +791,57 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
         </div>
       </dl>
 
+      <EnvelopeReceipt envelope={receipt.envelope} />
+
       <div className="closing">
         <CheckIcon className="icon icon--large" />
         <p className="closing__text">Thank you, that's all for today.</p>
       </div>
     </main>
+  )
+}
+
+/** The care team's sealed copy in one plain line (updated in place while it waits). Nothing when not sharing. */
+function EnvelopeLine({ envelope }: { envelope: EnvelopeState }) {
+  const text = envelopeText(envelope)
+  if (text === null) return null
+  return (
+    <p className="lead alert-line" aria-live="polite">
+      {text}
+    </p>
+  )
+}
+
+/** A sent sealed copy: where it went, when, and its fingerprint (the network log has the same one). */
+function EnvelopeReceipt({ envelope }: { envelope: EnvelopeState }) {
+  if (envelope === null || envelope.status !== 'sent') return null
+  return (
+    <section className="care-receipt" aria-labelledby="care-receipt-heading">
+      <h2 id="care-receipt-heading" className="subtitle">
+        Your doctor's sealed copy
+      </h2>
+      <dl className="receipt">
+        <div>
+          <dt>Sent to</dt>
+          <dd>{envelope.label ?? CARE_TEAM_DESTINATION}</dd>
+        </div>
+        {envelope.sent_at && (
+          <div>
+            <dt>Sent at</dt>
+            <dd>{formatLocalTime(envelope.sent_at)}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Fingerprint</dt>
+          <dd>
+            <p className="mono fingerprint">{envelope.payload_sha256}</p>
+            <p className="note">
+              This code is a fingerprint of the sealed copy. It matches the entry in this computer's network log.
+            </p>
+          </dd>
+        </div>
+      </dl>
+    </section>
   )
 }
 

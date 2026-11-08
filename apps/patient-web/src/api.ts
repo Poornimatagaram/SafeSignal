@@ -80,6 +80,19 @@ export interface SharePreview {
   fields: string[]
   /** The exact JSON that will be sent, or null while a severity is still missing. */
   record: Record<string, unknown> | null
+  /** The sealed record for the care team, or null when not sharing with the care team (also when missing). */
+  care: CareShare | null
+}
+
+/** The sealed record for the patient's care team: only the care team can open it (CN-01). */
+export interface CareShare {
+  org_id: string
+  /** Defaults to POST when the runtime does not say. */
+  method: string
+  url: string
+  sealed: boolean
+  /** The field names INSIDE the sealed record, format `symptoms[].term_code`. */
+  fields: string[]
 }
 
 export interface CheckinSummary {
@@ -116,6 +129,50 @@ export interface ReceiptAlert {
 
 export type ReceiptStatus = 'sent' | 'queued' | 'failed'
 
+/** One outbound payload from the runtime's egress gate (the care envelope, a consent change). */
+export interface OutboxReceipt {
+  status: ReceiptStatus
+  outbox_id: string
+  destination: string
+  method: string
+  url: string
+  fields_sent: string[]
+  payload_sha256: string
+  sent_at: string | null
+  response_code: number | null
+  /** The runtime's plain-words name for where it goes, when it gives one; else null. */
+  label: string | null
+}
+
+export const WAITING_REASONS = ['no_key', 'offline', 'refused'] as const
+/** no_key = the hospital has not set up its lock yet; offline = no connection; refused = the service said no. */
+export type WaitingReason = (typeof WAITING_REASONS)[number]
+
+/** The doctors' sealed record is still on this device. `reason` is null when the runtime gave none we know. */
+export interface EnvelopeWaiting {
+  status: 'waiting'
+  reason: WaitingReason | null
+}
+
+/** The care envelope after approval: a receipt, waiting, or null (not sharing with the care team). */
+export type EnvelopeState = OutboxReceipt | EnvelopeWaiting | null
+
+/** Who the patient shares with (CN-01, CN-03), and the receipt of the last change. */
+export interface ConsentState {
+  share_care_team: boolean
+  share_caregiver: boolean
+  /** False: no care team is set up, so sharing with it cannot be turned on. */
+  has_care_team: boolean
+  /** False: no caregiver is set up, so sharing with them cannot be turned on. */
+  has_caregiver: boolean
+  /** The receipt of the change just sent (queued while offline), or null. */
+  receipt: OutboxReceipt | null
+}
+
+export type ConsentKey = 'share_care_team' | 'share_caregiver'
+/** A consent change: only the switches that changed. */
+export type ConsentChange = Partial<Record<ConsentKey, boolean>>
+
 /** The egress receipt (PV-05): what left this device, where, when, and its fingerprint. */
 export interface EgressReceipt {
   /** sent; queued = no network, kept on this device and sent later; failed = the service refused it. */
@@ -132,6 +189,8 @@ export interface EgressReceipt {
   response_code: number | null
   /** The severe-symptom alert, or null when there was none (also when missing or unreadable). */
   alert: ReceiptAlert | null
+  /** The sealed record for the care team; null when not sharing with them (also when missing or unreadable). */
+  envelope: EnvelopeState
 }
 
 export type RuntimeErrorKind =
@@ -150,6 +209,7 @@ export type RuntimeErrorKind =
   | 'correction-used' // 409 on a correction: the one correction was already used, or the check-in was shared
   | 'speech-unavailable' // 503
   | 'questions-missing' // 503 on start or a question: today's questions were never downloaded to this device
+  | 'consent-unavailable' // 422 on a consent change: no care team or caregiver is set up to share with
   | 'bad-response' // 2xx with a body we cannot read
   | 'unknown'
 
@@ -217,6 +277,13 @@ export interface RuntimeClient {
   correct(sessionId: string, change: CorrectionChange | Blob): Promise<CheckinSummary>
   /** The current receipt of a shared check-in, so a queued record can be watched until it is sent. */
   getReceipt(sessionId: string): Promise<EgressReceipt>
+  /** Who the patient shares with now. Sends nothing. */
+  getConsent(): Promise<ConsentState>
+  /**
+   * Change who the patient shares with: only the changed switches are sent. It takes effect on this device at once,
+   * even offline (the receipt is then "queued"). 422 = nobody is set up to share with.
+   */
+  setConsent(change: ConsentChange): Promise<ConsentState>
 }
 
 type StatusKinds = Partial<Record<number, RuntimeErrorKind>>
@@ -358,7 +425,101 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
       if (!isEgressReceipt(body)) throw new RuntimeError('bad-response', res.status)
       return readReceipt(body)
     },
+
+    async getConsent() {
+      const res = await send('/consent', { method: 'GET' })
+      if (!res.ok) throw failure(res)
+      return readConsent(await readJson(res), res.status)
+    },
+
+    async setConsent(change) {
+      const body: ConsentChange = {}
+      for (const key of CONSENT_KEYS) {
+        const value = change[key]
+        if (typeof value === 'boolean') body[key] = value
+      }
+      if (Object.keys(body).length === 0) throw new RuntimeError('not-understood')
+      const res = await send('/consent', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw failure(res, { 422: 'consent-unavailable' })
+      return readConsent(await readJson(res), res.status)
+    },
   }
+}
+
+export const CONSENT_KEYS: readonly ConsentKey[] = ['share_care_team', 'share_caregiver']
+
+function readConsent(body: unknown, status: number): ConsentState {
+  if (
+    !isRecord(body) ||
+    typeof body.share_care_team !== 'boolean' ||
+    typeof body.share_caregiver !== 'boolean' ||
+    typeof body.has_care_team !== 'boolean' ||
+    typeof body.has_caregiver !== 'boolean'
+  ) {
+    throw new RuntimeError('bad-response', status)
+  }
+  return {
+    share_care_team: body.share_care_team,
+    share_caregiver: body.share_caregiver,
+    has_care_team: body.has_care_team,
+    has_caregiver: body.has_caregiver,
+    receipt: readOutboxReceipt(body.receipt),
+  }
+}
+
+/** A missing or unreadable receipt reads as null. */
+export function readOutboxReceipt(value: unknown): OutboxReceipt | null {
+  if (
+    isRecord(value) &&
+    (value.status === 'sent' || value.status === 'queued' || value.status === 'failed') &&
+    typeof value.destination === 'string' &&
+    typeof value.method === 'string' &&
+    typeof value.url === 'string' &&
+    isStringArray(value.fields_sent) &&
+    typeof value.payload_sha256 === 'string' &&
+    (value.sent_at === undefined || isNullableString(value.sent_at)) &&
+    (value.response_code === undefined || value.response_code === null || typeof value.response_code === 'number')
+  ) {
+    return {
+      status: value.status,
+      outbox_id: typeof value.outbox_id === 'string' ? value.outbox_id : '',
+      destination: value.destination,
+      method: value.method,
+      url: value.url,
+      fields_sent: value.fields_sent,
+      payload_sha256: value.payload_sha256,
+      sent_at: (value.sent_at as string | null | undefined) ?? null,
+      response_code: (value.response_code as number | null | undefined) ?? null,
+      label: typeof value.label === 'string' && value.label.trim() !== '' ? value.label : null,
+    }
+  }
+  return null
+}
+
+/** The care envelope: a receipt, waiting (unknown reasons read as null), or null when missing or unreadable. */
+export function readEnvelope(value: unknown): EnvelopeState {
+  if (isRecord(value) && value.status === 'waiting') {
+    return { status: 'waiting', reason: WAITING_REASONS.find((reason) => reason === value.reason) ?? null }
+  }
+  return readOutboxReceipt(value)
+}
+
+/** The sealed care-team preview, or null when not sharing with the care team (also when missing or unreadable). */
+export function readCare(value: unknown): CareShare | null {
+  if (isRecord(value) && typeof value.org_id === 'string' && typeof value.url === 'string' && isStringArray(value.fields)) {
+    return {
+      org_id: value.org_id,
+      method: typeof value.method === 'string' ? value.method : 'POST',
+      url: value.url,
+      sealed: value.sealed !== false,
+      fields: value.fields,
+    }
+  }
+  return null
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -405,7 +566,7 @@ function isSummaryItem(value: unknown): value is SummaryItem {
   )
 }
 
-function isSharePreview(value: unknown): value is SharePreview {
+function isSharePreview(value: unknown): value is Omit<SharePreview, 'care'> & { care?: unknown } {
   return (
     isRecord(value) &&
     typeof value.destination === 'string' &&
@@ -416,7 +577,11 @@ function isSharePreview(value: unknown): value is SharePreview {
   )
 }
 
-type RawSummary = Omit<CheckinSummary, 'spoken' | 'correction_used'> & { spoken?: unknown; correction_used?: unknown }
+type RawSummary = Omit<CheckinSummary, 'spoken' | 'correction_used' | 'share'> & {
+  spoken?: unknown
+  correction_used?: unknown
+  share: Omit<SharePreview, 'care'> & { care?: unknown }
+}
 
 function isCheckinSummary(value: unknown): value is RawSummary {
   return (
@@ -434,10 +599,15 @@ function isCheckinSummary(value: unknown): value is RawSummary {
 /** `spoken` missing or not text reads as null; `correction_used` missing or not true reads as false. */
 function readSummary(body: RawSummary): CheckinSummary {
   const spoken = typeof body.spoken === 'string' && body.spoken.trim() !== '' ? body.spoken : null
-  return { ...body, spoken, correction_used: body.correction_used === true }
+  return {
+    ...body,
+    spoken,
+    correction_used: body.correction_used === true,
+    share: { ...body.share, care: readCare(body.share.care) },
+  }
 }
 
-type RawReceipt = Omit<EgressReceipt, 'alert'> & { alert?: unknown }
+type RawReceipt = Omit<EgressReceipt, 'alert' | 'envelope'> & { alert?: unknown; envelope?: unknown }
 
 function isEgressReceipt(value: unknown): value is RawReceipt {
   return (
@@ -468,7 +638,7 @@ export function readAlert(value: unknown): ReceiptAlert | null {
 }
 
 function readReceipt(body: RawReceipt): EgressReceipt {
-  return { ...body, alert: readAlert(body.alert) }
+  return { ...body, alert: readAlert(body.alert), envelope: readEnvelope(body.envelope) }
 }
 
 /** The voice command in a turn: `command`, or a repeat/slower `next.action`; null for a normal answer. */

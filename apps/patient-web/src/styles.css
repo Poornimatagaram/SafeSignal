@@ -522,3 +522,120 @@ ul {
 .alert-line {
   font-weight: 600;
 }
+
+/* The care team's sealed copy (CN-01): in the "What will be shared" box and on the receipt. */
+.care-box,
+.care-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.care-box {
+  padding-top: 20px;
+  border-top: 3px solid var(--line);
+}
+
+/* "Who I share with" (CN-01, CN-03): each switch is one big row. On/Off shows as a word and the knob's side,
+   never colour alone. */
+.switches {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.switch-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  width: 100%;
+  min-height: 96px;
+  padding: 16px 28px;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.5rem; /* 36 px */
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.switch:hover {
+  background: var(--panel);
+}
+
+.switch--on {
+  border-width: 5px;
+}
+
+.switch:focus-visible {
+  outline: 5px solid var(--focus);
+  outline-offset: 5px;
+}
+
+.switch:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.switch[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.switch__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.switch__track {
+  position: relative;
+  display: inline-block;
+  width: 96px;
+  height: 52px;
+  flex: none;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+}
+
+.switch--on .switch__track {
+  background: var(--primary);
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 38px;
+  height: 38px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.switch--on .switch__thumb {
+  left: auto;
+  right: 4px;
+}
+
+.switch__word {
+  min-width: 2.2em;
+}
+
+.switch__means {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+}

@@ -13,12 +13,14 @@ import {
 import { afterTurn, createQuestionVoice } from './questionFlow.ts'
 import { createShareFlow, type ShareFlow } from './shareFlow.ts'
 import { ShareScreen } from './ShareScreen.tsx'
+import { createConsentFlow, type ConsentFlow } from './consentFlow.ts'
+import { ConsentScreen } from './ConsentScreen.tsx'
 import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
 
 const client = createRuntimeClient()
 
-/** start -> question (one per survey question) -> share (summary, approval, receipt). */
-type Screen = 'start' | 'question' | 'share'
+/** start -> question (one per survey question) -> share (summary, approval, receipt); start <-> consent. */
+type Screen = 'start' | 'question' | 'share' | 'consent'
 /** Push-to-talk is a toggle (tap to start, tap to stop): holding a button is hard with a hand tremor. */
 type Talk = 'idle' | 'starting' | 'listening' | 'sending'
 /**
@@ -44,6 +46,8 @@ export default function App() {
   const [voiceLoading, setVoiceLoading] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
+  // "Who I share with": created when opened from the start screen, disposed when leaving it.
+  const [consentFlow, setConsentFlow] = useState<ConsentFlow | null>(null)
 
   const session = useRef<CheckinSession | null>(null) // today's check-in; every answer is sent with its id
   const player = useRef<Player | null>(null)
@@ -76,6 +80,19 @@ export default function App() {
       shareFlowNow.current?.dispose()
     }
   }, [])
+
+  // Leaving "Who I share with" stops watching a queued change (the runtime still sends it by itself).
+  useEffect(() => () => consentFlow?.dispose(), [consentFlow])
+
+  const openConsent = () => {
+    setConsentFlow(createConsentFlow(client))
+    setScreen('consent')
+  }
+
+  const closeConsent = () => {
+    setConsentFlow(null)
+    setScreen('start')
+  }
 
   const speak = useCallback(async (q: Question, slow: boolean) => {
     if (!player.current) return
@@ -301,8 +318,15 @@ export default function App() {
         >
           {startError ? 'Try again' : 'Start check-in'}
         </button>
+        <button type="button" className="button button--secondary button--huge" onClick={openConsent}>
+          Who I share with
+        </button>
       </main>
     )
+  }
+
+  if (screen === 'consent' && consentFlow) {
+    return <ConsentScreen flow={consentFlow} onBack={closeConsent} />
   }
 
   if (screen === 'share' && shareFlow) {
