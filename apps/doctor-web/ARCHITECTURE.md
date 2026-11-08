@@ -21,6 +21,7 @@ flowchart LR
   subgraph DOCTOR["Doctor side · apps/doctor-web :5174"]
     DV["Doctor view<br/>Northgate: Dr. Shah, Dr. Patel (admin), Dr. Rivera<br/>Lakeside: Dr. Okafor (emergency)"]
     CG["Caregiver view #/caregiver · Anna"]
+    HOME["Public pages #/ and #/learn<br/>no service calls"]
     DV --- IDB[("IndexedDB sentinel_doctor_view<br/>dr_patient · dr_timeline_entry · dr_alert<br/>dr_key · dr_org_key · dr_sync_state")]
   end
 
@@ -80,7 +81,9 @@ Emergency organizations (Lakeside) do not sync routinely. A member states a code
 ```mermaid
 flowchart TB
   subgraph UI["src/components/"]
-    APP["App.tsx: who am I? · routes #/ and #/caregiver"]
+    APP["App.tsx: routes #/ patients · #/patient/ref · #/patient/ref/record · #/caregiver · #/about · #/learn"]
+    DOC["src/doctor/: DoctorApp, Nav, home/, Workspace, HistoryGrid, FullRecord, AdminPage"]
+    LAND["src/landing/: Landing, LearnMore (static, synthetic example)"]
     ORG["OrgPanel: memberships, key status, admin grants and revokes"]
     DVIEW["DoctorView: patient list by urgency"]
     TL["Timeline: symptom grid, severity chart, reporter"]
@@ -97,7 +100,8 @@ flowchart TB
     VAL["validate.ts: Ajv on schema/doctor_payload.json"]
     DB["db.ts: IndexedDB, 6 stores"]
   end
-  APP --> ORG & DVIEW & CGV
+  APP --> DOC & LAND & CGV
+  DOC --> ORG & DVIEW
   DVIEW --> TL & SUM & AL & EM
   ORG --> KEYS
   DVIEW --> SYNC --> API & CRY & VAL & DB
@@ -107,14 +111,18 @@ flowchart TB
 
 ## 5. Branches
 
-One component per branch, cut from the latest `main`, merged (squash) when CI is green before the next one starts (`CONTRIBUTING.md`):
+One component per branch. From #3 on, each branch builds on the previous one and is pushed but not merged; the user merges them later, in order, when there are no conflicts (DW-22):
 
 | # | Branch | Contents |
 |---|---|---|
-| 1 | `doctor/feat/app-scaffold` | Vite/React/TS setup, secret check, app docs |
-| 2 | `doctor/feat/org-key-sync` | `src/lib/`: keys, grants, per-org sync, IndexedDB 2.0 |
+| 1 | `doctor/feat/app-scaffold` (merged, PR 8) | Vite/React/TS setup, secret check, app docs |
+| 2 | `doctor/feat/org-key-sync` (merged, PR 9) | `src/lib/`: keys, grants, per-org sync, IndexedDB 2.0 |
 | 3 | `doctor/feat/org-admin` | Who-am-I, memberships, admin key setup, grant and revoke |
 | 4 | `doctor/feat/timeline-view` | Patient list, timeline, summary, alerts with escalation level |
 | 5 | `doctor/feat/emergency-access` | Break-glass flow for emergency organizations |
 | 6 | `doctor/feat/caregiver-view` | Anna's alerts with escalation level |
 | 7 | `doctor/test/access-checks` | `evals/doctor/`: 26.15 checks on contract 2.0 |
+| 8 | `doctor/feat/demo-history` | `data/doctor/`: synthetic 3-week history |
+| 9 | `doctor/docs/demo-runbook` | `DEMO.md` |
+| 10 | `doctor/feat/landing-page` | Public home and Learn more pages, pastel theme, routes |
+| 11 | `doctor/feat/doctor-view-redesign` | Doctor UI (DW-29): home, patients, detailed view, guide, Admin & access; light, dark and system modes. Carries branches 3–6, 9 and 10; merged into `main` as one pull request (DW-30) |
