@@ -1,4 +1,4 @@
-# Architecture: apps/doctor-web (contract 2.0)
+# Architecture: apps/doctor-web (contract 2.2)
 
 How the doctor and caregiver views fit into the SafeSignal repo. Names, ports and calls match `README.md`, `CODEOWNERS`, `schema/`, `docs/briefs/doctor-web.md` and `docs/design/contract-2.0.md`. If this file disagrees with them, they win.
 
@@ -78,51 +78,19 @@ Emergency organizations (Lakeside) do not sync routinely. A member states a code
 
 ## 4. Inside the app
 
-```mermaid
-flowchart TB
-  subgraph UI["src/components/"]
-    APP["App.tsx: routes #/ patients · #/patient/ref · #/patient/ref/record · #/caregiver · #/about · #/learn"]
-    DOC["src/doctor/: DoctorApp, Nav, home/, Workspace, Clinic, HistoryGrid, FullRecord, AdminPage"]
-    LAND["src/landing/: Landing, LearnMore (static, synthetic example)"]
-    ORG["OrgPanel: memberships, key status, admin grants and revokes"]
-    DVIEW["DoctorView: patient list by urgency"]
-    TL["Timeline: symptom grid, severity chart, reporter"]
-    SUM["PreVisitSummary: templates only"]
-    AL["AlertsPanel: type, escalation level, time"]
-    EM["EmergencyAccess: coded reason, banner"]
-    CGV["CaregiverView: type, level, time only"]
-  end
-  subgraph LIB["src/lib/"]
-    KEYS["keys.ts: personal key, org key, wrap / unwrap"]
-    SYNC["sync.ts: per-org fetch → decrypt → hash → validate → store → ack"]
-    API["api.ts: headers, allowed calls only"]
-    CRY["crypto.ts: libsodium sealed box"]
-    VAL["validate.ts: Ajv on schema/doctor_payload.json"]
-    DB["db.ts: IndexedDB, 6 stores"]
-  end
-  APP --> DOC & LAND & CGV
-  DOC --> ORG & DVIEW
-  DVIEW --> TL & SUM & AL & EM
-  ORG --> KEYS
-  DVIEW --> SYNC --> API & CRY & VAL & DB
-  KEYS --> API & CRY & DB
-  API --> SVC["apps/service :8000"]
-```
+See `README.md` §10–§13 for the current screens, routes, Guided and Clinic views, code structure and browser data, each with a diagram.
 
-## 5. Branches
+## 5. What is on `main`
 
-One component per branch. From #3 on, each branch builds on the previous one and is pushed but not merged; the user merges them later, in order, when there are no conflicts (DW-22):
+| Pull request | Contents |
+|---|---|
+| #8 | Vite/React/TS setup, secret check, app docs |
+| #9 | `src/lib/`: keys, grants, per-org sync, IndexedDB 2.0 |
+| #16 | `evals/doctor/`: 26.15 access and privacy checks (19/19 on contract 2.2) |
+| #17 | `data/doctor/`: synthetic 3-week demo history |
+| #18 | Key grant made in another browser no longer blanks every organization |
+| #28 | Doctor UI (DW-29): home, patients, detailed view, guide, Admin & access, caregiver view, emergency access, light/dark/system |
+| #30 | Accessibility pass (DW-31) |
+| #35 | Clinic view (DW-32) |
 
-| # | Branch | Contents |
-|---|---|---|
-| 1 | `doctor/feat/app-scaffold` (merged, PR 8) | Vite/React/TS setup, secret check, app docs |
-| 2 | `doctor/feat/org-key-sync` (merged, PR 9) | `src/lib/`: keys, grants, per-org sync, IndexedDB 2.0 |
-| 3 | `doctor/feat/org-admin` | Who-am-I, memberships, admin key setup, grant and revoke |
-| 4 | `doctor/feat/timeline-view` | Patient list, timeline, summary, alerts with escalation level |
-| 5 | `doctor/feat/emergency-access` | Break-glass flow for emergency organizations |
-| 6 | `doctor/feat/caregiver-view` | Anna's alerts with escalation level |
-| 7 | `doctor/test/access-checks` | `evals/doctor/`: 26.15 checks on contract 2.0 |
-| 8 | `doctor/feat/demo-history` | `data/doctor/`: synthetic 3-week history |
-| 9 | `doctor/docs/demo-runbook` | `DEMO.md` |
-| 10 | `doctor/feat/landing-page` | Public home and Learn more pages, pastel theme, routes |
-| 11 | `doctor/feat/doctor-view-redesign` | Doctor UI (DW-29): home, patients, detailed view, guide, Admin & access; light, dark and system modes. Carries branches 3–6, 9 and 10; merged into `main` as one pull request (DW-30) |
+New work goes on a `doctor/<type>/<topic>` branch from `main` and into a pull request (CONTRIBUTING).
