@@ -138,7 +138,8 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
                          "adherence": FIXTURE_ADHERENCE.get(p["display_name"], 0.85),
                          "consent_care_team": p["consent"]["share_care_team"], "reporter": p["reporter_default"],
                          "consent_caregiver": p["consent"]["share_caregiver"], "linked": True,
-                         "enrolled": date.fromisoformat(p["enrolled_at"][:10])})
+                         "enrolled": date.fromisoformat(p["enrolled_at"][:10]),
+                         "missed_tail": e.get("demo_missed_tail", 0), "synthetic": False})
     cohorts = {c["cohort_id"]: c["drug_version"] for c in fx["cohorts"]}
     for cohort_id in cohorts:
         have = sum(1 for p in patients if p["cohort_id"] == cohort_id)
@@ -147,7 +148,7 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
                              "window": rng.choice(WINDOWS), "adherence": rng.uniform(0.62, 0.95),
                              "consent_care_team": rng.random() < 0.7, "consent_caregiver": rng.random() < 0.45,
                              "reporter": "caregiver" if rng.random() < PROXY_RATE else "self",
-                             "linked": False, "enrolled": None})
+                             "linked": False, "enrolled": None, "missed_tail": 0, "synthetic": True})
 
     # ---- days and weeks of history ----
     monday = today - timedelta(days=today.weekday()) - timedelta(weeks=weeks - 1)
@@ -178,6 +179,8 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
             x = rng.random()
             status = "missed" if x > p["adherence"] else ("partial" if x > p["adherence"] - PARTIAL_RATE else
                                                          "completed")
+            if (today - d).days <= p["missed_tail"]:
+                status = "missed"  # demo: a run of misses right before today (demo_fixtures enrollments)
             start, end = p["window"].split("-")
             if status == "missed":
                 received = _at(d, end, 30)  # the scheduler marks it after the window closes (D-003)
@@ -226,10 +229,10 @@ def seed(dbs: Databases, *, patients_per_cohort: int = 250, weeks: int = 4, rng_
                         int(t["severe_trigger"])) for t in terms])
         c.executemany("INSERT INTO survey_config VALUES (?,?,?,?,?,?)",
                       [(f"cfg_{k.lower()}_v1", k, 1, json.dumps(survey), t0, admin) for k in cohorts])
-        c.executemany("INSERT INTO enrollment (patient_ref, program_id, cohort_id, checkin_window, start_date, active) "
-                      "VALUES (?,?,?,?,?,1)",
+        c.executemany("INSERT INTO enrollment (patient_ref, program_id, cohort_id, checkin_window, start_date, "
+                      "synthetic, active) VALUES (?,?,?,?,?,?,1)",
                       [(p["patient_ref"], program["program_id"], p["cohort_id"], p["window"],
-                        (p["enrolled"] or monday).isoformat()) for p in patients])
+                        (p["enrolled"] or monday).isoformat(), int(p["synthetic"])) for p in patients])
         c.executemany("INSERT INTO checkin_record (record_id, schema_version, patient_ref, program_id, cohort_id, "
                       "drug_version, iso_week, status, unanswered_questions, consent_care_team, consent_caregiver, "
                       "payload_sha256, reporter, input_mode, source, received_at) "

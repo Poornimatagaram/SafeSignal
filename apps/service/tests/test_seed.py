@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from conftest import TODAY
-from sentinel_contract import SCHEMA_DIR, payload_sha256, validation_errors
+from sentinel_contract import CONTRACT_VERSION, SCHEMA_DIR, payload_sha256, validation_errors
 from sentinel_service import demo_ids as ids
 from sentinel_service.main import app
 from sentinel_service.seed import is_seeded, seed
@@ -147,7 +147,7 @@ def test_seed_is_idempotent_and_data_survives_restart(tmp_path):
     assert is_seeded(s2.db)
     assert s2.put_record(ids.WALTER, rec)[0] == 200  # still there, idempotent
     meta = s2.db.company.execute("SELECT schema_version FROM schema_meta").fetchone()[0]
-    assert meta == "2.0"
+    assert meta == CONTRACT_VERSION
     s2.close()
 
 
@@ -155,7 +155,7 @@ def test_healthz_reports_seed_state(tmp_path):
     app.state.store = SqliteStore.open(tmp_path)
     try:
         with TestClient(app) as c:
-            assert c.get("/healthz").json() == {"status": "ok", "contract_version": "2.0", "seeded": False}
+            assert c.get("/healthz").json() == {"status": "ok", "contract_version": CONTRACT_VERSION, "seeded": False}
     finally:
         app.state.store.close()
         app.state.store = None

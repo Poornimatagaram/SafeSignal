@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from nacl.public import PrivateKey, SealedBox
 
-from sentinel_contract import SCHEMA_DIR, ContractError, canonical, payload_sha256
+from sentinel_contract import CONTRACT_VERSION, SCHEMA_DIR, ContractError, canonical, payload_sha256
 from sentinel_contract.client import SendRejected, SentinelClient, build_envelope
 from sentinel_service import demo_ids as ids
 from sentinel_service.main import app
@@ -81,7 +81,7 @@ def test_missing_headers_401(c):
 
 def test_contract_version_header_and_terms(c):
     r = c.get("/v1/terms", params={"program_id": ids.PROGRAM_ID}, headers=PT)
-    assert r.headers["X-Schema-Version"] == "2.0"
+    assert r.headers["X-Schema-Version"] == CONTRACT_VERSION
     terms = {t["term_code"]: t for t in r.json()["terms"]}
     assert terms["SE_RASH"]["known_for_program"] is True and terms["SE_COUGH"]["known_for_program"] is False
 

@@ -6,11 +6,12 @@ codes only, never request bodies (26.12).
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any, Literal, Optional
 
 from fastapi import Body, Depends, FastAPI, Query, Request
@@ -21,6 +22,7 @@ from sentinel_contract import CONTRACT_VERSION, enums
 
 from . import models as m
 from .errors import ApiError, forbidden
+from .scheduler import run_missed_checks
 from .store import SqliteStore
 
 log = logging.getLogger("sentinel")
@@ -29,13 +31,33 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 ROLES = set(enums()["roles"])
 COMPANY_READ = {"company_reader", "company_admin", "company_safety"}
 
+async def scheduler_loop(app: FastAPI, interval: float) -> None:
+    """Missed check-in scheduler (D-074). Logs counts and IDs only, never contacts or payloads."""
+    while True:
+        try:
+            raised = await asyncio.to_thread(run_missed_checks, app.state.store)
+            for item in raised:
+                log.info("missed check-in patient=%s day=%s level=%s alert=%s", item["patient_ref"], item["day"],
+                         item["escalation_level"], item["alert_id"])
+        except Exception as exc:  # keep the loop alive; the next run retries
+            log.error("scheduler run failed: %s", type(exc).__name__)
+        await asyncio.sleep(interval)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Tests may install their own store before startup; otherwise open var/service (or $SERVICE_DATA_DIR).
     opened = getattr(app.state, "store", None) is None
     if opened:
         app.state.store = SqliteStore.open()
+    task = None
+    if opened and os.environ.get("SERVICE_SCHEDULER", "on") != "off":
+        task = asyncio.create_task(scheduler_loop(app, float(os.environ.get("SERVICE_SCHEDULER_INTERVAL", "30"))))
     yield
+    if task:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
     if opened:
         app.state.store.close()
         app.state.store = None
