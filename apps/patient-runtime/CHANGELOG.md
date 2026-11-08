@@ -2,6 +2,16 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Network log and config fetches (PV-06, contract 2.3; branch `patient/feat/network-log`)
+
+### Added
+- `GET /network-log`: every request that reached the service, newest first. It covers sends and configuration fetches, with field names, hashes and status only, never payloads.
+- Configuration fetches (survey, terms, org keys) are logged in `egress_log` as `kind: "config_fetch"` with no outbox row. `make_client` passes `on_fetch` to `SentinelClient` (D-088); `egress_gate.log_fetch` writes the row and never blocks a fetch.
+- Tests: migration, fetch logging (parameters only, nothing logged offline) and the network-log listing; 731 runtime tests.
+
+### Changed
+- `db.py`: a 2.2 `egress_log` (no `kind`, `outbox_id` NOT NULL) is migrated to 2.3 on start. The table is renamed, recreated from `schema/patient.sql` and its rows copied back as sends. An interrupted migration is finished on the next start.
+
 ## 2026-11-08: Task A7, care envelopes per organization, consent switches and setup (branch `patient/feat/care-envelope`)
 
 ### Added

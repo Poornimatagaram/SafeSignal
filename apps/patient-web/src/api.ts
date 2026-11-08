@@ -371,7 +371,34 @@ export interface RuntimeClient {
   setConsent(change: ConsentChange): Promise<ConsentState>
   /** Save the whole setup; the runtime sends it through its egress gate. 422 = refused, with a plain reason. */
   saveConsentSetup(setup: ConsentSetupRequest): Promise<ConsentState>
+  /** What this computer sent or fetched, newest first (PV-06). Sends nothing. */
+  getNetworkLog(limit?: number): Promise<NetworkLogEntry[]>
 }
+
+export type NetworkLogKind = 'send' | 'config_fetch' | 'other'
+
+/** One line of the runtime's network log: one request that left this computer (PV-06). */
+export interface NetworkLogEntry {
+  /** null when the runtime gave none. */
+  log_id: number | null
+  /** 'other' for a kind this screen does not know. */
+  kind: NetworkLogKind
+  /** company_record | care_envelope | alert | consent, any newer name as given, or null. */
+  destination: string | null
+  org_id: string | null
+  method: string
+  url: string
+  /** Field names only (for a download: request parameters such as cohort_id). */
+  fields_sent: string[]
+  /** '' when the runtime gave none. */
+  payload_sha256: string
+  response_code: number | null
+  /** UTC ISO time, or null when missing. */
+  sent_at: string | null
+  outbox_id: string | null
+}
+
+export const NETWORK_LOG_LIMIT = 200
 
 type StatusKinds = Partial<Record<number, RuntimeErrorKind>>
 
@@ -549,6 +576,39 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
       if (!res.ok) throw failure(res)
       return readConsent(await readJson(res), res.status)
     },
+
+    async getNetworkLog(limit = NETWORK_LOG_LIMIT) {
+      const query = new URLSearchParams({ limit: String(limit) })
+      const res = await send(`/network-log?${query}`, { method: 'GET' })
+      if (!res.ok) throw failure(res)
+      const body = await readJson(res)
+      if (!isRecord(body) || !Array.isArray(body.entries)) throw new RuntimeError('bad-response', res.status)
+      return body.entries.flatMap((entry: unknown) => {
+        const read = readNetworkLogEntry(entry)
+        return read ? [read] : []
+      })
+    },
+  }
+}
+
+const optionalString = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null)
+
+/** One log entry; null (dropped) without a URL. Missing or unknown fields read as plain defaults. */
+export function readNetworkLogEntry(value: unknown): NetworkLogEntry | null {
+  if (!isRecord(value) || typeof value.url !== 'string' || value.url === '') return null
+  return {
+    log_id: typeof value.log_id === 'number' && Number.isFinite(value.log_id) ? value.log_id : null,
+    kind: value.kind === 'send' || value.kind === 'config_fetch' ? value.kind : 'other',
+    destination: optionalString(value.destination),
+    org_id: optionalString(value.org_id),
+    method: typeof value.method === 'string' && value.method !== '' ? value.method.toUpperCase() : 'GET',
+    url: value.url,
+    fields_sent: isStringArray(value.fields_sent) ? value.fields_sent : [],
+    payload_sha256: typeof value.payload_sha256 === 'string' ? value.payload_sha256 : '',
+    response_code:
+      typeof value.response_code === 'number' && Number.isInteger(value.response_code) ? value.response_code : null,
+    sent_at: optionalString(value.sent_at),
+    outbox_id: optionalString(value.outbox_id),
   }
 }
 
