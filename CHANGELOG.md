@@ -2,12 +2,24 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 015: company-side overview (branch `company/docs/company-side-overview`)
+
+### Added
+- `docs/company/company-side-overview.md`: what the company side does across the product and what is left.
+
 ## 2026-11-08 — Session 014: company portal (branch `company/feat/company-portal`)
 
 ### Added
 - `apps/company-web`: Vite + React + TypeScript portal on port 5175, reading only `/v1/company/*` (contract 2.2). Tabs: Side effects (CO-01: share of reporting patients per term by cohort, week over week, change in percentage points, severe counts with `<5`, terms not on the FDA label flagged), Check-ins (CO-02: completion, missed, voice/text/mixed), Survey (CO-03: load the live version, edit, publish as `company_admin`, 422 field errors shown), Program & export (cohorts with source trial arms, public documents, CO-07 JSON/CSV export as `company_safety`). Program picker for all three programs. Every chart has a table view, legend and direct end labels; four-series palette validated in light and dark (D-084).
 - CI: `company-web` job runs lint and build.
 - `README.md`: portal run command.
+
+## 2026-11-08 — Session 013: end-to-end check across personas (branch `company/test/e2e-check`)
+
+### Added
+- `scripts/e2e_check.py`: starts a throwaway service (temp data dir, free port, scheduler off), seeds it, and drives one check-in through every persona over real HTTP: patient device via `SentinelClient` (consent, record, one envelope per organization, severe alert), doctors as doctor-web does (personal and org keys, key grants, decrypt and hash check, ack, emergency access), caregiver alerts, company export and aggregates. 58 checks covering the automatable items of Scoping Doc 26.15 (D-083).
+- CI: the end-to-end check runs in the `contract-and-service` job.
+- `README.md`: the check is listed under Check and in the layout table.
 
 ## 2026-11-08 — Session 012: real-data seed, contract 2.2 (branch `company/feat/real-data-seed`)
 

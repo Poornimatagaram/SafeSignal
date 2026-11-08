@@ -360,6 +360,26 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Company portal (`apps/company-web`) on the 2.2 endpoints.
 2. Ask the repo owner to protect `main`.
 
+---
+
+## Session 013 — 2026-11-08 (Sun) · End-to-end check across personas
+
+**Goal:** connect the three personas through the service and prove each sees its intended slice of the same check-in.
+
+**Outputs**
+- `scripts/e2e_check.py` (D-083) and a CI step that runs it.
+- Findings while building it: envelope IDs must be `env_` + 8 hex, so each organization's envelope needs its own random ID; cohort views stay empty with fewer than 5 patients per term, so the check seeds 40 per cohort.
+
+**Verification:** `uv run --project apps/service python scripts/e2e_check.py` → 58 passed, 0 failed on contract 2.2 (about 1 s). `ruff` clean. Service tests pass.
+
+**Status of the other personas** (main at #13): the patient runtime has voice check-in, filter and extraction, but `egress_gate.py` is still a stub, so no live check-in reaches the service yet; doctor-web has its data layer but no screens; patient-web is not started; the company portal is on `company/feat/company-portal` (Session 014).
+
+**Next**
+1. Point the patient owner at `scripts/e2e_check.py` as the reference for the egress gate's calls.
+2. Not automated yet in 26.15: network-off check-in, leakage evaluation, patient receipt on screen.
+
+---
+
 ## Session 014 — 2026-11-08 (Sun) · Company portal
 
 **Goal:** build the third persona's screen so one check-in is visible to patient, doctor and company.
@@ -374,4 +394,25 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Merge the e2e check PR and this PR; then run the Scoping Doc 26.15 checklist with teammates.
 2. CO-05 (document assistant) and CO-06 (FDA report draft) if time allows.
+
+---
+
+## Session 015 — 2026-11-08 (Sun) · Company-side overview
+
+**Goal:** Write down what the company side does across the whole product and what is left, before merging #14 (end-to-end check) and #15 (company portal).
+
+**Outputs**
+- `docs/company/company-side-overview.md`: the contract, the service, the drug company's product, the data and demo setup, project upkeep, what is left, and what other owners handle.
+
+**Verification**
+- Documentation only. Facts were checked against `main` at `b0200e7` and the open PRs.
+
+**Open items**
+- Branch protection (repo owner).
+- D-008.
+- Team integration run once the patient egress gate (A4, patient side) exists.
+
+**Next**
+1. Merge this PR, then #14 and #15 (each needs `main` merged in for the log files).
+2. Plan the next steps with the product owner.
 

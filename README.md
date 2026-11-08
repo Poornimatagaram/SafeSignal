@@ -22,7 +22,7 @@ Scope: `docs/scoping-document.md`. Decisions that override it: `docs/DECISIONS.m
 | `apps/doctor-web/` | Doctor view (`@sentinel/doctor-web`) | Doctor | 5174 | IndexedDB `sentinel_doctor_view` |
 | `evals/<area>/` | Leakage, F1 and re-ask evaluations, one subfolder per area | Each area | — | — |
 | `data/<area>/` | Public data (openFDA cache) and synthetic generators, one subfolder per area | Each area | — | — |
-| `scripts/` | Shared tooling, incl. `send_demo_envelope.py` (fake Walter device for doctor-web testing) | Company | — | — |
+| `scripts/` | Shared tooling, incl. `send_demo_envelope.py` (fake Walter device for doctor-web testing) and `e2e_check.py` (end-to-end check across all personas) | Company | — | — |
 | `var/` | All runtime databases (gitignored) | — | — | — |
 
 ## Rules
@@ -50,4 +50,5 @@ scripts/reset_all.sh --seed                                  # from the repo roo
 (cd packages/contract-py && uv run pytest -q)
 (cd apps/service && uv run pytest -q)
 npm test --prefix packages/contract-ts
+uv run --project apps/service python scripts/e2e_check.py   # one check-in through every persona (throwaway service)
 ```
