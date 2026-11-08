@@ -2,6 +2,13 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Held-out leakage set (branch `patient/test/leakage-held-out`)
+
+### Added
+- `data/patient/leakage_held_out.json`: 40 new synthetic transcripts (`lk_11`–`lk_50`, 185 identifiers, every term code). They were written by an agent that never saw the filter, extraction or eval code, and are never to be used for tuning.
+- `evals/patient/leakage_eval.py` takes `--data` more than once. By default it runs both sets and reports each one separately (`sets`), so the held-out result is never hidden in the total. Case ids must be unique across files.
+- Result, honest and with the filter unchanged: PV-01 PASS (0 of 244 identifiers in the output). Filter residuals: 0 of 59 on the tuned set and **19 of 185 on the held-out set** (NAME 14, ADDRESS 4, PLACE 1). Those reach the local model only, never the outbound record. Term F1: 0.814 on the held-out set.
+
 ## 2026-11-08: Restart safety (branch `patient/feat/restart-safety`)
 
 ### Added

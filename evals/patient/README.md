@@ -2,7 +2,14 @@
 
 ## Leakage (PV-01): `leakage_eval.py`
 
-Checks that no personal identifier reaches the coded output the patient runtime builds its outbound record from (Scoping Doc 12.2 PV-01, 17.3). Dataset: `data/patient/leakage_transcripts.json` (10 synthetic, identifier-heavy check-in answers; see `data/patient/README.md`).
+Checks that no personal identifier reaches the coded output the patient runtime builds its outbound record from (Scoping Doc 12.2 PV-01, 17.3). Datasets (see `data/patient/README.md`), reported as separate sets as well as in the totals:
+- `data/patient/leakage_transcripts.json`: 10 synthetic, identifier-heavy check-in answers. The filter was developed against these, so their result is optimistic.
+- `data/patient/leakage_held_out.json`: 40 held-out answers (185 identifiers) written by someone who never saw the filter. **Never tune the filter on them**; add new cases elsewhere instead.
+
+Latest run (2026-11-08, llama3.2:3b, filter unchanged):
+- Output leaks: 0 of 244 identifiers (PASS).
+- Filter residuals: 0 of 59 on the tuned set, and 19 of 185 on the held-out set (NAME 14, ADDRESS 4, PLACE 1). These residuals reach only the local model on the device, never the outbound record.
+- Term F1: 0.882 on the tuned set and 0.814 on the held-out set.
 
 For each case the harness runs the real pipeline:
 1. `redact(transcript)` from `sentinel_patient.filter` gives the filtered text.
