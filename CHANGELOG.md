@@ -2,6 +2,12 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 020: patient brief and data licence (branch `company/docs/patient-brief-loopback`)
+
+### Changed
+- `docs/briefs/patient-runtime.md`: the egress rule now covers requests leaving the device; the local `ollama` client is allowed for loopback hosts only (D-089).
+- `data/README.md`: source and licence row for `data/patient/` (Scoping Doc 16.1).
+
 ## 2026-11-08 — Session 019: contract 2.3 receipts (branch `company/feat/contract-2-3-receipts`)
 
 ### Added

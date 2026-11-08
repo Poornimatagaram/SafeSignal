@@ -491,3 +491,20 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 **Next**
 1. Merge this PR; then start the landing page and portal redesign in `apps/company-web` from `docs/design/company-web-ui.md`.
+
+## Session 020 — 2026-11-08 (Sun) · Patient brief and data licence
+
+**Goal:** Close the last company-side requests from the patient PRs.
+
+**Outputs**
+- Patient brief: loopback exception for the local model client (D-089).
+- `data/README.md`: row for `data/patient/` (synthetic, MIT).
+
+**Verification**
+- Docs only; `scripts/check_ownership.sh company` and `scripts/check_commits.sh` pass.
+
+**Open items (patient-owned)**
+- Re-check typed input (`input_mode`), proxy display, schedule and the AL-04 reminder against the merged patient PRs.
+
+**Next**
+1. Landing page and portal redesign in `apps/company-web` (`docs/design/company-web-ui.md`).
