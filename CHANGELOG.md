@@ -2,6 +2,14 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 011: CODEOWNERS handles (branch `company/chore/codeowners-handles`)
+
+### Changed
+- `CODEOWNERS`: patient folders → `@Poornimatagaram`, doctor folders → `@Swetha-Jalluri` (D-077; resolves D-046).
+
+### Noted
+- Teammates merged #7 (patient runtime skeleton), #8 and #9 (doctor web scaffold, org keys and per-org sync); all changes stayed inside their own folders. #10 (patient voice check-in) is open.
+
 ## 2026-11-08 — Session 010: missed check-in scheduler (branch `company/feat/missed-checkin-scheduler`)
 
 ### Added

@@ -292,3 +292,19 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates (FLAURA, MARIPOSA), OnSIDES-corrected terms, trial documents in the company `document` table, an infant program (MELODY).
 2. Company portal (`apps/company-web`).
+
+---
+
+## Session 011 — 2026-11-08 (Sun) · Scheduler merged; teammates active; CODEOWNERS
+
+**Outputs**
+- #11 (missed check-in scheduler) squash-merged; CI on `main` green with the teammates' work included.
+- Teammates' merged PRs #7, #8, #9 changed only their own folders (checked file by file). #10 open (patient).
+- `CODEOWNERS` handles filled in (D-077).
+
+**Note for the next session:** PR numbers are shared with teammates now; always read the PR number from `gh pr create` output rather than assuming the next one.
+
+**Next**
+1. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates (FLAURA, MARIPOSA), OnSIDES-corrected terms, trial documents in the company `document` table; an infant program (MELODY) needs new term codes, so it is a contract change.
+2. Company portal (`apps/company-web`).
+3. Ask the repo owner to protect `main` and require CI (D-045).
