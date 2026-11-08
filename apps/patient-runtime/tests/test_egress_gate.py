@@ -346,9 +346,10 @@ def test_refresh_config_upserts_survey_and_terms(db_path):
     assert (survey["config_id"], survey["cohort_id"], survey["version"]) == ("cfg_cohort_b_v1", "cohort_B", 1)
     assert json.loads(survey["questions_json"]) == {"schedule": SURVEY["schedule"], "questions": SURVEY["questions"]}
     terms = {r["term_code"]: r for r in rows(db_path, "SELECT * FROM term_cache")}
-    assert len(terms) == 12
-    assert terms["SE_RASH"] == {"term_code": "SE_RASH", "label_term": "Rash",
-                                "everyday_words": json.dumps(["rash", "spots", "red skin", "itchy bumps"]),
+    assert len(terms) == len(TERMS["terms"])  # follows schema/terms.json (12 in 2.0, 18 in 2.2)
+    rash = next(t for t in TERMS["terms"] if t["term_code"] == "SE_RASH")
+    assert terms["SE_RASH"] == {"term_code": "SE_RASH", "label_term": rash["label_term"],
+                                "everyday_words": json.dumps(rash["everyday_words"]),
                                 "severe_trigger": 0, "known_for_program": 1}
     assert terms["SE_DYSPNEA"]["severe_trigger"] == 1
 
@@ -362,7 +363,8 @@ def test_refresh_config_upserts_survey_and_terms(db_path):
     service.terms = {**TERMS, "terms": [{**t, "label_term": "Skin rash"} if t["term_code"] == "SE_RASH" else t
                                         for t in TERMS["terms"]]}
     assert gate.refresh_config(db_path, WALTER, client=service.client()) == gate.ConfigRefresh("updated", "updated")
-    assert len(rows(db_path, "SELECT * FROM survey_cache")) == 1 and len(rows(db_path, "SELECT * FROM term_cache")) == 12
+    assert len(rows(db_path, "SELECT * FROM survey_cache")) == 1
+    assert len(rows(db_path, "SELECT * FROM term_cache")) == len(TERMS["terms"])
     assert rows(db_path, "SELECT label_term FROM term_cache WHERE term_code = 'SE_RASH'") == [{"label_term": "Skin rash"}]
     assert len(rows(db_path, "SELECT * FROM symptom_event")) == 1
 
@@ -432,7 +434,7 @@ def test_live_refresh_config_fills_the_caches(db_path, live_client):
     [survey] = rows(db_path, "SELECT * FROM survey_cache")
     assert (survey["config_id"], survey["cohort_id"]) == ("cfg_cohort_b_v1", "cohort_B")
     assert len(json.loads(survey["questions_json"])["questions"]) == 6
-    assert len(rows(db_path, "SELECT * FROM term_cache")) == 12
+    assert len(rows(db_path, "SELECT * FROM term_cache")) == len(TERMS["terms"])  # service serves schema/terms.json
     assert rows(db_path, "SELECT known_for_program FROM term_cache WHERE term_code = 'SE_RASH'") == [
         {"known_for_program": 1}]
 

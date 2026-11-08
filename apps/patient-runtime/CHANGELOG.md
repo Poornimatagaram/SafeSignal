@@ -23,7 +23,7 @@ Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
   - `POST /checkin/sessions/{id}/approve`: the only route that sends.
   - `/checkin/turn` now requires `session_id`, and the model runs only for questions that ask about symptoms.
 - `extract.py` helpers: `severity_in_text` and `onset_in_text`, which are rule-based and return None when unclear.
-- Tests: `test_egress_gate.py` (including live tests against the service on port 8000) and a rewritten `test_checkin_api.py` (approve before sending, no double send, offline queue, missing severity); 417 runtime tests in total.
+- Tests: `test_egress_gate.py` (including live tests against the service on port 8000) and a rewritten `test_checkin_api.py` (approve before sending, no double send, offline queue, missing severity); 450 runtime tests in total on contract 2.2. Term counts in tests follow `schema/terms.json`.
 
 ### Changed
 - `extract.py`: when the model isn't sure, the symptom is coded `SE_OTHER_REVIEW` instead of a guessed term ("chest feels tight" is no longer `SE_COUGH`).

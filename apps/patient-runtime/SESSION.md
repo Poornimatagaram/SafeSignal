@@ -5,7 +5,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 ## Done
 - **2026-11-08, A4: egress gate, approve before sharing, receipt** (branch `patient/feat/egress-gate`). Built by three parallel agents (egress gate, extract fix, patient screen); I owned `checkin.py`, `survey.py`, `main.py` and their tests.
   - **Checks:**
-    - Runtime: 417 tests pass, including live egress tests against `apps/service` on port 8000.
+    - Runtime: 450 tests pass after rebasing onto contract 2.2, including live egress tests against `apps/service` on port 8000.
     - Eval harness: 37 tests pass.
     - Patient web: 114 tests pass, the build is clean, and `npm audit` reports 0 vulnerabilities.
     - Leakage eval: **PASS** (0 of 59 identifiers; term F1 0.909).
@@ -85,6 +85,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **The rebase onto contract 2.2 broke an egress test.** `main` gained six term codes (D-079), so the term list grew from 12 to 18, and `test_egress_gate.py` had hard-coded 12. Fixed by deriving the count and the rash row from `schema/terms.json`. I restarted the local service on the 2.2 code and reseeded it with `seed --reset`, which leaves `var/patient` alone. All tests and the leakage eval pass on 2.2.
 - **The first live A4 run talked to an old runtime.** Port 8001 was held by an A2-era runtime (PID 15222, started 2026-11-07 20:04, not by me), so the new runtime failed to bind. Every request went to the old code: no `session_id`, and `SE_COUGH` from the old extractor. Fixed by running the new runtime on port 8011; I left the unknown process alone. Lesson: check the runtime log for "address already in use" before trusting a live run.
 - **The live run found invented symptoms.** "It started two days ago" and "I took my tablets" each became `SE_OTHER_REVIEW`, and the onset answer was copied onto fatigue from an earlier question. Fixed by allowing symptoms only from symptom questions and applying follow-up answers only to the symptoms they refer to, with a test for each.
 - **Live egress tests write real records** for Walter to the local service: synthetic, a few per run. They also suppress Walter's missed check-in alert for today. Reseed before the demo: `scripts/reset_all.sh --seed`.
