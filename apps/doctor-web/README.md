@@ -15,7 +15,7 @@ Structure inside this folder is up to its owner.
 ```bash
 npm install
 cp .env.example .env.local     # VITE_DOCTOR_SERVICE_URL=http://127.0.0.1:8000
-npm run dev                    # doctor: http://localhost:5174 · caregiver: http://localhost:5174/#/caregiver
+npm run dev                    # doctor: http://localhost:5174 · patient: /#/patient/<ref> · full record: /#/patient/<ref>/record · caregiver: /#/caregiver
 ```
 Start the service first (`docs/INTEGRATION_STATUS.md`) with `http://localhost:5174` and `http://127.0.0.1:5174` in `SENTINEL_ALLOWED_ORIGINS`. Each origin holds one doctor (DW-19).
 
