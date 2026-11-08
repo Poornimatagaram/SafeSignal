@@ -1,9 +1,15 @@
 // Display labels from the contract's term list (schema/terms.json).
 import terms from '../../../../schema/terms.json'
 
-const LABELS = new Map<string, string>(
-  (terms as { terms: { term_code: string; label_term: string }[] }).terms.map((t) => [t.term_code, t.label_term]),
-)
+export interface Term {
+  term_code: string
+  label_term: string
+  everyday_words: string[]
+  drug_scope: string[]
+}
+export const TERMS = (terms as { terms: Term[] }).terms
+
+const LABELS = new Map<string, string>(TERMS.map((t) => [t.term_code, t.label_term]))
 
 export const termLabel = (code: string) =>
   LABELS.get(code) ?? code.replace(/^SE_/, '').replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())

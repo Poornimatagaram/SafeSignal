@@ -1,5 +1,5 @@
 // Synthetic runtime responses shared by the tests (no real patient data).
-import type { CheckinSummary, EgressReceipt } from '../src/api.ts'
+import type { CareShare, CheckinSummary, ConsentState, EgressReceipt, OutboxReceipt } from '../src/api.ts'
 
 export const BASE = 'http://127.0.0.1:8001'
 export const SID = 'ses_1a2b3c4d'
@@ -49,6 +49,7 @@ const SHARE = {
   method: 'POST',
   url: SERVICE_RECORDS,
   fields: FIELDS,
+  care: null,
 }
 
 /** A rash with everything known: ready to share. */
@@ -96,6 +97,8 @@ export const RECEIPT_SENT: EgressReceipt = {
   sent_at: '2026-11-08T14:03:12Z',
   response_code: 201,
   alert: null,
+  envelope: null,
+  envelopes: [],
 }
 
 export const RECEIPT_QUEUED: EgressReceipt = { ...RECEIPT_SENT, status: 'queued', sent_at: null, response_code: null }
@@ -117,4 +120,77 @@ export const SUMMARY_CORRECTED: CheckinSummary = {
   text: 'You told me about: rash, mild, started 1 to 3 days ago.',
   spoken: 'Here is what I heard. You have a rash. It is mild. It started 1 to 3 days ago.',
   correction_used: true,
+}
+
+// ---- Care envelope and consent (CN-01, CN-03) ----
+
+export const SERVICE_ENVELOPES = 'http://127.0.0.1:8000/v1/care-envelopes'
+
+/** The fields inside the sealed care-team record. */
+export const CARE_FIELDS = [
+  'age_years',
+  'checkin_date',
+  'display_name',
+  'drug_name',
+  'drug_version',
+  'patient_ref',
+  'reporter',
+  'schema_version',
+  'status',
+  'symptoms[].onset',
+  'symptoms[].severity',
+  'symptoms[].term_code',
+  'trend',
+]
+
+export const CARE: CareShare = { org_id: 'org_demo_clinic', method: 'POST', url: SERVICE_ENVELOPES, sealed: true, fields: CARE_FIELDS, emergency: [] }
+
+/** Ready to share, also with the care team (sealed). */
+export const SUMMARY_WITH_CARE: CheckinSummary = { ...SUMMARY_READY, share: { ...SUMMARY_READY.share, care: CARE } }
+
+export const ENVELOPE_SENT: OutboxReceipt = {
+  status: 'sent',
+  outbox_id: 'env_9c1d2e3f',
+  destination: 'care_envelope',
+  method: 'POST',
+  url: SERVICE_ENVELOPES,
+  fields_sent: ['ciphertext', 'envelope_id', 'org_id', 'patient_ref', 'payload_sha256', 'schema_version'],
+  payload_sha256: '9b8a7c6d5e4f30211203f4e5d6c7b8a99a8b7c6d5e4f30211203f4e5d6c7b8a9',
+  sent_at: '2026-11-08T14:03:14Z',
+  response_code: 201,
+  label: 'Your care team (sealed: only your doctors can read it)',
+}
+export const ENVELOPE_QUEUED: OutboxReceipt = { ...ENVELOPE_SENT, status: 'queued', sent_at: null, response_code: null }
+export const ENVELOPE_NO_KEY = { status: 'waiting', reason: 'no_key' } as const
+export const ENVELOPE_OFFLINE = { status: 'waiting', reason: 'offline' } as const
+export const ENVELOPE_REFUSED = { status: 'waiting', reason: 'refused' } as const
+
+export const CONSENT_RECEIPT_SENT: OutboxReceipt = {
+  status: 'sent',
+  outbox_id: 'con_1a2b3c4d',
+  destination: 'consent',
+  method: 'PUT',
+  url: 'http://127.0.0.1:8000/v1/consent',
+  fields_sent: ['care_team', 'caregiver', 'patient_ref'],
+  payload_sha256: '1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988',
+  sent_at: '2026-11-08T14:10:00Z',
+  response_code: 200,
+  label: null,
+}
+export const CONSENT_RECEIPT_QUEUED: OutboxReceipt = {
+  ...CONSENT_RECEIPT_SENT,
+  status: 'queued',
+  sent_at: null,
+  response_code: null,
+}
+
+/** Both switches on, both set up, nothing sent yet. */
+export const CONSENT_ON: ConsentState = {
+  share_care_team: true,
+  share_caregiver: true,
+  has_care_team: true,
+  has_caregiver: true,
+  receipt: null,
+  setup: null,
+  options: { organizations: [], caregivers: [] },
 }

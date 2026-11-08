@@ -487,7 +487,7 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 **Open items**
 - The runtime must use `on_fetch` and migrate its `egress_log` table (patient-owned).
-- Branch is stacked on #25's branch (merge of #25 was blocked by a permission check).
+- #27 closed when #25's branch was deleted; reopened as a new PR from this branch against main.
 
 **Next**
-1. Merge #25, then this PR; then start the landing page and portal redesign in `apps/company-web` from `docs/design/company-web-ui.md`.
+1. Merge this PR; then start the landing page and portal redesign in `apps/company-web` from `docs/design/company-web-ui.md`.

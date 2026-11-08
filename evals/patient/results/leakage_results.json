@@ -1,7 +1,7 @@
 {
   "eval": "patient_leakage",
   "requirement": "PV-01",
-  "run_at_utc": "2026-11-08T04:54:53Z",
+  "run_at_utc": "2026-11-08T05:34:05Z",
   "model": "llama3.2:3b",
   "dataset": "data/patient/leakage_transcripts.json",
   "dataset_sha256": "2408c70cc329d4e2dd7386292e7f913e3956cd11945ccfb5b0eb6824d983be21",
@@ -39,11 +39,11 @@
     "extraction_errors": 0,
     "term_match": {
       "tp": 15,
-      "fp": 3,
+      "fp": 4,
       "fn": 0,
-      "precision": 0.833,
+      "precision": 0.789,
       "recall": 1.0,
-      "f1": 0.909,
+      "f1": 0.882,
       "target_f1": 0.75,
       "meets_target": true
     }
@@ -93,11 +93,12 @@
       ],
       "extracted_terms": [
         "SE_DECREASED_APPETITE",
-        "SE_DIARRHEA"
+        "SE_DIARRHEA",
+        "SE_OTHER_REVIEW"
       ],
       "term_match": {
         "tp": 2,
-        "fp": 0,
+        "fp": 1,
         "fn": 0
       }
     },

@@ -7,6 +7,7 @@
 // Also here: the spoken summary (played when it appears, "Hear it again", "Slower"), the one correction before
 // sharing (VC-08), and watching a receipt saved while offline until the runtime's background retry sends it (PV-07).
 import {
+  receiptEnvelopes,
   RuntimeError,
   type CheckinSummary,
   type CorrectionChange,
@@ -97,9 +98,17 @@ export function canCorrect(state: ShareState): boolean {
   return state.phase === 'review' && state.summary !== null && !state.summary.correction_used && !state.summary.shared
 }
 
-/** True while the record (or the severe-symptom alert) is saved on this computer, waiting for the connection. */
+/**
+ * True while the record, the severe-symptom alert or any sealed copy (care team, emergency hospitals) is still on
+ * this computer and the runtime will send it later by itself. A sealed copy the service refused is not retried, so
+ * it is not watched.
+ */
 export function isWaitingToSend(receipt: EgressReceipt | null): boolean {
-  return receipt !== null && (receipt.status === 'queued' || receipt.alert?.status === 'queued')
+  if (receipt === null) return false
+  const copyWaiting = receiptEnvelopes(receipt).some((copy) =>
+    copy.receipt ? copy.receipt.status === 'queued' : copy.waiting !== 'refused',
+  )
+  return receipt.status === 'queued' || receipt.alert?.status === 'queued' || copyWaiting
 }
 
 /** Term codes that still need a severity from the patient. */

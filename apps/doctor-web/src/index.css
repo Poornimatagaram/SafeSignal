@@ -1,3 +1,27 @@
+/* Self-hosted fonts: no request to a font CDN (privacy: no third-party calls, DW-24). */
+@import '@fontsource/fredoka/500.css';
+@import '@fontsource/fredoka/600.css';
+@import '@fontsource/fredoka/700.css';
+@import '@fontsource/dm-sans/400.css';
+@import '@fontsource/dm-sans/500.css';
+@import '@fontsource/dm-sans/600.css';
+@import '@fontsource/dm-sans/700.css';
+@import '@fontsource/dm-mono/400.css';
+@import '@fontsource/dm-mono/500.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The doctor theme (tokens and components) is in theme.css, loaded after this file from main.tsx. */
+@layer components {
+  .soft-focus:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .chev { transform: rotate(180deg); }
+}
+
+@keyframes wave-bar { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+.wave-on { animation: wave-bar .9s ease-in-out infinite; transform-origin: center; }
+.wave-off { transform: scaleY(.45); transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .wave-on { animation: none; } }
