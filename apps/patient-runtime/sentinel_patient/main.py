@@ -261,6 +261,13 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
             raise HTTPException(404, "this check-in has not been shared")
         return _receipt(shared)
 
+    # ---------- network log (PV-06) ----------
+
+    @app.get("/network-log")
+    def network_log(limit: int = Query(200, ge=1, le=1000)) -> dict:
+        """Every request that reached the service, newest first: sends and configuration fetches (D-088)."""
+        return {"entries": egress_gate.network_log(settings.db_path, limit=limit)}
+
     # ---------- consent switches (CN-01, CN-03) ----------
 
     @app.get("/consent")
