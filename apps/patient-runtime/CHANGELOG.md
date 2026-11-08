@@ -2,6 +2,11 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Demo guide (branch `patient/docs/demo-guide`)
+
+### Added
+- `DEMO.md`, for the team. It covers what runs on which port, start commands and health checks, every environment variable (runtime and screen), CORS origins, the demo-morning checklist (including the reset and doctor key steps), fixes for common problems, and what never leaves the device. `README.md` links to it.
+
 ## 2026-11-08: Held-out leakage set (branch `patient/test/leakage-held-out`)
 
 ### Added

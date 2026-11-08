@@ -3,6 +3,8 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08 (overnight), `DEMO.md` written for the team** (branch `patient/docs/demo-guide`). I checked its facts against the code: ports, variables, origins and commands.
+- **2026-11-08 (overnight), held-out leakage set merged as PR #36** (`83b1608`).
 - **2026-11-08 (overnight), 40 held-out leakage transcripts (50 in total)** (branch `patient/test/leakage-held-out`). They were written by a fresh agent that never read the filter, extraction or eval code, and I did not retune the filter.
   - **Honest result:** PV-01 passes, with 0 of 244 identifiers in the extraction output.
   - **The filter is weaker on unseen text:** 19 of 185 held-out identifiers survive filtering, about 10% (NAME 14, ADDRESS 4, PLACE 1), against 0 of 59 on the tuned set. They reach only the local model, which runs on the device; the outbound record is built from coded fields only.
