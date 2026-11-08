@@ -44,6 +44,8 @@ jobs:
       - name: Service tests
         working-directory: apps/service
         run: uv run --frozen pytest -q
+      - name: End-to-end check across all personas (throwaway service)
+        run: uv run --frozen --project apps/service python scripts/e2e_check.py
       - name: Generated contract files are up to date
         run: |
           uv run --frozen --project packages/contract-py python scripts/build_examples.py
