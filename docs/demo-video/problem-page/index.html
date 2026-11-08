@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeSignal Demo Slides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Clinical Mist, the company portal's palette */
+  :root {
+    --porcelain: #F6F8FA; --ink: #13233A; --ink-2: #4A5A70; --teal: #0E7C7B; --teal-soft: #D8EEEC;
+    --butter: #FBF0CF; --signal: #C2410C; --signal-soft: #FBE3D6; --line: #C9D2DD; --card: #FFFFFF;
+    --ease: cubic-bezier(.22,.8,.24,1);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: var(--porcelain); color: var(--ink); font-family: Montserrat, system-ui, sans-serif; overflow: hidden; }
+  /* fixed 16:9 stage, centred and scaled to the window */
+  #stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+
+  .fade { transition: opacity .7s var(--ease), transform .7s var(--ease); }
+  .hide { opacity: 0; pointer-events: none; }
+
+  /* title */
+  #title { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 28px; }
+  #title p { font-size: 40px; color: var(--ink-2); font-weight: 500; max-width: 1200px; line-height: 1.35; }
+  #title p b { color: var(--ink); }
+
+  /* headline at the top of each step */
+  #headline { position: absolute; top: 64px; left: 0; right: 0; text-align: center; font-size: 46px; font-weight: 700; letter-spacing: -.5px; }
+  #headline small { display: block; font-size: 28px; font-weight: 500; color: var(--ink-2); margin-top: 10px; letter-spacing: 0; }
+
+  /* the three people + links */
+  svg#links { position: absolute; inset: 0; width: 100%; height: 100%; }
+  svg#links line { stroke: var(--line); stroke-width: 6; stroke-linecap: round; transition: stroke .7s, stroke-dasharray .7s, opacity .7s; }
+  svg#links.broken line { stroke: var(--signal); stroke-dasharray: 14 22; }
+  svg#links.joined line { stroke: var(--teal); stroke-dasharray: none; }
+  .x { position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--signal);
+       color: #fff; display: grid; place-items: center; font-size: 34px; font-weight: 800; }
+
+  .node { position: absolute; width: 330px; height: 330px; margin: -165px 0 0 -165px; border-radius: 50%;
+          background: var(--card); border: 6px solid var(--line); display: grid; place-content: center; text-align: center; gap: 10px;
+          box-shadow: 0 18px 50px rgba(19,35,58,.10); transition: all .7s var(--ease); }
+  .node .ico { font-size: 84px; line-height: 1; }
+  .node .ico svg { width: 92px; height: 92px; }
+  .node h2 { font-size: 40px; font-weight: 800; }
+  .node .who { font-size: 24px; color: var(--ink-2); font-weight: 500; }
+  .node.focus { border-color: var(--ink); transform: scale(1.08); }
+  .node.dim { opacity: .35; transform: scale(.92); }
+  .node.ok { border-color: var(--teal); }
+
+  .tag { position: absolute; padding: 10px 22px; border-radius: 999px; font-size: 26px; font-weight: 700; white-space: nowrap; transform: translateX(-50%); }
+  .tag.bad { background: var(--signal-soft); color: var(--signal); }
+  .tag.good { background: var(--teal-soft); color: var(--teal); }
+
+  /* the centre check-in */
+  #hub { position: absolute; left: 960px; top: 770px; width: 330px; height: 330px; margin: -165px 0 0 -165px; border-radius: 50%;
+         background: var(--teal); color: #fff; display: grid; place-content: center; text-align: center; padding: 40px; gap: 12px;
+         box-shadow: 0 0 0 18px rgba(14,124,123,.14), 0 24px 60px rgba(14,124,123,.35); }
+  #hub .t { font-size: 40px; font-weight: 800; line-height: 1.15; }
+  #hub .s { font-size: 24px; font-weight: 500; opacity: .9; }
+  #hub.hide { transform: scale(.6); }
+
+  /* title + end card */
+  .mark { display: inline-flex; align-items: center; gap: 26px; justify-content: center; font-size: 104px; font-weight: 800; letter-spacing: -2px; }
+  .mark svg { width: 128px; height: 128px; }
+  .mark .tl { color: var(--teal); }
+  .tracks { display: flex; gap: 18px; justify-content: center; }
+  .tracks span { padding: 12px 26px; border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-size: 26px; font-weight: 700; }
+  #end { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 34px; }
+  #end p { font-size: 44px; color: var(--ink-2); font-weight: 500; line-height: 1.35; }
+  #end p b { color: var(--ink); }
+
+  /* column cards: privacy + business */
+  .cols { position: absolute; left: 0; right: 0; top: 250px; display: flex; justify-content: center; gap: 44px; }
+  .col { position: relative; overflow: hidden; width: 560px; background: var(--card); border-radius: 28px; padding: 54px 40px 40px;
+         box-shadow: 0 24px 60px rgba(19,35,58,.12); }
+  .col::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 14px; background: var(--teal); }
+  .cols.two .col { width: 760px; }
+  .cols.two .col:first-child::before { background: #E9B949; }
+  .col .num { width: 64px; height: 64px; border-radius: 50%; background: var(--teal-soft); color: var(--teal); display: grid; place-items: center;
+              font-size: 34px; font-weight: 800; margin-bottom: 18px; }
+  .col h3 { font-size: 38px; font-weight: 800; margin-bottom: 22px; }
+  .col ul { padding-left: 30px; display: grid; gap: 16px; font-size: 28px; line-height: 1.32; }
+  .col b { font-weight: 700; }
+  .foot { position: absolute; left: 0; right: 0; top: 640px; text-align: center; font-size: 26px; color: var(--ink-2); }
+
+  /* proof tiles */
+  #proof { position: absolute; left: 200px; right: 200px; top: 250px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .tile { background: var(--card); border-radius: 24px; padding: 34px 34px; box-shadow: 0 18px 50px rgba(19,35,58,.10); display: grid; gap: 14px; }
+  .tile span { font-size: 48px; line-height: 1; }
+  .tile p { font-size: 28px; line-height: 1.32; }
+  #proof .foot { top: 600px; }
+
+  /* hand-off */
+  #go { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 24px; }
+  #go h1 { font-size: 110px; font-weight: 800; letter-spacing: -2px; }
+  #go p { font-size: 38px; color: var(--ink-2); }
+  #go .arrow { color: var(--teal); }
+
+  /* step dots (hidden while recording with "h") */
+  #dots { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; opacity: .5; }
+  #dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  #dots i.on { background: var(--ink); }
+  body.clean #dots { display: none; }
+  body.clean, body.clean * { cursor: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 0: title -->
+  <div id="title" class="fade">
+    <div class="mark"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M60 8 L102 22 V58 C102 84 84 102 60 112 C36 102 18 84 18 58 V22 Z" fill="#0E7C7B"/><circle cx="44" cy="76" r="8" fill="#fff"/><path d="M44 54 A22 22 0 0 1 66 76" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M44 36 A40 40 0 0 1 84 76" fill="none" stroke="#E9B949" stroke-width="8" stroke-linecap="round"/></svg><span>Safe<span class="tl">Signal</span></span></div>
+    <p>A daily voice check-in for patients on a new medicine.<br><b>Private by design.</b></p>
+    <div class="tracks"><span>Privacy-First track</span><span>Most Startup-able</span></div>
+  </div>
+
+  <div id="headline" class="fade hide"></div>
+
+  <svg id="links" class="fade hide" viewBox="0 0 1920 1080" aria-hidden="true">
+    <line id="l-pd" x1="430" y1="610" x2="960" y2="380"/>
+    <line id="l-dc" x1="960" y1="380" x2="1490" y2="610"/>
+    <line id="l-pc" x1="430" y1="610" x2="1490" y2="610"/>
+    <line id="h-p" class="hubline" x1="430" y1="610" x2="960" y2="770" style="opacity:0"/>
+    <line id="h-d" class="hubline" x1="960" y1="380" x2="960" y2="770" style="opacity:0"/>
+    <line id="h-c" class="hubline" x1="1490" y1="610" x2="960" y2="770" style="opacity:0"/>
+  </svg>
+  <div id="xs" class="fade hide">
+    <div class="x" style="left:695px;top:495px">✕</div>
+    <div class="x" style="left:1225px;top:495px">✕</div>
+    <div class="x" style="left:1200px;top:610px">✕</div>
+  </div>
+
+  <div id="hub" class="fade hide"><div class="t">A daily check-in</div><div class="s">at a time he chooses.<br>He just talks.</div></div>
+
+  <div class="node fade hide" id="n-patient" style="left:430px;top:610px">
+    <div class="ico">
+      <svg viewBox="0 0 64 64"><circle cx="32" cy="20" r="11" fill="none" stroke="#13233A" stroke-width="4"/><path d="M12 58c2-13 10-20 20-20s18 7 20 20" fill="none" stroke="#13233A" stroke-width="4" stroke-linecap="round"/></svg>
+    </div>
+    <h2>Patient</h2><div class="who">Walter, 92</div>
+  </div>
+  <div class="node fade hide" id="n-doctor" style="left:960px;top:380px">
+    <div class="ico">
+      <svg viewBox="0 0 64 64"><path d="M20 8v16a12 12 0 0 0 24 0V8" fill="none" stroke="#13233A" stroke-width="4" stroke-linecap="round"/><path d="M32 36v8a10 10 0 0 0 20 0v-6" fill="none" stroke="#13233A" stroke-width="4" stroke-linecap="round"/><circle cx="52" cy="34" r="5" fill="none" stroke="#13233A" stroke-width="4"/></svg>
+    </div>
+    <h2>Doctor</h2><div class="who">his care team</div>
+  </div>
+  <div class="node fade hide" id="n-company" style="left:1490px;top:610px">
+    <div class="ico">
+      <svg viewBox="0 0 64 64"><rect x="10" y="22" width="44" height="34" rx="4" fill="none" stroke="#13233A" stroke-width="4"/><path d="M22 22v-8h20v8M10 36h44" fill="none" stroke="#13233A" stroke-width="4"/></svg>
+    </div>
+    <h2>Company</h2><div class="who">running the trial</div>
+  </div>
+
+  <!-- problem tags -->
+  <div class="tag bad fade hide" id="t-patient" style="left:430px;top:810px">Unheard</div>
+  <div class="tag bad fade hide" id="t-doctor" style="left:960px;top:552px">A blank page</div>
+  <div class="tag bad fade hide" id="t-company" style="left:1490px;top:810px">A thin, late signal</div>
+
+  <!-- promise tags -->
+  <div class="tag good fade hide" id="g-patient" style="left:430px;top:810px">His words stay on his computer</div>
+  <div class="tag good fade hide" id="g-doctor" style="left:960px;top:150px">A sealed history only his care team opens</div>
+  <div class="tag good fade hide" id="g-company" style="left:1490px;top:810px">Patterns, never people</div>
+
+  <!-- privacy at every step -->
+  <div id="privacy" class="cols fade hide">
+    <div class="col"><div class="num">1</div><h3>Stays on his computer</h3>
+      <ul><li>Speech-to-text and the AI model <b>run locally</b></li><li>His voice is <b>never saved</b>, not even on his computer</li><li>A privacy filter strips names, phones and addresses <b>before the AI sees the text</b></li></ul></div>
+    <div class="col"><div class="num">2</div><h3>What leaves</h3>
+      <ul><li><b>Coded fields only</b>: symptom, severity, onset, check-in status</li><li>No audio, no words, no name</li><li>Nothing is sent <b>until Walter approves it</b></li><li>He keeps a <b>receipt</b> with a fingerprint of exactly what was sent</li></ul></div>
+    <div class="col"><div class="num">3</div><h3>Who can read it</h3>
+      <ul><li><b>Doctor</b>: sealed to his care team's key. Our server can't open it</li><li><b>Company</b>: groups of 5 or more, by week, never a name</li><li><b>Caregiver</b>: alerts only, never symptoms</li><li><b>Emergency hospital</b>: only with a stated reason, logged</li></ul></div>
+  </div>
+
+  <div id="go" class="fade hide"><h1>Let's see it run<span class="arrow"> →</span></h1><p>Patient · Doctor · Company, live</p></div>
+
+  <!-- outro: the business -->
+  <div id="biz" class="cols two fade hide">
+    <div class="col"><h3>Who pays</h3>
+      <ul><li>The <b>drug company</b>: it has a legal duty to monitor side effects</li><li><b>$100k</b> per drug program a year + <b>$25</b> per patient a month</li><li>1,000 patients = <b>$400k a program, every year</b></li><li>Patients and doctors use it free. <b>Data is never sold.</b></li></ul></div>
+    <div class="col good"><h3>Privacy is the margin</h3>
+      <ul><li>The AI runs on the patient's device: <b>no cloud AI bill</b> per patient</li><li>We store small coded records, <b>not audio or transcripts</b></li><li>The company holds <b>less identifiable data</b>, so less risk</li><li>New drug, same app: only the survey changes</li></ul></div>
+    <div class="foot">Illustrative prices, to validate with buyers</div>
+  </div>
+
+  <!-- outro: proof -->
+  <div id="proof" class="fade hide">
+    <div class="tile"><span>🧾</span><p>Every receipt's fingerprint <b>matches what the server got</b></p></div>
+    <div class="tile"><span>📡</span><p>A log of <b>every request</b> the computer makes</p></div>
+    <div class="tile"><span>🧪</span><p>A <b>leakage test</b> runs on synthetic transcripts before every commit</p></div>
+    <div class="tile"><span>🔐</span><p>Every role is <b>tested against the live service</b>: who is refused, and why</p></div>
+    <div class="tile"><span>📴</span><p>Check-ins work <b>with the network off</b>, and send once back online</p></div>
+    <div class="tile"><span>🗂</span><p>Company reads and exports are <b>all logged</b></p></div>
+    <div class="foot">Next: encryption at rest and real sign-in</div>
+  </div>
+
+  <!-- outro: end card -->
+  <div id="end" class="fade hide">
+    <div class="mark"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M60 8 L102 22 V58 C102 84 84 102 60 112 C36 102 18 84 18 58 V22 Z" fill="#0E7C7B"/><circle cx="44" cy="76" r="8" fill="#fff"/><path d="M44 54 A22 22 0 0 1 66 76" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M44 36 A40 40 0 0 1 84 76" fill="none" stroke="#E9B949" stroke-width="8" stroke-linecap="round"/></svg><span>Safe<span class="tl">Signal</span></span></div>
+    <p>Someone is looking out for you.<br><b>And no one else is listening.</b></p>
+    <div class="tracks"><span>Privacy-First track</span><span>Most Startup-able</span></div>
+  </div>
+</div>
+<div id="dots"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const ALL = ['title','headline','links','xs','hub','n-patient','n-doctor','n-company','t-patient','t-doctor','t-company',
+               'g-patient','g-doctor','g-company','privacy','go','biz','proof','end'];
+  const NODES = ['patient','doctor','company'];
+  const PEOPLE = ['links','n-patient','n-doctor','n-company'];
+
+  // one entry per click; each lists what is visible and the headline
+  const STEPS = [
+    // intro
+    { show: ['title'] },
+    { head: 'Three people, none connected', sub: 'and a patient who won\'t share', show: [...PEOPLE,'xs','t-patient','t-doctor','t-company'], links: 'broken' },
+    { head: 'SafeSignal: one daily voice check-in', show: [...PEOPLE,'hub','g-patient','g-doctor','g-company'], links: 'joined', hub: true, ok: true },
+    { head: 'Privacy first, at every step', sub: 'what stays, what leaves, who can read it', show: ['privacy'] },
+    { show: ['go'] },
+    // outro
+    { head: 'A business built on privacy', sub: 'Most Startup-able', show: ['biz'] },
+    { head: 'Proven, not promised', sub: 'Privacy-First', show: ['proof'] },
+    { show: ['end'] },
+  ];
+
+  let i = 0;
+  const dots = $('dots');
+  STEPS.forEach(() => dots.appendChild(document.createElement('i')));
+
+  function render() {
+    const s = STEPS[i];
+    for (const id of ALL) $(id).classList.toggle('hide', !s.show.includes(id) && !(id === 'headline' && s.head));
+    $('headline').innerHTML = s.head ? s.head + (s.sub ? `<small>${s.sub}</small>` : '') : '';
+    const links = $('links');
+    links.classList.toggle('broken', s.links === 'broken');
+    links.classList.toggle('joined', s.links === 'joined');
+    for (const l of links.querySelectorAll('.hubline')) l.style.opacity = s.hub ? 1 : 0;
+    for (const id of ['l-pd','l-dc','l-pc']) $(id).style.opacity = s.hub ? 0 : 1;
+    for (const n of NODES) {
+      const el = $('n-' + n);
+      el.classList.toggle('focus', s.focus === n);
+      el.classList.toggle('dim', !!s.focus && s.focus !== n);
+      el.classList.toggle('ok', !!s.ok);
+    }
+    [...dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
+    history.replaceState(null, '', '#' + i);
+  }
+  function go(d) { i = Math.max(0, Math.min(STEPS.length - 1, i + d)); render(); }
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight','PageDown',' ','Enter'].includes(e.key)) { e.preventDefault(); go(1); }
+    else if (['ArrowLeft','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); go(-1); }
+    else if (e.key === 'Home') { i = 0; render(); }
+    else if (e.key === 'h') document.body.classList.toggle('clean');
+    else if (e.key === 'f') document.documentElement.requestFullscreen?.();
+  });
+  addEventListener('click', (e) => go(e.clientX < innerWidth / 4 ? -1 : 1));
+
+  function fit() {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    $('stage').style.transform = `scale(${s}) translate(-960px, -540px)`;
+  }
+  addEventListener('resize', fit); fit();
+  i = Math.min(STEPS.length - 1, parseInt(location.hash.slice(1)) || 0);
+  render();
+</script>
+</body>
+</html>
