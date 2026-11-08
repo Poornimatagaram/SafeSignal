@@ -2,6 +2,14 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 017: company UI brief (branch `company/docs/company-web-ui-brief`)
+
+### Added
+- `docs/design/company-web-ui.md`: build brief for the Halvaren landing page and redesigned portal: Stripe/Linear-grade structure (Direction C), Clinical Mist palette, light only, projector-first, bundled fonts, role-gated actions, no invented claims (D-086).
+
+### Changed
+- `.gitignore`: ignore `.impeccable/` (local design-tool output).
+
 ## 2026-11-08 — Session 016: free deployment on Render (branch `company/ci/render-deploy`)
 
 ### Added
