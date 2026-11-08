@@ -2,6 +2,14 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Restart safety (branch `patient/feat/restart-safety`)
+
+### Added
+- `state_store.py`: small local JSON files beside `patient.db`. They are owner-only (0600), written atomically, never logged or sent; an unreadable file reads as empty.
+- A half-finished check-in survives a runtime restart. The draft (coded symptoms, exposures, the one correction, the record id shown) is saved after every change to `var/patient/drafts/<session_id>.json` and reloaded on demand. It is deleted once the check-in is approved.
+- The retry worker's attempt counts and due times survive a restart (`var/patient/retry_state.json`, wall-clock times). A restart resumes the backoff, and an overdue row is due at once.
+- Tests: restart tests in `test_checkin_api.py` and `test_egress_gate.py`; 762 runtime tests.
+
 ## 2026-11-08: Possible link (SE-04; branch `patient/feat/possible-link`)
 
 ### Added
