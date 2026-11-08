@@ -43,6 +43,7 @@ import {
   NOTHING_TO_REPORT,
   ONSET_CHOICES,
   onsetSentence,
+  POSSIBLE_LINK_TEXT,
   QUEUED_EXPLANATION,
   receiptStatusText,
   severityQuestion,
@@ -585,6 +586,7 @@ function Item(props: {
         <p>How bad: {severityText(item.severity)}</p>
       )}
       <p>{onsetSentence(item.onset)}</p>
+      {item.possible_link && <p className="item__flag">{POSSIBLE_LINK_TEXT}</p>}
     </li>
   )
 }
