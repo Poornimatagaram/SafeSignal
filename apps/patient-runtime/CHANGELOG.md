@@ -2,16 +2,17 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
-## 2026-11-08: Task A7, care envelope and consent switches (branch `patient/feat/care-envelope`)
+## 2026-11-08: Task A7, care envelopes per organization, consent switches and setup (branch `patient/feat/care-envelope`)
 
 ### Added
 - `care_payload.py` (NF-05, SE-05): builds the doctor payload 2.0 for an approved check-in.
   - Contents: name, exact check-in date, drug and version, coded symptoms, trend, reporter and age.
   - It validates the payload against the schema and imports no network code.
   - Trend compares today's severity score (mild 1, moderate 2, severe 3) with the mean of up to 6 earlier check-ins on this device. It is "unknown" with no history and "same" within ±0.5.
-- Care envelope in `egress_gate.py` (NF-05):
-  - After approval, if the patient shares with the care team, the gate fetches the care-team organization's public key and seals the payload in a sealed box.
-  - It queues and sends the envelope to `POST /v1/care-envelopes` after the record.
+- Care envelopes in `egress_gate.py` (NF-05, D-064, D-065): one per organization, each with its own `envelope_id`.
+  - Recipients: the care team (Northgate) when the patient shares with it, plus each emergency hospital (Lakeside) when emergency consent is on, both now and when the check-in was approved.
+  - For each recipient the gate fetches that organization's public key and seals the payload in a sealed box. The envelopes are queued and sent to `POST /v1/care-envelopes` after the record.
+  - An organization without a key waits on its own and never holds up the others (`queue_care_envelopes`, `care_recipients`, `pending_care_envelopes`).
   - The receipt, outbox and `egress_log` hash is the plaintext hash (passes `schema/examples/hash_vectors.json`).
   - If the key isn't registered yet (404) or the network is off, the check-in waits and the retry worker seals and sends it later. A queued envelope is resent unchanged.
 - Consent switches (CN-01, CN-03):
@@ -19,11 +20,15 @@ Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
   - A change is saved on the device at once (new `consent` row) and queued as a full consent update in the same transaction. It is then sent through the egress gate (`PUT /v1/consent/{ref}`), or later by the retry worker.
   - An older update still queued is superseded and never sent.
   - Turning the care team off means no new envelope, no waiting envelope is sealed, and the record says `consent.care_team: false`.
+- Consent setup (CN-01): `PUT /consent/setup` replaces the whole choice: care team, caregiver and detail level, and (only with emergency consent) up to 3 emergency hospitals and 3 contacts.
+  - It is checked on the device first (care team not also an emergency hospital, known organizations, phone format, unique order, labels up to 40 characters), saved, and sent as one consent update with `send_consent`.
+  - Contact labels stay on the device.
+  - `GET /consent` adds `setup` and `options` (organizations and caregivers from the synthetic demo directory).
 - Endpoints:
-  - Approve and receipt responses carry `envelope`: a receipt, `{"status": "waiting", "reason": "no_key" | "offline" | "refused"}`, or null.
+  - Approve and receipt responses carry `envelopes` (one per organization: receipt or waiting reason) and `envelope`: a receipt, `{"status": "waiting", "reason": "no_key" | "offline" | "refused"}`, or null.
   - The summary's `share.care` lists the sealed fields, or is null when not sharing.
 - Retry worker order: consent, alert, record, envelope.
-- Tests: `test_care_payload.py`, envelope, consent and hash-vector tests in `test_egress_gate.py` (including live ones against the service), and envelope and consent API tests in `test_checkin_api.py`; 711 runtime tests in total.
+- Tests: `test_care_payload.py`, envelope, consent and hash-vector tests in `test_egress_gate.py` (including live ones against the service), and envelope, consent and setup API tests in `test_checkin_api.py`; 725 runtime tests in total.
 
 ## 2026-11-08: Task A6, spoken summary, voice commands, network-off queue, severe alerts (branch `patient/feat/summary-offline`)
 

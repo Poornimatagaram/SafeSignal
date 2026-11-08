@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
+from nacl.exceptions import CryptoError
 from nacl.public import PrivateKey, SealedBox
 
 from sentinel_contract import SCHEMA_DIR, ContractError, canonical, payload_sha256
@@ -43,7 +44,7 @@ class FakeService:
     """Stand-in for the Sentinel service behind the real SentinelClient; records every request that reached it."""
 
     def __init__(self, *, status: int = 201, get_status: int = 200, down: bool = False, survey=None, terms=None,
-                 failures: int = 0, delay: float = 0.0, org_key: str | None = None, key_status: int = 200):
+                 failures: int = 0, delay: float = 0.0, org_key: str | dict | None = None, key_status: int = 200):
         self.status, self.get_status, self.down = status, get_status, down
         self.survey, self.terms = survey or SURVEY, terms or TERMS
         self.failures, self.delay = failures, delay  # the first `failures` POSTs get a 503
@@ -65,9 +66,11 @@ class FakeService:
             return httpx.Response(503, json={"error": BODY_MARKER})
         path = request.url.path
         if path.endswith("/public-key"):
-            if self.key_status != 200 or self.org_key is None:
+            org_id = path.split("/")[3]
+            key = self.org_key.get(org_id) if isinstance(self.org_key, dict) else self.org_key
+            if self.key_status != 200 or key is None:
                 return httpx.Response(self.key_status if self.key_status != 200 else 404, json={"error": BODY_MARKER})
-            return httpx.Response(200, json={"org_id": path.split("/")[3], "public_key": self.org_key})
+            return httpx.Response(200, json={"org_id": org_id, "public_key": key})
         if path.startswith("/v1/consent/"):
             if self.consent_status != 200:
                 return httpx.Response(self.consent_status, json={"error": BODY_MARKER})
@@ -688,9 +691,12 @@ def test_hash_vectors(vector):
 
 # ---------- care envelopes (NF-05; task A7) ----------
 
-NORTHGATE = "org_5e1a2b3c"
+NORTHGATE, LAKESIDE = "org_5e1a2b3c", "org_8f4d6a2e"  # Walter's care team and consented emergency hospital
 ORG_SK = PrivateKey.generate()  # test-only care-team key pair
 ORG_PK = base64.b64encode(bytes(ORG_SK.public_key)).decode()
+ER_SK = PrivateKey.generate()   # test-only emergency hospital key pair
+ER_PK = base64.b64encode(bytes(ER_SK.public_key)).decode()
+BOTH_KEYS = {NORTHGATE: ORG_PK, LAKESIDE: ER_PK}
 
 
 def seed_session(db_path, session_id="ses_00000007", day=7, symptoms=(RASH,), *, care_team=True,
@@ -718,16 +724,31 @@ def seed_session(db_path, session_id="ses_00000007", day=7, symptoms=(RASH,), *,
     return session_id
 
 
-def set_consent(db_path, *, care_team=1, emergency=1, caregiver=1):
+def set_consent(db_path, *, care_team=1, emergency=1, caregiver=1, at=None):
     with closing(connect(db_path)) as conn, conn:
         conn.execute("INSERT INTO consent (share_care_team, emergency_consent, share_caregiver, caregiver_detail, "
-                     "updated_at) VALUES (?, ?, ?, 'alerts_only', ?)", (care_team, emergency, caregiver, utc_now()))
+                     "updated_at) VALUES (?, ?, ?, 'alerts_only', ?)", (care_team, emergency, caregiver,
+                                                                       at or utc_now()))
 
 
 def plaintext_for(db_path, session_id):
     from sentinel_patient import care_payload
     with closing(connect(db_path)) as conn:
         return care_payload.doctor_payload_for_session(conn, session_id, WALTER)
+
+
+def recipients(db_path, session_id):
+    with closing(connect(db_path)) as conn:
+        return gate.care_recipients(conn, session_id, WALTER)
+
+
+def envelope_rows(db_path):
+    return {json.loads(r["payload"])["org_id"]: r
+            for r in rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'")}
+
+
+def T(org_id, link, envelope_id=None, waiting=None):
+    return gate.EnvelopeTarget(org_id, link, envelope_id, waiting)
 
 
 def test_envelope_and_consent_ids_and_urls():
@@ -737,15 +758,20 @@ def test_envelope_and_consent_ids_and_urls():
         assert all(i.startswith(prefix) and len(i) == 12 and set(i[4:]) <= set("0123456789abcdef") for i in ids)
     assert gate.envelopes_url("http://127.0.0.1:8000/") == "http://127.0.0.1:8000/v1/care-envelopes"
     assert gate.consent_url("http://127.0.0.1:8000/", WALTER) == f"http://127.0.0.1:8000/v1/consent/{WALTER}"
+    target = T(NORTHGATE, "care_team", "env_0a1b2c3d")
+    assert target.to_dict() == {"org_id": NORTHGATE, "link_type": "care_team", "envelope_id": "env_0a1b2c3d",
+                                "waiting": None}
 
 
-def test_fetch_org_key_stores_the_care_team_key_and_maps_errors(db_path, caplog):
+def test_fetch_org_key_stores_the_key_and_maps_errors(db_path, caplog):
     caplog.set_level(logging.DEBUG)
     assert gate.fetch_org_key(db_path, NORTHGATE, client=FakeService(org_key=ORG_PK).client()) == ORG_PK
     assert rows(db_path, "SELECT care_org_public_key FROM patient_profile") == [{"care_org_public_key": ORG_PK}]
-    other = base64.b64encode(bytes(PrivateKey.generate().public_key)).decode()
-    gate.fetch_org_key(db_path, "org_8f4d6a2e", client=FakeService(org_key=other).client())  # not the care org
+    assert rows(db_path, "SELECT public_key FROM emergency_org") == [{"public_key": None}]
+    gate.fetch_org_key(db_path, LAKESIDE, client=FakeService(org_key=ER_PK).client())  # an emergency org
     assert rows(db_path, "SELECT care_org_public_key FROM patient_profile") == [{"care_org_public_key": ORG_PK}]
+    assert rows(db_path, "SELECT org_id, public_key FROM emergency_org") == [{"org_id": LAKESIDE,
+                                                                              "public_key": ER_PK}]
 
     for service, reason in ((FakeService(), "no_key"), (FakeService(org_key=ORG_PK, key_status=403), "refused"),
                             (FakeService(org_key=ORG_PK, key_status=503), "offline"),
@@ -760,49 +786,60 @@ def test_fetch_org_key_stores_the_care_team_key_and_maps_errors(db_path, caplog)
     assert rows(db_path, "SELECT * FROM egress_log") == []  # a key fetch carries no patient payload
 
 
-def test_envelope_round_trip(db_path, caplog):
+def test_one_envelope_per_organization_round_trip(db_path, caplog):
     caplog.set_level(logging.DEBUG)
     session_id = seed_session(db_path)
-    service = FakeService(org_key=ORG_PK)
-    envelope_id = gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client())
-    assert envelope_id.startswith("env_")
+    assert recipients(db_path, session_id) == [(NORTHGATE, "care_team"), (LAKESIDE, "emergency")]
+    service = FakeService(org_key=BOTH_KEYS)
+    targets = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())
+    assert [(t.org_id, t.link_type, t.waiting) for t in targets] == [(NORTHGATE, "care_team", None),
+                                                                     (LAKESIDE, "emergency", None)]
+    ids = [t.envelope_id for t in targets]
+    assert all(i.startswith("env_") for i in ids) and ids[0] != ids[1]
     plaintext = plaintext_for(db_path, session_id)
     digest = payload_sha256(plaintext)
 
-    [row] = rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'")
-    assert (row["outbox_id"], row["session_id"], row["status"]) == (envelope_id, session_id, "queued")
-    assert row["payload_sha256"] == digest  # the plaintext hash, never a hash of the sealed JSON
-    envelope = json.loads(row["payload"])
-    assert payload_sha256(envelope) != digest
-    assert (envelope["envelope_id"], envelope["org_id"], envelope["patient_ref"]) == (envelope_id, NORTHGATE, WALTER)
-    for secret in ("Tagrisso", "SE_RASH", "itches", "display_name") + LOCAL_ONLY:  # sealed: no plaintext
-        assert secret not in row["payload"]
+    stored = envelope_rows(db_path)
+    assert set(stored) == {NORTHGATE, LAKESIDE}
+    for target, sk, other in ((targets[0], ORG_SK, ER_SK), (targets[1], ER_SK, ORG_SK)):
+        row = stored[target.org_id]
+        assert (row["outbox_id"], row["session_id"], row["status"]) == (target.envelope_id, session_id, "queued")
+        assert row["payload_sha256"] == digest  # the plaintext hash, never a hash of the sealed JSON
+        envelope = json.loads(row["payload"])
+        assert (envelope["envelope_id"], envelope["org_id"], envelope["patient_ref"]) == (
+            target.envelope_id, target.org_id, WALTER)
+        for secret in ("Tagrisso", "SE_RASH", "itches", "display_name") + LOCAL_ONLY:  # sealed: no plaintext
+            assert secret not in row["payload"]
 
-    receipt = gate.send_queued(db_path, envelope_id, client=service.client())
-    assert (receipt.status, receipt.response_code, receipt.destination) == ("sent", 201, "care_envelope")
-    assert (receipt.method, receipt.url) == ("POST", f"{BASE}/v1/care-envelopes")
-    assert receipt.payload_sha256 == digest and receipt.fields_sent == client_field_names(envelope)
-    [(method, path, body)] = [r for r in service.sends() if r[1] == "/v1/care-envelopes"]
-    assert body == row["payload"].encode()  # the stored envelope, unchanged
-    opened = SealedBox(ORG_SK).decrypt(base64.b64decode(json.loads(body)["ciphertext"]))
-    assert opened == canonical(plaintext) and payload_sha256(json.loads(opened)) == digest
-    assert json.loads(opened)["display_name"] == "Walter" and "itches" not in opened.decode()
-    [entry] = rows(db_path, "SELECT * FROM egress_log")
-    assert (entry["outbox_id"], entry["payload_sha256"], entry["response_code"]) == (envelope_id, digest, 201)
-    assert gate.receipt_for(db_path, envelope_id) == receipt
+        receipt = gate.send_queued(db_path, target.envelope_id, client=service.client())
+        assert (receipt.status, receipt.response_code, receipt.destination) == ("sent", 201, "care_envelope")
+        assert (receipt.method, receipt.url) == ("POST", f"{BASE}/v1/care-envelopes")
+        assert receipt.payload_sha256 == digest and receipt.fields_sent == client_field_names(envelope)
+        [body] = [b for _, p, b in service.sends() if p == "/v1/care-envelopes" and
+                  json.loads(b)["envelope_id"] == target.envelope_id]
+        assert body == row["payload"].encode()  # the stored envelope, unchanged
+        sealed = base64.b64decode(envelope["ciphertext"])
+        opened = SealedBox(sk).decrypt(sealed)
+        assert opened == canonical(plaintext) and json.loads(opened)["display_name"] == "Walter"
+        with pytest.raises(CryptoError):  # only that organization's key opens it
+            SealedBox(other).decrypt(sealed)
+        [entry] = rows(db_path, "SELECT * FROM egress_log WHERE outbox_id = ?", target.envelope_id)
+        assert (entry["payload_sha256"], entry["response_code"]) == (digest, 201)
+        assert gate.receipt_for(db_path, target.envelope_id) == receipt
 
-    # once queued, the session keeps its one envelope: no second key fetch, no second seal
+    # once queued, each organization keeps its one envelope: no second key fetch, no second seal
     fetches = len(service.requests)
-    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) == envelope_id
-    assert len(service.requests) == fetches and gate.pending_care_sessions(db_path) == []
-    for secret in ("Walter", "Tagrisso", "SE_RASH", BODY_MARKER, envelope["ciphertext"][:24]):
+    assert gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client()) == targets
+    assert len(service.requests) == fetches and gate.pending_care_envelopes(db_path) == []
+    for secret in ("Walter", "Tagrisso", "SE_RASH", BODY_MARKER, json.loads(stored[NORTHGATE]["payload"])[
+            "ciphertext"][:24]):
         assert secret not in caplog.text
 
 
 def test_envelope_is_resent_unchanged_after_offline_and_a_server_error(db_path):
     session_id = seed_session(db_path)
-    service = FakeService(org_key=ORG_PK)
-    envelope_id = gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client())
+    service = FakeService(org_key=BOTH_KEYS)
+    envelope_id = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())[0].envelope_id
     stored = rows(db_path, "SELECT payload, payload_sha256 FROM outbox WHERE outbox_id = ?", envelope_id)[0]
     service.down = True
     queued = gate.send_queued(db_path, envelope_id, client=service.client())
@@ -842,62 +879,149 @@ def test_envelope_queue_is_idempotent_and_the_integrity_check_holds(db_path):
 
 def test_no_key_queues_nothing_and_the_worker_sends_once_a_key_exists(db_path):
     session_id = seed_session(db_path)
-    service = FakeService()  # Northgate's admin has not registered a key yet: 404
-    with pytest.raises(gate.KeyUnavailable) as exc:
-        gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client())
-    assert exc.value.reason == "no_key"
-    assert rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'") == []
+    service = FakeService()  # neither admin has registered a key yet: 404
+    assert gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client()) == [
+        T(NORTHGATE, "care_team", waiting="no_key"), T(LAKESIDE, "emergency", waiting="no_key")]
+    assert envelope_rows(db_path) == {}
+    assert gate.pending_care_envelopes(db_path) == [(session_id, NORTHGATE), (session_id, LAKESIDE)]
     assert gate.pending_care_sessions(db_path) == [session_id]
 
     clock = FakeClock()
     worker = gate.RetryWorker(db_path, service.client, clock=clock, patient_ref=WALTER)
-    receipts = worker.run_once()  # sends the queued record; the envelope waits for a key
+    receipts = worker.run_once()  # sends the queued record; the envelopes wait for keys
     assert [r.destination for r in receipts] == ["company_record"]
-    assert worker._state[f"care:{session_id}"][0] == 1
-    service.org_key = ORG_PK
+    assert worker._state[f"care:{session_id}:{NORTHGATE}"][0] == 1
+    assert worker._state[f"care:{session_id}:{LAKESIDE}"][0] == 1
+    service.org_key = {NORTHGATE: ORG_PK}  # Northgate registers; Lakeside still has none
     clock.now += 1
     assert worker.run_once() == []  # not due yet (2 s)
     clock.now += 1
     [receipt] = worker.run_once()
     assert (receipt.destination, receipt.status, receipt.response_code) == ("care_envelope", "sent", 201)
     assert receipt.payload_sha256 == payload_sha256(plaintext_for(db_path, session_id))
-    assert gate.pending_care_sessions(db_path) == [] and f"care:{session_id}" not in worker._state
+    assert gate.pending_care_envelopes(db_path) == [(session_id, LAKESIDE)]
+    assert f"care:{session_id}:{NORTHGATE}" not in worker._state
+    assert worker._state[f"care:{session_id}:{LAKESIDE}"][0] == 2  # backs off on its own: 4 s now
+    service.org_key = BOTH_KEYS
+    clock.now += 3
+    assert worker.run_once() == []
+    clock.now += 1
+    [receipt] = worker.run_once()
+    assert (receipt.destination, receipt.status) == ("care_envelope", "sent")
+    assert gate.pending_care_envelopes(db_path) == [] and gate.pending_care_sessions(db_path) == []
     clock.now += 1000
     assert worker.run_once() == []
-    assert len([r for r in service.sends() if r[1] == "/v1/care-envelopes"]) == 1
+    sent = [json.loads(b)["org_id"] for _, p, b in service.sends() if p == "/v1/care-envelopes"]
+    assert sent == [NORTHGATE, LAKESIDE]
+
+
+def test_an_emergency_org_without_a_key_never_blocks_the_care_team(db_path):
+    session_id = seed_session(db_path)
+    service = FakeService(org_key={NORTHGATE: ORG_PK})
+    targets = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())
+    assert targets[1] == T(LAKESIDE, "emergency", waiting="no_key")
+    assert targets[0].org_id == NORTHGATE and targets[0].envelope_id and targets[0].waiting is None
+    assert gate.send_queued(db_path, targets[0].envelope_id, client=service.client()).status == "sent"
+    # the next attempt seals Lakeside only, with the same plaintext hash and its own envelope_id
+    service.org_key = BOTH_KEYS
+    again = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())
+    assert again[0] == targets[0] and again[1].envelope_id not in (None, targets[0].envelope_id)
+    stored = envelope_rows(db_path)
+    assert stored[NORTHGATE]["payload_sha256"] == stored[LAKESIDE]["payload_sha256"]
+
+
+@pytest.mark.parametrize("error, waiting", [(gate.KeyUnavailable("offline", LAKESIDE), "offline"),
+                                            (ValueError("bad"), "refused")])
+def test_per_org_errors_do_not_raise(db_path, monkeypatch, error, waiting):
+    session_id = seed_session(db_path)
+    real = gate.fetch_org_key
+
+    def fetch(db, org_id, *, client):
+        if org_id == LAKESIDE:
+            raise error
+        return real(db, org_id, client=client)
+
+    monkeypatch.setattr(gate, "fetch_org_key", fetch)
+    targets = gate.queue_care_envelopes(db_path, session_id, WALTER,
+                                        client=FakeService(org_key=BOTH_KEYS).client())
+    assert targets[0].envelope_id and targets[1] == T(LAKESIDE, "emergency", waiting=waiting)
+
+
+def test_a_payload_that_cannot_be_built_waits_as_refused(db_path):
+    session_id = seed_session(db_path)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("UPDATE patient_profile SET date_of_birth = NULL")
+    service = FakeService(org_key=BOTH_KEYS)
+    assert gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client()) == [
+        T(NORTHGATE, "care_team", waiting="refused"), T(LAKESIDE, "emergency", waiting="refused")]
+    assert service.requests == []
 
 
 def test_worker_reads_the_patient_ref_from_the_profile(db_path):
     session_id = seed_session(db_path, record_status="sent")
-    service = FakeService(org_key=ORG_PK)
-    [receipt] = gate.RetryWorker(db_path, service.client, clock=FakeClock()).run_once()
-    assert (receipt.destination, receipt.status) == ("care_envelope", "sent")
-    assert rows(db_path, "SELECT session_id FROM outbox WHERE destination = 'care_envelope'") == [
-        {"session_id": session_id}]
+    service = FakeService(org_key=BOTH_KEYS)
+    receipts = gate.RetryWorker(db_path, service.client, clock=FakeClock()).run_once()
+    assert [(r.destination, r.status) for r in receipts] == [("care_envelope", "sent")] * 2
+    assert {r["session_id"] for r in envelope_rows(db_path).values()} == {session_id}
 
 
 def test_consent_off_means_no_envelope_and_nothing_pending(db_path):
     session_id = seed_session(db_path)
-    set_consent(db_path, care_team=0)  # CN-03: turning it off stops future sharing
-    service = FakeService(org_key=ORG_PK)
-    assert gate.pending_care_sessions(db_path) == []
-    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) is None
+    set_consent(db_path, care_team=0, emergency=0)  # CN-03: turning it off stops future sharing
+    service = FakeService(org_key=BOTH_KEYS)
+    assert gate.pending_care_envelopes(db_path) == [] and recipients(db_path, session_id) == []
+    assert gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client()) == []
     worker = gate.RetryWorker(db_path, service.client, clock=FakeClock(), patient_ref=WALTER)
     assert [r.destination for r in worker.run_once()] == ["company_record"]
-    assert service.requests == [("POST", "/v1/records", service.requests[0][2])]  # never a key fetch or envelope
-    assert rows(db_path, "SELECT * FROM outbox WHERE destination = 'care_envelope'") == []
+    assert [p for _, p, _ in service.requests] == ["/v1/records"]  # never a key fetch or envelope
+    assert envelope_rows(db_path) == {}
 
-    set_consent(db_path, care_team=1)  # back on: the session was approved while sharing, so it may go now
-    assert gate.pending_care_sessions(db_path) == [session_id]
+    set_consent(db_path, care_team=1, emergency=1)  # back on: approved while sharing, so it may go now
+    assert gate.pending_care_envelopes(db_path) == [(session_id, NORTHGATE), (session_id, LAKESIDE)]
+
+
+def test_emergency_consent_off_means_no_emergency_envelope(db_path):
+    session_id = seed_session(db_path)
+    set_consent(db_path, care_team=1, emergency=0)
+    assert recipients(db_path, session_id) == [(NORTHGATE, "care_team")]
+    service = FakeService(org_key=BOTH_KEYS)
+    [target] = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())
+    assert target.org_id == NORTHGATE and target.envelope_id
+    assert set(envelope_rows(db_path)) == {NORTHGATE}
+    assert all(LAKESIDE not in p for _, p, _ in service.requests)  # its key is not even fetched
+
+
+def test_emergency_consent_turned_on_later_does_not_seal_earlier_checkins(db_path):
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("UPDATE consent SET updated_at = '2026-11-01T00:00:00Z'")  # seeded: emergency on
+    set_consent(db_path, emergency=0, at="2026-11-06T00:00:00Z")
+    before = seed_session(db_path, "ses_00000007", day=7)               # approved with emergency consent off
+    set_consent(db_path, emergency=1, at="2026-11-08T00:00:00Z")
+    after = seed_session(db_path, "ses_00000009", day=9)                # approved with it on
+    assert recipients(db_path, before) == [(NORTHGATE, "care_team")]
+    assert recipients(db_path, after) == [(NORTHGATE, "care_team"), (LAKESIDE, "emergency")]
+    assert gate.pending_care_envelopes(db_path) == [(before, NORTHGATE), (after, NORTHGATE), (after, LAKESIDE)]
+
+    set_consent(db_path, emergency=0)  # off again now: no emergency envelope for anyone
+    assert recipients(db_path, after) == [(NORTHGATE, "care_team")]
+
+
+def test_the_care_org_is_never_also_an_emergency_recipient(db_path):
+    session_id = seed_session(db_path)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("INSERT INTO emergency_org (org_id) VALUES (?)", (NORTHGATE,))
+    assert recipients(db_path, session_id) == [(NORTHGATE, "care_team"), (LAKESIDE, "emergency")]
 
 
 @pytest.mark.parametrize("kwargs", [{"care_team": False}, {"record_status": "failed"}])
-def test_sessions_not_approved_while_sharing_never_get_an_envelope(db_path, kwargs):
+def test_care_team_needs_a_record_approved_while_sharing(db_path, kwargs):
     session_id = seed_session(db_path, **kwargs)
-    service = FakeService(org_key=ORG_PK)
-    assert gate.pending_care_sessions(db_path) == []
-    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) is None
-    assert service.requests == []
+    expected = [] if kwargs.get("record_status") == "failed" else [(LAKESIDE, "emergency")]
+    assert recipients(db_path, session_id) == expected
+    service = FakeService(org_key=BOTH_KEYS)
+    targets = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())
+    assert [t.org_id for t in targets] == [org for org, _ in expected]
+    assert NORTHGATE not in envelope_rows(db_path)
 
 
 def test_no_envelope_without_a_care_org_or_before_approval(db_path):
@@ -905,14 +1029,24 @@ def test_no_envelope_without_a_care_org_or_before_approval(db_path):
         conn.execute("INSERT INTO survey_cache VALUES ('cfg_cohort_b_v1', 'cohort_B', 1, '{}', ?)", (utc_now(),))
         conn.execute("INSERT INTO checkin_session (session_id, config_id, started_at, status) "
                      "VALUES ('ses_0000000a', 'cfg_cohort_b_v1', ?, 'partial')", (utc_now(),))
-    service = FakeService(org_key=ORG_PK)
-    assert gate.queue_care_envelope(db_path, "ses_0000000a", WALTER, client=service.client()) is None
+    service = FakeService(org_key=BOTH_KEYS)
+    assert recipients(db_path, "ses_0000000a") == [] and recipients(db_path, "ses_missing") == []
+    assert gate.queue_care_envelopes(db_path, "ses_0000000a", WALTER, client=service.client()) == []
     session_id = seed_session(db_path)
     with closing(connect(db_path)) as conn, conn:
         conn.execute("UPDATE patient_profile SET care_org_id = NULL")
-    assert gate.pending_care_sessions(db_path) == []
-    assert gate.queue_care_envelope(db_path, session_id, WALTER, client=service.client()) is None
-    assert service.requests == []
+    assert gate.pending_care_envelopes(db_path) == [(session_id, LAKESIDE)]
+    assert [t.org_id for t in gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())] == [
+        LAKESIDE]
+
+
+def test_an_already_sealed_org_is_still_reported_after_consent_is_withdrawn(db_path):
+    session_id = seed_session(db_path)
+    service = FakeService(org_key=BOTH_KEYS)
+    targets = gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client())
+    set_consent(db_path, care_team=0, emergency=0)
+    assert gate.queue_care_envelopes(db_path, session_id, WALTER, client=service.client()) == targets
+    assert gate.pending_care_envelopes(db_path) == []
 
 
 # ---------- consent updates (CN-01) ----------
@@ -1068,41 +1202,85 @@ def test_live_retry_worker_sends_a_queued_alert(db_path, live):
     assert (receipt.status, receipt.response_code, receipt.outbox_id) == ("sent", 201, alert["alert_id"])
 
 
-PATEL = "dr_b29c4e71"  # Northgate admin (schema/demo_fixtures.json)
+PATEL, OKAFOR = "dr_b29c4e71", "dr_d4a8e2b6"  # Northgate and Lakeside admins (schema/demo_fixtures.json)
+
+
+def b64(raw: bytes) -> str:
+    return base64.b64encode(raw).decode()
+
+
+class LiveDoctor:
+    """What doctor-web does in the browser (as scripts/e2e_check.py): personal key, org key, self key grant."""
+
+    def __init__(self, base: str, doctor_id: str):
+        self.id, self.personal = doctor_id, PrivateKey.generate()
+        self.http = httpx.Client(base_url=base, timeout=10, headers={"X-Role": "doctor", "X-Actor-Id": doctor_id})
+
+    def register_org_key(self, org_id: str) -> None:
+        assert self.http.put(f"/v1/doctors/{self.id}/public-key",
+                             json={"public_key": b64(bytes(self.personal.public_key))}).status_code == 200
+        org = PrivateKey.generate()
+        assert self.http.put(f"/v1/orgs/{org_id}/public-key",
+                             json={"public_key": b64(bytes(org.public_key))}).status_code == 200
+        wrapped = SealedBox(self.personal.public_key).encrypt(bytes(org))
+        assert self.http.post(f"/v1/orgs/{org_id}/key-grants",
+                              json={"doctor_id": self.id, "wrapped_key": b64(wrapped)}).status_code == 201
+
+    def org_key(self, org_id: str) -> PrivateKey:
+        r = self.http.get(f"/v1/orgs/{org_id}/key-grants/{self.id}")
+        assert r.status_code == 200
+        return PrivateKey(SealedBox(self.personal).decrypt(base64.b64decode(r.json()["wrapped_key"])))
 
 
 @pytest.fixture(scope="module")
-def live_org_key(live):
-    """Registers a throwaway Northgate care-team key as Dr. Patel, as doctor-web's admin flow does.
-    This replaces Northgate's key in the local dev service (synthetic data, reseeded before the demo)."""
-    sk = PrivateKey.generate()
-    r = httpx.put(f"{live}/v1/orgs/{NORTHGATE}/public-key", timeout=5,
-                  json={"public_key": base64.b64encode(bytes(sk.public_key)).decode()},
-                  headers={"X-Role": "doctor", "X-Actor-Id": PATEL})
-    assert r.status_code == 200, r.status_code
-    return sk
+def live_doctors(live):
+    """Registers throwaway Northgate (Dr. Patel) and Lakeside (Dr. Okafor) keys with self grants.
+    This replaces both organizations' keys in the local dev service (synthetic data, reseeded before the demo)."""
+    patel, okafor = LiveDoctor(live, PATEL), LiveDoctor(live, OKAFOR)
+    patel.register_org_key(NORTHGATE)
+    okafor.register_org_key(LAKESIDE)
+    yield patel, okafor
+    patel.http.close()
+    okafor.http.close()
 
 
-def test_live_care_envelope_reaches_northgate_and_decrypts(db_path, live, live_client, live_org_key):
+def test_live_envelopes_reach_northgate_and_lakeside_and_decrypt(db_path, live, live_client, live_doctors):
+    patel, okafor = live_doctors
     session_id = seed_session(db_path, started_at=utc_now())
-    envelope_id = gate.queue_care_envelope(db_path, session_id, WALTER, client=live_client)
+    targets = gate.queue_care_envelopes(db_path, session_id, WALTER, client=live_client)
+    assert [(t.org_id, t.link_type, t.waiting) for t in targets] == [(NORTHGATE, "care_team", None),
+                                                                     (LAKESIDE, "emergency", None)]
     plaintext = plaintext_for(db_path, session_id)
-    receipt = gate.send_queued(db_path, envelope_id, client=live_client)
-    assert (receipt.status, receipt.response_code) == ("sent", 201)
-    assert receipt.url == f"{live}/v1/care-envelopes" and receipt.payload_sha256 == payload_sha256(plaintext)
+    digest = payload_sha256(plaintext)
+    receipts = {t.org_id: gate.send_queued(db_path, t.envelope_id, client=live_client) for t in targets}
+    for org_id, receipt in receipts.items():
+        assert (receipt.status, receipt.response_code) == ("sent", 201)
+        assert receipt.url == f"{live}/v1/care-envelopes" and receipt.payload_sha256 == digest
 
     # the service's own hash: the stored envelope again -> 200 with its payload_sha256
-    stored = rows(db_path, "SELECT payload FROM outbox WHERE outbox_id = ?", envelope_id)[0]["payload"]
+    stored = envelope_rows(db_path)[NORTHGATE]["payload"]
     again = httpx.post(f"{live}/v1/care-envelopes", content=stored.encode(), timeout=5,
                        headers={"Content-Type": "application/json", "X-Role": "patient_device", "X-Actor-Id": WALTER})
-    assert again.status_code == 200 and again.json()["payload_sha256"] == receipt.payload_sha256
+    assert again.status_code == 200 and again.json()["payload_sha256"] == digest
 
-    inbox = httpx.get(f"{live}/v1/orgs/{NORTHGATE}/envelopes", timeout=5,
-                      headers={"X-Role": "doctor", "X-Actor-Id": PATEL}).json()
-    mine = next(e for e in inbox if e["envelope_id"] == envelope_id)
-    opened = json.loads(SealedBox(live_org_key).decrypt(base64.b64decode(mine["ciphertext"])))
-    assert opened == plaintext and payload_sha256(opened) == mine["payload_sha256"] == receipt.payload_sha256
-    assert gate.send_queued(db_path, envelope_id, client=live_client) == receipt  # not re-sent
+    # Northgate: the routine inbox, opened with the org key unwrapped from Dr. Patel's grant
+    inbox = patel.http.get(f"/v1/orgs/{NORTHGATE}/envelopes").json()
+    mine = next(e for e in inbox if e["envelope_id"] == targets[0].envelope_id)
+    opened = json.loads(SealedBox(patel.org_key(NORTHGATE)).decrypt(base64.b64decode(mine["ciphertext"])))
+    assert opened == plaintext and payload_sha256(opened) == mine["payload_sha256"] == digest
+    assert all(e["envelope_id"] != targets[1].envelope_id for e in inbox)
+
+    # Lakeside: not in its routine inbox; only through audited emergency access
+    routine = okafor.http.get(f"/v1/orgs/{LAKESIDE}/envelopes").json()
+    assert all(e["envelope_id"] != targets[1].envelope_id for e in routine)
+    r = okafor.http.post(f"/v1/orgs/{LAKESIDE}/emergency-access",
+                         json={"patient_ref": WALTER, "reason": "emergency_admission"})
+    assert r.status_code == 200
+    em = next(e for e in r.json()["envelopes"] if e["envelope_id"] == targets[1].envelope_id)
+    opened = json.loads(SealedBox(okafor.org_key(LAKESIDE)).decrypt(base64.b64decode(em["ciphertext"])))
+    assert opened == plaintext and em["payload_sha256"] == digest
+    for t in targets:
+        assert gate.send_queued(db_path, t.envelope_id, client=live_client) == receipts[t.org_id]  # not re-sent
 
 
 def test_live_consent_update(db_path, live, live_client):

@@ -29,20 +29,33 @@ TERMS = json.loads((SCHEMA_DIR / "terms.json").read_text())["terms"]
 class FakeClient:
     """Shaped like SentinelClient: service-shaped config responses, records kept in `sent`.
 
-    `org_key` is the care team's private key; None = its admin has not registered one yet (404, like the service).
+    `org_key` is Northgate's (the care team's) private key, `org_keys` any organization's; an organization without
+    one has no registered key yet (404, like the service).
     """
 
-    def __init__(self, online=True, org_key=None):
+    def __init__(self, online=True, org_key=None, org_keys=None):
         self.online, self.sent, self.alerts, self.fetches = online, [], [], 0
-        self.org_key, self.envelopes, self.consents, self.calls = org_key, [], [], []
+        self.org_keys = dict(org_keys or {})
+        if org_key is not None:
+            self.org_keys["org_5e1a2b3c"] = org_key
+        self.envelopes, self.consents, self.calls = [], [], []
+
+    @property
+    def org_key(self):
+        return self.org_keys.get("org_5e1a2b3c")
+
+    @org_key.setter
+    def org_key(self, key):
+        self.org_keys["org_5e1a2b3c"] = key
 
     def fetch_org_key(self, org_id):
         self.calls.append(("key", org_id))
         if not self.online:
             raise SendRetryable("no network")
-        if self.org_key is None:
+        key = self.org_keys.get(org_id)
+        if key is None:
             raise SendRejected(404, {"error": "not_found"})
-        return base64.b64encode(bytes(self.org_key.public_key)).decode()
+        return base64.b64encode(bytes(key.public_key)).decode()
 
     def send_envelope(self, envelope):
         if not self.online:
@@ -611,8 +624,9 @@ def test_consent_switches_are_saved_at_once_and_sent_through_the_gate(tmp_path):
     c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_key=PrivateKey.generate()))
     with c:
         state = c.get("/consent").json()
-        assert state == {"share_care_team": True, "share_caregiver": True, "has_care_team": True,
-                         "has_caregiver": True, "receipt": None}
+        assert {k: state[k] for k in ("share_care_team", "share_caregiver", "has_care_team", "has_caregiver",
+                                      "receipt")} == {"share_care_team": True, "share_caregiver": True,
+                                                      "has_care_team": True, "has_caregiver": True, "receipt": None}
         off = c.put("/consent", json={"share_care_team": False}).json()
         same = c.put("/consent", json={"share_care_team": False}).json()  # no change: nothing sent
         assert c.put("/consent", json={}).status_code == 422
@@ -668,3 +682,103 @@ def test_a_switch_cannot_be_turned_on_without_someone_to_share_with(tmp_path):
         assert c.get("/consent").json()["has_caregiver"] is False
         assert c.put("/consent", json={"share_caregiver": True}).status_code == 422
     assert len(sentinel.consents) == 1
+
+
+# ---------- consent setup (CN-01) ----------
+
+SETUP = {"care_org_id": "org_5e1a2b3c", "share_care_team": True, "caregiver_id": "cg_7e21c9a4",
+         "share_caregiver": True, "caregiver_detail": "summary", "emergency_consent": True,
+         "emergency_org_ids": ["org_8f4d6a2e"],
+         "emergency_contacts": [{"contact_type": "person", "phone": "+16175550123", "org_id": None, "priority": 1,
+                                 "label": "Neighbour Bob"},
+                                {"contact_type": "emergency_service", "phone": "911", "org_id": None, "priority": 2,
+                                 "label": None}]}
+
+
+def test_consent_state_lists_the_setup_and_the_choices(tmp_path):
+    c, _, _ = make_client(tmp_path)
+    with c:
+        state = c.get("/consent").json()
+    assert state["setup"]["care_org_id"] == "org_5e1a2b3c" and state["setup"]["caregiver_id"] == "cg_7e21c9a4"
+    assert state["setup"]["emergency_consent"] is True and state["setup"]["emergency_org_ids"] == ["org_8f4d6a2e"]
+    assert [x["phone"] for x in state["setup"]["emergency_contacts"]] == ["911", "+16175550199"]
+    assert state["setup"]["emergency_contacts"][0]["label"] == "Emergency services"  # shown locally only
+    assert {o["org_id"] for o in state["options"]["organizations"]} == {"org_5e1a2b3c", "org_8f4d6a2e"}
+    assert state["options"]["caregivers"] == [{"caregiver_id": "cg_7e21c9a4", "display_name": "Anna"}]
+
+
+def test_setup_is_saved_and_sent_with_labels_kept_on_the_device(tmp_path):
+    c, _, sentinel = make_client(tmp_path)
+    with c:
+        state = c.put("/consent/setup", json=SETUP).json()
+    [update] = sentinel.consents
+    assert state["receipt"]["status"] == "sent" and state["receipt"]["payload_sha256"] == payload_sha256(update)
+    assert update["caregiver_detail"] == "summary" and update["emergency_org_ids"] == ["org_8f4d6a2e"]
+    assert [(x["phone"], x["priority"]) for x in update["emergency_contacts"]] == [("+16175550123", 1), ("911", 2)]
+    assert "Neighbour" not in json.dumps(update) and "label" not in json.dumps(update)
+    assert [x["label"] for x in state["setup"]["emergency_contacts"]] == ["Neighbour Bob", None]
+    assert all(x["contact_id"].startswith("ec_") for x in update["emergency_contacts"])
+
+
+def test_setup_without_emergency_consent_sends_no_hospitals_or_phones(tmp_path):
+    c, _, sentinel = make_client(tmp_path)
+    with c:
+        state = c.put("/consent/setup", json={**SETUP, "emergency_consent": False, "caregiver_id": None,
+                                              "share_caregiver": False}).json()
+    [update] = sentinel.consents
+    assert update["emergency_org_ids"] == [] and update["emergency_contacts"] == []
+    assert update["caregiver_id"] is None and "+1617" not in json.dumps(update)
+    assert state["setup"]["emergency_contacts"] == [] and rows(tmp_path, "SELECT * FROM emergency_contact") == []
+
+
+def test_setup_refuses_choices_the_contract_does_not_allow(tmp_path):
+    c, _, sentinel = make_client(tmp_path)
+    bad = [{**SETUP, "emergency_org_ids": ["org_5e1a2b3c"]},                       # care team as emergency hospital
+           {**SETUP, "care_org_id": "org_00000000"},                               # unknown organization
+           {**SETUP, "care_org_id": None},                                         # sharing with nobody
+           {**SETUP, "emergency_contacts": [{**SETUP["emergency_contacts"][0], "phone": "555-0142"}]},
+           {**SETUP, "emergency_contacts": SETUP["emergency_contacts"] * 2},       # more than 3
+           {**SETUP, "emergency_contacts": [{**SETUP["emergency_contacts"][0], "label": "x" * 41}]},
+           {**SETUP, "emergency_contacts": [SETUP["emergency_contacts"][0]] * 2}]  # same priority twice
+    with c:
+        codes = [c.put("/consent/setup", json=b).status_code for b in bad]
+        details = c.put("/consent/setup", json=bad[3]).json()["detail"]
+    assert codes == [422] * len(bad) and sentinel.consents == []
+    assert "555" not in details  # messages never quote what was typed
+    assert len(rows(tmp_path, "SELECT * FROM consent")) == 1
+
+
+def test_choosing_another_care_team_moves_where_envelopes_go(tmp_path):
+    key = PrivateKey.generate()
+    c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_keys={"org_8f4d6a2e": key}))
+    with c:
+        c.put("/consent/setup", json={**SETUP, "care_org_id": "org_8f4d6a2e", "emergency_consent": False})
+        c.post(f"/checkin/sessions/{check_in(c)}/approve", json={})
+    assert [e["org_id"] for e in sentinel.envelopes] == ["org_8f4d6a2e"]
+    assert ("key", "org_5e1a2b3c") not in sentinel.calls
+
+
+def test_one_envelope_per_organization_care_team_and_emergency_hospital(tmp_path):
+    northgate, lakeside = PrivateKey.generate(), PrivateKey.generate()
+    sentinel = FakeClient(org_keys={"org_5e1a2b3c": northgate})  # Lakeside's admin has no key yet
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        sid = check_in(c)
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+        first = c.post(f"/checkin/sessions/{sid}/approve", json={}).json()
+        sentinel.org_keys["org_8f4d6a2e"] = lakeside
+        c.app.state.retry_worker.run_once()
+        now = c.get(f"/checkin/sessions/{sid}/receipt").json()
+    assert summary["share"]["care"]["emergency"] == [{"org_id": "org_8f4d6a2e",
+                                                      "display_name": "Lakeside Emergency Hospital"}]
+    assert [(e["org_id"], e["link_type"], e["waiting"]) for e in first["envelopes"]] == \
+        [("org_5e1a2b3c", "care_team", None), ("org_8f4d6a2e", "emergency", "no_key")]
+    assert first["envelope"]["status"] == "sent"  # the care team is never held up by the emergency hospital
+    assert [(e["link_type"], e["receipt"]["status"]) for e in now["envelopes"]] == [("care_team", "sent"),
+                                                                                    ("emergency", "sent")]
+    by_org = {e["org_id"]: e for e in sentinel.envelopes}
+    assert set(by_org) == {"org_5e1a2b3c", "org_8f4d6a2e"}
+    assert by_org["org_5e1a2b3c"]["envelope_id"] != by_org["org_8f4d6a2e"]["envelope_id"]
+    assert opened(northgate, by_org["org_5e1a2b3c"]) == opened(lakeside, by_org["org_8f4d6a2e"])
+    assert by_org["org_5e1a2b3c"]["payload_sha256"] == by_org["org_8f4d6a2e"]["payload_sha256"]
+    assert "emergency" in now["envelopes"][1]["label"]

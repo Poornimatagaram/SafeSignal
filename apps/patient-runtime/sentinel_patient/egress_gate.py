@@ -15,13 +15,14 @@ This is the ONLY module allowed to import sentinel_contract.client or any HTTP l
   `BACKOFF_SECONDS` (2, 4, 8, 16, 32, 60, 60 ... seconds), in the order consent, alert, company record, care
   envelope; it also seals and queues the envelopes of pending sessions once a key exists. Refused rows are never
   retried.
-- Care envelopes (NF-05; task A7): `queue_care_envelope` seals the doctor payload of an approved session
-  (`care_payload.doctor_payload_for_session`) to the care-team organization's key (`fetch_org_key`, always fetched
-  fresh) and queues it, only while the patient shares with the care team and only for sessions approved while
-  sharing. The stored envelope is resent unchanged on retry (re-sealing gives a new ciphertext and a 409, D-021).
-  For envelopes the outbox, egress_log and receipt hash is the PLAINTEXT hash the envelope carries (26.13).
-  No key yet (404 until the org admin registers one) raises `KeyUnavailable`: nothing is queued and the session
-  stays in `pending_care_sessions`, which the retry worker keeps trying.
+- Care envelopes (NF-05, D-064, D-065; task A7): `queue_care_envelopes` seals the doctor payload of an approved
+  session (`care_payload.doctor_payload_for_session`) once per recipient organization of `care_recipients`: the
+  care team (while sharing with it, for sessions approved while sharing) and each emergency organization (while
+  emergency consent is on, for sessions approved with it on). Each envelope has its own envelope_id and is sealed
+  to that organization's key (`fetch_org_key`, always fetched fresh). The stored envelope is resent unchanged on
+  retry (re-sealing gives a new ciphertext and a 409, D-021). For envelopes the outbox, egress_log and receipt hash
+  is the PLAINTEXT hash the envelope carries (26.13). An organization without a key yet (404 until its admin
+  registers one) waits in `pending_care_envelopes` without blocking the others; the retry worker keeps trying.
 - Consent updates (CN-01): `queue_consent_update` queues the full current consent state for
   `PUT /v1/consent/{patient_ref}` and supersedes (marks failed, never sent) every older queued update.
 - `refresh_config` fetches the survey and term list (configuration only; no patient data in the request) into
@@ -61,7 +62,8 @@ __all__ = ["Receipt", "ConfigRefresh", "make_client", "field_names", "new_record
            "build_company_record", "queue_payload", "send_queued", "receipt_for", "refresh_config",
            "new_alert_id", "alerts_url", "build_alert", "RetryWorker", "BACKOFF_SECONDS",
            "new_envelope_id", "envelopes_url", "new_consent_id", "consent_url", "KeyUnavailable", "fetch_org_key",
-           "queue_care_envelope", "pending_care_sessions", "build_consent_update", "queue_consent_update",
+           "EnvelopeTarget", "care_recipients", "queue_care_envelopes", "pending_care_envelopes",
+           "pending_care_sessions", "build_consent_update", "queue_consent_update",
            "latest_consent_receipt"]
 
 # outbox.destination -> payload kind in schema/ (schema/enums.json -> outbox_destination)
@@ -362,7 +364,8 @@ def _is_key(value: Any) -> bool:
 def fetch_org_key(db_path: Path, org_id: str, *, client) -> str:
     """The organization's current X25519 public key (base64), fetched fresh every time: an org may re-register its
     key, so a cached one is never used to seal. The care-team org's key is stored in
-    `patient_profile.care_org_public_key` (for display only). Raises KeyUnavailable."""
+    `patient_profile.care_org_public_key`, an emergency org's in `emergency_org.public_key` (for display only).
+    Raises KeyUnavailable."""
     path = f"/v1/orgs/{org_id}/public-key"
     try:
         key = client.fetch_org_key(org_id)
@@ -381,31 +384,44 @@ def fetch_org_key(db_path: Path, org_id: str, *, client) -> str:
     log.info("egress GET %s -> 200", path)
     with closing(connect(db_path)) as conn, conn:
         conn.execute("UPDATE patient_profile SET care_org_public_key = ? WHERE care_org_id = ?", (key, org_id))
+        conn.execute("UPDATE emergency_org SET public_key = ? WHERE org_id = ?", (key, org_id))
     return key
 
 
-def _sharing_care_team(conn: sqlite3.Connection) -> bool:
-    row = conn.execute("SELECT share_care_team FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
-    return bool(row and row["share_care_team"])
+@dataclass(frozen=True)
+class EnvelopeTarget:
+    """One recipient organization of a session's doctor payload and where its envelope stands."""
+    org_id: str
+    link_type: str            # "care_team" | "emergency"
+    envelope_id: str | None   # the queued (or sent) envelope; None while it waits
+    waiting: str | None       # "no_key" | "offline" | "refused" | None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
 
 
-def _approved_while_sharing(conn: sqlite3.Connection, session_id: str) -> bool:
-    """The session was approved (ended_at set) and its company record (queued or sent) says consent.care_team."""
+def _current_consent(conn: sqlite3.Connection):
+    return conn.execute("SELECT * FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
+
+
+def _consent_at(conn: sqlite3.Connection, at: str):
+    """The consent row in effect at `at`: the newest whose updated_at <= at, else the earliest row."""
+    return (conn.execute("SELECT * FROM consent WHERE updated_at <= ? ORDER BY consent_id DESC LIMIT 1",
+                         (at,)).fetchone()
+            or conn.execute("SELECT * FROM consent ORDER BY consent_id LIMIT 1").fetchone())
+
+
+def _approved_records(conn: sqlite3.Connection, session_id: str) -> list[dict]:
+    """Company records (queued or sent) of an approved session; empty if it was not approved."""
+    out = []
     for row in conn.execute("SELECT o.payload FROM outbox o JOIN checkin_session s ON s.session_id = o.session_id "
                             "WHERE o.session_id = ? AND o.destination = 'company_record' "
                             "AND o.status IN ('queued', 'sent') AND s.ended_at IS NOT NULL", (session_id,)):
         try:
-            if json.loads(row["payload"])["consent"]["care_team"] is True:
-                return True
-        except (KeyError, TypeError, ValueError):
+            out.append(json.loads(row["payload"]))
+        except ValueError:
             continue
-    return False
-
-
-def _envelope_row(conn: sqlite3.Connection, session_id: str) -> str | None:
-    row = conn.execute("SELECT outbox_id FROM outbox WHERE session_id = ? AND destination = 'care_envelope' "
-                       "ORDER BY created_at, outbox_id LIMIT 1", (session_id,)).fetchone()
-    return row["outbox_id"] if row else None
+    return out
 
 
 def _care_org(conn: sqlite3.Connection, patient_ref: str) -> str | None:
@@ -413,51 +429,134 @@ def _care_org(conn: sqlite3.Connection, patient_ref: str) -> str | None:
     return row["care_org_id"] if row else None
 
 
-def queue_care_envelope(db_path: Path, session_id: str, patient_ref: str, *, client) -> str | None:
-    """Seal the doctor payload of an approved session to the care-team organization and queue it (NF-05).
+def care_recipients(conn: sqlite3.Connection, session_id: str, patient_ref: str) -> list[tuple[str, str]]:
+    """[(org_id, link_type)] the session's doctor payload may be sealed to now: care team first, then emergency
+    organizations sorted. Only for an approved session (ended_at set, company record queued or sent).
 
-    Returns the envelope_id (== outbox_id) of the session's care envelope: the existing one if it was queued
-    before, else a new one. Returns None when there is nothing to send: the patient does not share with the care
-    team now, there is no care organization, or the session was not approved while sharing (its company record is
-    missing, refused or says consent.care_team false). Does not send: `send_queued` or the retry worker does.
-    Raises KeyUnavailable (nothing queued; try again later), ValueError (no date of birth) or ContractError.
-    Only the care-team organization for now: envelopes for consented emergency organizations (D-065) are a later
-    task.
+    - care team ("care_team"): the profile's care_org_id, if the CURRENT consent shares with the care team and the
+      session's company record says consent.care_team true (approved while sharing).
+    - emergency ("emergency", D-065): every emergency_org (other than the care org), if the CURRENT consent has
+      emergency consent and so had the consent in effect at approval (the newest consent row updated at or before
+      the session's ended_at; the earliest row if none was). Turning either off stops future sharing (CN-03), and
+      turning emergency consent on later never seals check-ins approved while it was off.
     """
-    with _lock_for(f"care:{session_id}"):  # the approve route and the retry worker never seal one session twice
-        with closing(connect(db_path)) as conn:
-            if (existing := _envelope_row(conn, session_id)) is not None:
-                return existing
-            org_id = _care_org(conn, patient_ref)
-            if not (org_id and _sharing_care_team(conn) and _approved_while_sharing(conn, session_id)):
-                return None
-            payload = care_payload.doctor_payload_for_session(conn, session_id, patient_ref)
-        key = fetch_org_key(db_path, org_id, client=client)
-        envelope_id = new_envelope_id()
-        envelope = build_envelope(envelope_id, org_id, payload, key)
-        with closing(connect(db_path)) as conn, conn:
-            if not (_sharing_care_team(conn) and _care_org(conn, patient_ref) == org_id):
-                return None  # consent was withdrawn or changed while the key was fetched
-            queue_payload(conn, outbox_id=envelope_id, session_id=session_id, destination="care_envelope",
-                          payload=envelope)
-        log.info("care envelope %s queued for %s", envelope_id, org_id)
-        return envelope_id
+    session = conn.execute("SELECT ended_at FROM checkin_session WHERE session_id = ?", (session_id,)).fetchone()
+    if session is None or session["ended_at"] is None:
+        return []
+    records = _approved_records(conn, session_id)
+    current = _current_consent(conn)
+    if not records or current is None:
+        return []
+    care_org = _care_org(conn, patient_ref)
+    out: list[tuple[str, str]] = []
+    if care_org and current["share_care_team"] and any(
+            isinstance(r.get("consent"), dict) and r["consent"].get("care_team") is True for r in records):
+        out.append((care_org, "care_team"))
+    if current["emergency_consent"]:
+        at_approval = _consent_at(conn, session["ended_at"])
+        if at_approval is not None and at_approval["emergency_consent"]:
+            out.extend((r["org_id"], "emergency") for r in conn.execute(
+                "SELECT org_id FROM emergency_org ORDER BY org_id") if r["org_id"] != care_org)
+    return out
+
+
+def _envelopes_of(conn: sqlite3.Connection, session_id: str) -> dict[str, str]:
+    """{org_id: envelope_id} of the session's care_envelope outbox rows (the first one per org)."""
+    out: dict[str, str] = {}
+    for row in conn.execute("SELECT outbox_id, payload FROM outbox WHERE session_id = ? "
+                            "AND destination = 'care_envelope' ORDER BY created_at, rowid", (session_id,)):
+        try:
+            out.setdefault(json.loads(row["payload"])["org_id"], row["outbox_id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def queue_care_envelopes(db_path: Path, session_id: str, patient_ref: str, *, client) -> list[EnvelopeTarget]:
+    """Seal the session's doctor payload once per recipient organization and queue each envelope (NF-05, D-065).
+
+    One target per recipient of `care_recipients` (care team first, then emergency organizations), plus any
+    organization the session already has an envelope for. An organization that already has an envelope for this
+    session keeps it (never sealed twice). Each new envelope gets its own envelope_id; all carry the same plaintext
+    hash. Errors are per organization and never raise: a missing key ("no_key", 404 until its admin registers one),
+    no network ("offline") or a refusal or payload that cannot be built ("refused") leaves that organization
+    waiting without blocking the others. Does not send: `send_queued` or the retry worker does.
+    """
+    return _queue_care_envelopes(db_path, session_id, patient_ref, client=client)
+
+
+def _queue_care_envelopes(db_path: Path, session_id: str, patient_ref: str, *, client,
+                          only: set[str] | None = None) -> list[EnvelopeTarget]:
+    with closing(connect(db_path)) as conn:
+        recipients = care_recipients(conn, session_id, patient_ref)
+        existing = _envelopes_of(conn, session_id)
+        care_org = _care_org(conn, patient_ref)
+    links = dict(recipients)
+    for org_id in existing:
+        links.setdefault(org_id, "care_team" if org_id == care_org else "emergency")
+    order = sorted(links, key=lambda o: (links[o] != "care_team", o))
+    targets: list[EnvelopeTarget] = []
+    payload: dict | None = None
+    for org_id in order:
+        link = links[org_id]
+        if org_id in existing:
+            targets.append(EnvelopeTarget(org_id, link, existing[org_id], None))
+            continue
+        if only is not None and org_id not in only:
+            continue
+        with _lock_for(f"care:{session_id}:{org_id}"):  # the approve route and the worker never seal it twice
+            try:
+                with closing(connect(db_path)) as conn:
+                    if (found := _envelopes_of(conn, session_id).get(org_id)) is not None:
+                        targets.append(EnvelopeTarget(org_id, link, found, None))
+                        continue
+                    if payload is None:
+                        payload = care_payload.doctor_payload_for_session(conn, session_id, patient_ref)
+                key = fetch_org_key(db_path, org_id, client=client)
+                envelope_id = new_envelope_id()
+                envelope = build_envelope(envelope_id, org_id, payload, key)
+                with closing(connect(db_path)) as conn, conn:
+                    if (org_id, link) not in care_recipients(conn, session_id, patient_ref):
+                        continue  # consent was withdrawn or changed while the key was fetched
+                    queue_payload(conn, outbox_id=envelope_id, session_id=session_id, destination="care_envelope",
+                                  payload=envelope)
+            except KeyUnavailable as e:
+                targets.append(EnvelopeTarget(org_id, link, None, e.reason))
+                continue
+            except (LookupError, ValueError) as e:  # includes ContractError; never the message (it could quote)
+                log.error("care envelope for %s to %s not built: %s", session_id, org_id, type(e).__name__)
+                targets.append(EnvelopeTarget(org_id, link, None, "refused"))
+                continue
+        log.info("care envelope %s queued for %s (%s)", envelope_id, org_id, link)
+        targets.append(EnvelopeTarget(org_id, link, envelope_id, None))
+    return targets
+
+
+def pending_care_envelopes(db_path: Path) -> list[tuple[str, str]]:
+    """[(session_id, org_id)] envelopes still to be sealed, oldest session first: approved sessions whose
+    `care_recipients` include an organization the session has no envelope for. Empty while consent is off."""
+    with closing(connect(db_path)) as conn:
+        current = _current_consent(conn)
+        if current is None or not (current["share_care_team"] or current["emergency_consent"]):
+            return []
+        profile = conn.execute("SELECT patient_ref FROM patient_profile LIMIT 2").fetchall()
+        if len(profile) != 1:
+            return []
+        patient_ref = profile[0]["patient_ref"]
+        out: list[tuple[str, str]] = []
+        for row in conn.execute("SELECT session_id FROM checkin_session WHERE ended_at IS NOT NULL "
+                                "ORDER BY ended_at, rowid").fetchall():
+            sid = row["session_id"]
+            recipients = care_recipients(conn, sid, patient_ref)
+            if recipients:
+                existing = _envelopes_of(conn, sid)
+                out.extend((sid, org) for org, _ in recipients if org not in existing)
+        return out
 
 
 def pending_care_sessions(db_path: Path) -> list[str]:
-    """Approved sessions whose care envelope is still to be sealed (oldest first): the patient shares with the care
-    team now, a care organization is set, the session was approved while sharing, and it has no care_envelope row.
-    Empty while consent is off: turning it off stops future sharing (CN-03)."""
-    with closing(connect(db_path)) as conn:
-        if not _sharing_care_team(conn):
-            return []
-        if not conn.execute("SELECT 1 FROM patient_profile WHERE care_org_id IS NOT NULL").fetchone():
-            return []
-        candidates = [r["session_id"] for r in conn.execute(
-            "SELECT s.session_id FROM checkin_session s WHERE s.ended_at IS NOT NULL AND NOT EXISTS "
-            "(SELECT 1 FROM outbox o WHERE o.session_id = s.session_id AND o.destination = 'care_envelope') "
-            "ORDER BY s.ended_at, s.session_id")]
-        return [sid for sid in candidates if _approved_while_sharing(conn, sid)]
+    """Sessions with at least one envelope still to be sealed (see `pending_care_envelopes`), oldest first."""
+    return list(dict.fromkeys(sid for sid, _ in pending_care_envelopes(db_path)))
 
 
 # ---------- consent updates (CN-01) ----------
@@ -529,9 +628,9 @@ class RetryWorker:
     through `send_queued`, so receipts, egress_log and never-twice are the same as for a send from the approve
     route; a row being sent by one caller is skipped by the others.
 
-    Each pass first calls `queue_care_envelope` for every due session of `pending_care_sessions` (backoff key
-    "care:<session_id>", same delays): no key yet (KeyUnavailable) backs off; once queued, the envelope is sent in
-    the same pass. `patient_ref` defaults to the device's single patient_profile row.
+    Each pass first seals and queues every due (session, organization) of `pending_care_envelopes` (backoff key
+    "care:<session_id>:<org_id>", same delays): an organization without a key yet backs off on its own and never
+    blocks the others; once queued, the envelope is sent in the same pass. `patient_ref` defaults to the device's single patient_profile row.
     """
 
     PRIORITY = ("consent", "alert", "company_record", "care_envelope")
@@ -581,7 +680,8 @@ class RetryWorker:
         return self._claim([oid for oid, _ in self._queued()], care=False)
 
     def _claim_care_due(self) -> list[str]:
-        return self._claim([self.CARE + sid for sid in pending_care_sessions(self.db_path)], care=True)
+        return self._claim([f"{self.CARE}{sid}:{org}" for sid, org in pending_care_envelopes(self.db_path)],
+                           care=True)
 
     def _finish(self, key: str, still_queued: bool) -> None:
         with self._guard:
@@ -604,20 +704,26 @@ class RetryWorker:
             if care_due:
                 client = self.client_factory()
                 patient_ref = self._patient_ref()
+                by_session: dict[str, dict[str, str]] = {}   # session_id -> {org_id: backoff key}
                 for key in care_due:
-                    session_id = key[len(self.CARE):]
-                    retry = True
+                    session_id, _, org_id = key[len(self.CARE):].rpartition(":")
+                    by_session.setdefault(session_id, {})[org_id] = key
+                for session_id, keys in by_session.items():
+                    targets: dict[str, EnvelopeTarget] = {}
                     try:
                         if patient_ref is not None:
-                            queue_care_envelope(self.db_path, session_id, patient_ref, client=client)
-                            retry = False
-                    except KeyUnavailable as e:
-                        log.info("care envelope for %s waits: key %s", session_id, e.reason)
+                            targets = {t.org_id: t for t in _queue_care_envelopes(
+                                self.db_path, session_id, patient_ref, client=client, only=set(keys))}
                     except Exception as e:  # never the message: it could quote a value
-                        log.error("care envelope for %s failed with %s; backing off", session_id, type(e).__name__)
-                    finally:
+                        log.error("care envelopes for %s failed with %s; backing off", session_id, type(e).__name__)
+                        targets = {org_id: EnvelopeTarget(org_id, "", None, "error") for org_id in keys}
+                    for org_id, key in keys.items():
+                        target = targets.get(org_id)
+                        waits = patient_ref is None or (target is not None and target.envelope_id is None)
+                        if target is not None and target.waiting:
+                            log.info("care envelope for %s to %s waits: %s", session_id, org_id, target.waiting)
                         pending.remove(key)
-                        self._finish(key, retry)
+                        self._finish(key, waits)  # no longer a recipient (target None) or queued: done
 
             due = self._claim_due()
             pending.extend(due)
