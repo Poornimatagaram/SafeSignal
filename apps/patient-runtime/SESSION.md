@@ -3,6 +3,15 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08, A6: spoken summary with one correction (VC-08), voice commands (VC-07), network-off queue (PV-07), severe alerts (AL-02, SE-03)** (branch `patient/feat/summary-offline`). Built by three parallel agents (egress gate, summary and commands, patient screen); I wired `checkin.py` and `main.py`.
+  - **Tests:** 650 runtime, 54 eval and 182 patient-web, with a clean build and `npm audit`.
+  - **Evals:** re-ask PASS (17 of 20); leakage PASS (0 of 59, F1 0.909).
+  - **Live check with the network off** (local service stopped; speech, filter and model all on the device; six synthetic spoken answers including a severe rash):
+    - The check-in completed and the summary was read aloud.
+    - Approval returned "queued" for both the record and the severe alert, with 0 `egress_log` rows.
+    - About 3 s after the service came back, the retry worker delivered the alert, then the record, each with 201, with no action from me.
+    - The record keeps the same `record_id` and hash, and both `egress_log` hashes equal the outbox hashes.
+- **2026-11-08, A5 merged as PR #21** (squash, `03bf912`). Branch deleted.
 - **2026-11-08, A5: answer rating and re-asking** (branch `patient/feat/reask`). Built by three parallel agents (rating, re-ask eval, patient screen); I owned the turn wiring in `checkin.py` and `main.py`, and its tests.
   - **Re-ask eval** (20 held-out synthetic cases; the rating agent never saw them): **PASS**, 17 of 20 rated correctly against a target of 16.
     - Misses: 2 partial answers rated complete, and 1 no-answer rated off-topic.
@@ -44,6 +53,12 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **"Network off" in the live check means the local service was stopped**: connection refused, the same as no network for the egress gate. I can't switch off the laptop's network from here; speech, filter and model run locally either way.
+- **Severe alerts are queued at approval, in the same transaction as the record, and sent first.** They go only with consent to share with the care team or the caregiver; the service decides who receives them. The payload is minimal (AL-03): no symptom details.
+- **The alert reply has no `payload_sha256`**, so alert receipts are checked by the canonical hash and the service's 200 on a resend. The company side could add the hash to the reply.
+- **The retry worker gets its own client**, because it closes its client after each pass; it never uses the shared one. Attempt counts are kept in memory.
+- **"pardon?" counts as a "repeat" command, not a no-answer**, and commands don't use up the two re-asks.
+- **One correction per check-in** (VC-08). A spoken change that isn't understood doesn't use it up, and nothing about it is ever guessed.
 - **Rating rules override the model.**
   - Only the rules can return `no_answer`; when the model says "no answer" about real words, that becomes `off_topic`.
   - Rambling means a long answer (over 40 words, or several sentences over 30 words) in which at least 40% of the words are off topic; an answer of 20 words or fewer is never rambling.
@@ -121,7 +136,6 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Restart the runtime on port 8001** (PID 15222 still runs A2 code) before using the patient screen.
 - **Reseed the service before the demo** (`scripts/reset_all.sh --seed`): the live tests left synthetic Walter records for today.
 - **A4 items not yet built:**
-  - Severe alerts: a `severe_trigger` term or severity `severe` should send `POST /v1/alerts`.
   - A network-log view on the screen (PV-06).
   - Re-checking the receipt hash in the browser.
   - Showing the exact record after the patient picks a missing severity (a preview call that takes the chosen severities).
@@ -130,16 +144,13 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - "Cracked skin on my fingers" can become `SE_OTHER_REVIEW` instead of `SE_DRY_SKIN`.
   - Some curated cues are broad ("dry", "toilet").
 - **Grow the leakage set to the 50 transcripts in Scoping Doc 17.3**, including held-out cases the filter was never tuned on. Ask the company owner to add a source-and-licence row for `data/patient/` to `data/README.md` (Scoping Doc 16.1).
-- **A5 PR:** get CI green, then the user merges it.
 - **Known rating misses** (from the rating agent's probes and the held-out eval):
   - Some vague answers are rated complete instead of partial.
   - "Took" counts as an adherence answer even in "I took the dog out".
   - A long, detailed answer can be cut down to only the sentences containing symptom or time words.
 - **Grow the re-ask set** beyond 20 cases, and check the partial and off-topic labels with a second person.
-- **A6:**
-  - Spoken summary with one correction (VC-08); the summary `text` is ready for text-to-speech.
-  - Retry queued records with `BACKOFF_SECONDS`.
-  - Persist the check-in draft so a restart loses nothing.
+- **A6 PR:** get CI green, then the user merges it.
+- **Persist the check-in draft** so a runtime restart mid check-in loses nothing; the retry state is in memory too.
 - **A7:** care envelopes per organization; `possible_link_flag` from exposures (SE-04).
 - **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
 - **Ask the company owner** for:

@@ -23,13 +23,14 @@ from contextlib import closing
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import egress_gate, extract
+from . import egress_gate, extract, summary as spoken
 from .db import connect, utc_now
 from .survey import latest_survey, survey_questions, term_labels
 
 SEVERITIES = ("mild", "moderate", "severe")
 SYMPTOM_PURPOSES = frozenset({"wellbeing", "symptom_screen", "exposure"})  # schema/enums.json question_purpose
 DESTINATION = "company_record"
+ALERT = "alert"
 DESTINATION_LABEL = "Drug company safety team (Sentinel service)"
 ONSET_WORDS = {"today": "started today", "1_3_days": "started 1 to 3 days ago",
                "4_7_days": "started 4 to 7 days ago", "over_7_days": "started more than a week ago",
@@ -42,6 +43,10 @@ class UnknownSession(LookupError):
 
 class AlreadyShared(RuntimeError):
     pass
+
+
+class CorrectionUsed(RuntimeError):
+    """VC-08 allows one correction per check-in."""
 
 
 class UnknownQuestion(LookupError):
@@ -63,6 +68,7 @@ class Draft:
     symptoms: dict[str, dict] = field(default_factory=dict)  # term_code -> {"severity": str | None, "onset": str}
     last_reported: list[str] = field(default_factory=list)   # codes from the latest answer that reported symptoms
     record_id: str | None = None
+    correction_used: bool = False                            # VC-08: one correction before sharing
 
 
 class CheckinStore:
@@ -164,18 +170,63 @@ class CheckinStore:
                 validate=False))
         return {"session_id": session_id, "shared": shared, "items": items, "needs_severity": needs,
                 "unanswered_questions": unanswered, "text": _plain_words(items, unanswered),
+                "spoken": spoken.spoken_summary(items, unanswered), "correction_used": draft.correction_used,
                 "share": {"destination": DESTINATION_LABEL, "method": "POST",
                           "url": egress_gate.records_url(base_url), "fields": fields, "record": record}}
 
-    def approve(self, session_id: str, severities: dict[str, str], *, client) -> egress_gate.Receipt:
+    def correction_items(self, session_id: str) -> list[dict]:
+        """Current items, for parsing a spoken correction against them."""
+        with self._lock, closing(connect(self.db_path)) as conn:
+            self._session(conn, session_id)
+            return self._items(conn, self._drafts.setdefault(session_id, Draft()))
+
+    def correct(self, session_id: str, term_code: str, *, severity: str | None = None, onset: str | None = None,
+                remove: bool = False) -> None:
+        """VC-08: one change to one item before sharing (new severity, new onset, or "I don't have that")."""
+        with self._lock, closing(connect(self.db_path)) as conn:
+            self._session(conn, session_id)
+            if self._outbox(conn, session_id):
+                raise AlreadyShared(session_id)
+            draft = self._drafts.setdefault(session_id, Draft())
+            if draft.correction_used:
+                raise CorrectionUsed(session_id)
+            changes = sum([severity is not None, onset is not None, bool(remove)])
+            if term_code not in draft.symptoms or changes != 1:
+                raise ValueError("a correction changes one thing about one reported symptom")
+            if severity is not None and severity not in SEVERITIES:
+                raise ValueError("severity must be mild, moderate or severe")
+            if onset is not None and onset not in ONSET_WORDS:
+                raise ValueError("unknown onset")
+            if remove:
+                del draft.symptoms[term_code]
+                draft.last_reported = [c for c in draft.last_reported if c != term_code]
+            elif severity is not None:
+                draft.symptoms[term_code]["severity"] = severity
+            else:
+                draft.symptoms[term_code]["onset"] = onset
+            draft.correction_used, draft.record_id = True, None
+
+    def receipts(self, session_id: str, base_url: str) -> tuple[egress_gate.Receipt | None, egress_gate.Receipt | None]:
+        """(record receipt, alert receipt) as they stand now; the retry worker may have sent a queued one since."""
+        with closing(connect(self.db_path)) as conn:
+            self._session(conn, session_id)
+            rec, alert = self._outbox(conn, session_id), self._outbox(conn, session_id, ALERT)
+        return (egress_gate.receipt_for(self.db_path, rec["outbox_id"], base_url=base_url) if rec else None,
+                egress_gate.receipt_for(self.db_path, alert["outbox_id"], base_url=base_url) if alert else None)
+
+    def approve(self, session_id: str, severities: dict[str, str], *,
+                client) -> tuple[egress_gate.Receipt, egress_gate.Receipt | None]:
         with self._lock:
             with closing(connect(self.db_path)) as conn:
                 self._session(conn, session_id)
                 existing = self._outbox(conn, session_id)
-            if existing:  # approved before: never build or send a second record
+                alert_row = self._outbox(conn, session_id, ALERT)
+            if existing:  # approved before: never build or send a second record or alert
+                alert = (egress_gate.send_queued(self.db_path, alert_row["outbox_id"], client=client)
+                         if alert_row else None)
                 if existing["status"] == "queued":
-                    return egress_gate.send_queued(self.db_path, existing["outbox_id"], client=client)
-                return egress_gate.receipt_for(self.db_path, existing["outbox_id"])
+                    return egress_gate.send_queued(self.db_path, existing["outbox_id"], client=client), alert
+                return egress_gate.receipt_for(self.db_path, existing["outbox_id"]), alert
 
             draft = self._drafts.setdefault(session_id, Draft())
             for code, sev in severities.items():
@@ -202,7 +253,15 @@ class CheckinStore:
                              (now, record["status"], session_id))
                 egress_gate.queue_payload(conn, outbox_id=record_id, session_id=session_id,
                                           destination=DESTINATION, payload=record)
-            return egress_gate.send_queued(self.db_path, record_id, client=client)
+                alert_id = None
+                if self._severe(conn, items) and self._alert_consent(conn):  # AL-02, SE-03
+                    alert_id = egress_gate.new_alert_id()
+                    egress_gate.queue_payload(conn, outbox_id=alert_id, session_id=session_id, destination=ALERT,
+                                              payload=egress_gate.build_alert(alert_id=alert_id,
+                                                                              patient_ref=self.patient_ref))
+            # The alert goes first: it is the urgent one. Both are already safe in the outbox if the network is off.
+            alert = egress_gate.send_queued(self.db_path, alert_id, client=client) if alert_id else None
+            return egress_gate.send_queued(self.db_path, record_id, client=client), alert
 
     # ---------- helpers ----------
 
@@ -221,9 +280,21 @@ class CheckinStore:
         return question
 
     @staticmethod
-    def _outbox(conn, session_id: str):
+    def _outbox(conn, session_id: str, destination: str = "company_record"):
         return conn.execute("SELECT outbox_id, status FROM outbox WHERE session_id = ? AND destination = ? "
-                            "ORDER BY created_at LIMIT 1", (session_id, DESTINATION)).fetchone()
+                            "ORDER BY created_at LIMIT 1", (session_id, destination)).fetchone()
+
+    @staticmethod
+    def _severe(conn, items: list[dict]) -> bool:
+        """A severe symptom, or any symptom whose term is a severe trigger (schema/terms.json via term_cache)."""
+        triggers = {r["term_code"] for r in conn.execute("SELECT term_code FROM term_cache WHERE severe_trigger = 1")}
+        return any(i["severity"] == "severe" or i["term_code"] in triggers for i in items)
+
+    @staticmethod
+    def _alert_consent(conn) -> bool:
+        """AL-02 within consent: alerts go to the care team and the caregiver, so at least one must be shared with."""
+        c = conn.execute("SELECT share_care_team, share_caregiver FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
+        return bool(c and (c["share_care_team"] or c["share_caregiver"]))
 
     @staticmethod
     def _items(conn, draft: Draft) -> list[dict]:

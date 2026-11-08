@@ -21,8 +21,11 @@ const client = createRuntimeClient()
 type Screen = 'start' | 'question' | 'share'
 /** Push-to-talk is a toggle (tap to start, tap to stop): holding a button is hard with a hand tremor. */
 type Talk = 'idle' | 'starting' | 'listening' | 'sending'
-/** A short kind line above the question: the runtime asked again more simply, or gave the question up (VC-05). */
-type Notice = 'reask' | 'move-on' | null
+/**
+ * A short kind line above the question: the runtime asked again more simply, or gave the question up (VC-05), or
+ * the patient asked to hear it again or more slowly by voice (VC-07).
+ */
+type Notice = 'reask' | 'move-on' | 'repeat' | 'slower' | null
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('start')
@@ -52,6 +55,7 @@ export default function App() {
   )
   const generation = useRef(0) // bumps on every question change; late results from an old question are dropped
   const mounted = useRef(true)
+  const shareFlowNow = useRef<ShareFlow | null>(null) // disposed when leaving the share screen (stops receipt polling)
 
   const talkButton = useRef<HTMLButtonElement>(null)
   const nextButton = useRef<HTMLButtonElement>(null)
@@ -69,6 +73,7 @@ export default function App() {
       recording.current = null
       player.current?.dispose()
       player.current = null
+      shareFlowNow.current?.dispose()
     }
   }, [])
 
@@ -107,7 +112,13 @@ export default function App() {
     setLoading(false)
     const current = session.current
     if (!current) return
-    const flow = createShareFlow(client, current.session_id)
+    // The summary is read out loud on the same audio element "Start check-in" unlocked.
+    const flow = createShareFlow(client, current.session_id, {
+      play: (audio) => player.current?.play(audio) ?? Promise.resolve(),
+      stop: () => player.current?.stop(),
+    })
+    shareFlowNow.current?.dispose()
+    shareFlowNow.current = flow
     setShareFlow(flow)
     setScreen('share')
     void flow.load() // GET the summary only
@@ -163,6 +174,8 @@ export default function App() {
     resetForQuestionChange()
     setLoading(false)
     session.current = null
+    shareFlowNow.current?.dispose()
+    shareFlowNow.current = null
     setShareFlow(null)
     setStartError(null)
     setScreen('start')
@@ -180,6 +193,7 @@ export default function App() {
       player.current?.stop()
       setAnswerError(null)
       setReply(null)
+      setNotice((shown) => (shown === 'repeat' || shown === 'slower' ? null : shown))
       updateTalk('starting')
       try {
         const active = await startRecording()
@@ -222,6 +236,13 @@ export default function App() {
           setNotice('reask')
           setQuestion(step.question)
           void speak(step.question, false)
+        } else if (step.kind === 'command') {
+          // "Say that again" / "Slower": not an answer and not a re-ask. Same wording, same ask; wait for the answer.
+          player.current?.stop()
+          updateTalk('idle')
+          setReply(null)
+          setNotice(step.command)
+          void speak(step.question, step.slow)
         } else if (step.kind === 'move-on') {
           setNotice('move-on')
         } else {
@@ -324,6 +345,8 @@ export default function App() {
       )}
 
       {question && notice === 'reask' && <p className="notice">Let me ask that more simply.</p>}
+      {question && notice === 'repeat' && <p className="note">Saying it again</p>}
+      {question && notice === 'slower' && <p className="note">Saying it more slowly</p>}
 
       {question && <h1 className="question">{question.text}</h1>}
 

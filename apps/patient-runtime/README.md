@@ -46,7 +46,10 @@ The Sentinel service must be reachable for the first check-in, because that is w
 - `GET /checkin/question/audio?index=&ask=&slow=`: the question as WAV.
 - `POST /checkin/turn?session_id=&question_id=&ask=`: send the raw audio body; returns `{transcript, symptoms, extraction, rating, next}`. `next` is `{action: "reask", ask, text}` or `{action: "next"}`, with `unanswered: true` after 2 re-asks.
 - `GET /checkin/sessions/{id}/summary`: plain words, `needs_severity`, and the exact record that would be shared. Sends nothing.
-- `POST /checkin/sessions/{id}/approve` with body `{"severities": {...}}`: the only route that sends. Returns the receipt: `{status, record_id, destination, method, url, fields_sent, payload_sha256, sent_at, response_code}`.
+- `GET /checkin/sessions/{id}/summary/audio`: the summary read aloud (template text, never model text).
+- `POST /checkin/sessions/{id}/correction`: one change before sharing, as JSON `{term_code, severity|onset|remove}` or as a spoken recording.
+- `GET /checkin/sessions/{id}/receipt`: the current receipt, so a queued record can be polled until the retry worker sends it.
+- `POST /checkin/sessions/{id}/approve` with body `{"severities": {...}}`: the only route that sends. Returns the receipt: `{status, record_id, destination, method, url, fields_sent, payload_sha256, sent_at, response_code, alert}`. A severe symptom also queues a minimal alert, which is sent first. Queued items are retried automatically with backoff.
 
 ## Check
 ```bash

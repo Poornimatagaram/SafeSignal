@@ -99,6 +99,35 @@ export function answerErrorMessage(error: unknown): string {
   return SOMETHING_WRONG
 }
 
+/** For a change to the summary that did not go through (VC-08). */
+export function correctionErrorMessage(error: unknown): string {
+  if (error instanceof RuntimeError) {
+    if (error.kind === 'correction-not-understood') {
+      return 'Sorry, I did not understand the change. Nothing was changed. Please say it again, or tap to change it.'
+    }
+    if (error.kind === 'correction-used') {
+      return 'This summary cannot be changed again. You can share it as it is, or tap Not now.'
+    }
+    if (error.kind === 'session-not-found') return SESSION_LOST
+  }
+  if (error instanceof MicrophoneError || error instanceof RuntimeError) {
+    if (error instanceof RuntimeError && error.kind === 'not-understood') {
+      return 'Sorry, I did not understand the change. Nothing was changed. Please try again.'
+    }
+    return answerErrorMessage(error)
+  }
+  return 'Something went wrong. Nothing was changed. Please try again.'
+}
+
+/** For problems reading the summary out loud; it is still on screen. */
+export function summaryVoiceMessage(error: unknown): string {
+  if (error instanceof RuntimeError && error.kind === 'runtime-down') return RUNTIME_DOWN
+  if (error instanceof DOMException && error.name === 'NotAllowedError') {
+    return 'Tap “Hear it again” to hear your summary.'
+  }
+  return 'I cannot read your summary out loud right now. Please read it on the screen.'
+}
+
 /** For problems loading the next question. */
 export function questionErrorMessage(error: unknown): string {
   if (error instanceof RuntimeError && error.kind === 'runtime-down') return RUNTIME_DOWN

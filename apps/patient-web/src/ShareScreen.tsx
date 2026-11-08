@@ -1,23 +1,52 @@
 // The end of the check-in: summary, approve-before-share (PV-04) and the egress receipt (PV-05).
 // `ShareView` only renders state and forwards taps; every request goes through the ShareFlow (src/shareFlow.ts).
-import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
-import { SEVERITIES, type CheckinSummary, type EgressReceipt, type Severity, type SummaryItem } from './api.ts'
-import { canShare, missingSeverities, type ShareFlow, type SharePhase, type ShareState } from './shareFlow.ts'
-import { needsRestart, shareErrorMessage, summaryErrorMessage } from './messages.ts'
+// Also: the spoken summary, "Change one answer" (VC-08) and a receipt saved while offline (PV-07, AL-02).
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 import {
+  ONSETS,
+  SEVERITIES,
+  type CheckinSummary,
+  type CorrectionChange,
+  type EgressReceipt,
+  type Severity,
+  type SummaryItem,
+} from './api.ts'
+import { startRecording, type ActiveRecording } from './recorder.ts'
+import {
+  canCorrect,
+  canShare,
+  missingSeverities,
+  type ShareFlow,
+  type SharePhase,
+  type ShareState,
+} from './shareFlow.ts'
+import {
+  correctionErrorMessage,
+  needsRestart,
+  shareErrorMessage,
+  summaryErrorMessage,
+  summaryVoiceMessage,
+} from './messages.ts'
+import {
+  alertText,
   formatLocalTime,
   itemLabel,
   NOTHING_TO_REPORT,
+  ONSET_CHOICES,
   onsetSentence,
+  QUEUED_EXPLANATION,
   receiptStatusText,
   severityQuestion,
   severityText,
   SEVERITY_WORDS,
   sharedPartsText,
 } from './summaryText.ts'
-import { AlertIcon, CheckIcon, HourglassIcon } from './Icons.tsx'
+import { AlertIcon, CheckIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
 
 type HeadingRef = RefObject<HTMLHeadingElement | null>
+
+/** Recording the spoken change: tap to start, tap to stop (like an answer). */
+export type SayTalk = 'idle' | 'starting' | 'listening'
 
 export interface ShareViewProps {
   state: ShareState
@@ -28,7 +57,21 @@ export interface ShareViewProps {
   onRetryLoad: () => void
   onRestart: () => void
   headingRef?: HeadingRef
+  /** "Hear it again" (false) and "Slower" (true) for the spoken summary. */
+  onHear?: (slow: boolean) => void
+  onOpenCorrection?: () => void
+  onCorrectionMode?: (mode: 'say' | 'tap') => void
+  onPickItem?: (termCode: string) => void
+  onCorrect?: (change: CorrectionChange) => void
+  onCloseCorrection?: () => void
+  /** Tap to start or stop recording the spoken change. */
+  onSayToggle?: () => void
+  sayTalk?: SayTalk
+  /** A microphone problem while recording the spoken change. */
+  sayError?: unknown
 }
+
+const noop = () => undefined
 
 /** Which page is showing; focus moves to its heading only when this changes. */
 function pageOf(phase: SharePhase): string {
@@ -41,11 +84,76 @@ export function ShareScreen({ flow, onRestart }: { flow: ShareFlow; onRestart: (
   const state = useSyncExternalStore(flow.subscribe, flow.getState)
   const heading = useRef<HTMLHeadingElement>(null)
   const page = pageOf(state.phase)
+  const recording = useRef<ActiveRecording | null>(null)
+  const sayNow = useRef<SayTalk>('idle')
+  const [sayTalk, setSayTalk] = useState<SayTalk>('idle')
+  const [sayError, setSayError] = useState<unknown>(null)
+  const mounted = useRef(true)
+
+  const updateSay = useCallback((next: SayTalk) => {
+    sayNow.current = next
+    setSayTalk(next)
+  }, [])
 
   // Keyboard and screen-reader users land on each new page's heading.
   useEffect(() => {
     heading.current?.focus()
   }, [page])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      recording.current?.cancel()
+      recording.current = null
+    }
+  }, [])
+
+  // Leaving "Say the change" (closed, tapped instead, or the change went through) drops any open recording.
+  const sayOpen = state.correction.step === 'say'
+  useEffect(() => {
+    if (sayOpen) return
+    recording.current?.cancel()
+    recording.current = null
+    updateSay('idle')
+    setSayError(null)
+  }, [sayOpen, updateSay])
+
+  const toggleSay = async () => {
+    if (sayNow.current === 'idle') {
+      if (state.correction.sending) return
+      flow.stopVoice()
+      setSayError(null)
+      updateSay('starting')
+      try {
+        const active = await startRecording()
+        if (!mounted.current || flow.getState().correction.step !== 'say') {
+          active.cancel()
+          return
+        }
+        recording.current = active
+        updateSay('listening')
+      } catch (error) {
+        if (!mounted.current) return
+        updateSay('idle')
+        setSayError(error)
+      }
+      return
+    }
+    if (sayNow.current === 'listening') {
+      // Only this tap ends the recording: long pauses never do (VC-03).
+      const active = recording.current
+      recording.current = null
+      updateSay('idle')
+      if (!active) return
+      try {
+        const audio = await active.stop() // also releases the microphone
+        await flow.correct(audio)
+      } catch (error) {
+        if (mounted.current) setSayError(error)
+      }
+    }
+  }
 
   return (
     <ShareView
@@ -57,6 +165,15 @@ export function ShareScreen({ flow, onRestart }: { flow: ShareFlow; onRestart: (
       onBack={flow.backToSummary}
       onRetryLoad={() => void flow.load()}
       onRestart={onRestart}
+      onHear={(slow) => void flow.speakSummary(slow)}
+      onOpenCorrection={flow.openCorrection}
+      onCorrectionMode={flow.chooseCorrectionMode}
+      onPickItem={flow.pickItem}
+      onCorrect={(change) => void flow.correct(change)}
+      onCloseCorrection={flow.closeCorrection}
+      onSayToggle={() => void toggleSay()}
+      sayTalk={sayTalk}
+      sayError={sayError}
     />
   )
 }
@@ -119,7 +236,8 @@ function LoadingPage({ state, headingRef, onRetryLoad, onRestart, onNotNow }: Sh
 
 function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
   const { state, summary, headingRef, onChoose, onShare, onNotNow, onRestart } = props
-  const sending = state.phase === 'sending'
+  const correcting = state.correction.step !== 'closed'
+  const sending = state.phase === 'sending' || state.correction.sending
   const missing = missingSeverities(state)
   const enabled = canShare(state)
   const error = state.failure?.error
@@ -133,6 +251,28 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
         Your summary
       </h1>
       {summary.shared && <p className="note">You have already shared this check-in.</p>}
+
+      {summary.spoken && (
+        <div className="voice-controls">
+          <button
+            type="button"
+            className="button button--secondary"
+            aria-disabled={sending}
+            onClick={() => !sending && (props.onHear ?? noop)(false)}
+          >
+            <SpeakerIcon className="icon" /> Hear it again
+          </button>
+          <button
+            type="button"
+            className="button button--secondary"
+            aria-disabled={sending}
+            onClick={() => !sending && (props.onHear ?? noop)(true)}
+          >
+            <SlowIcon className="icon" /> Slower
+          </button>
+        </div>
+      )}
+      {state.voiceFailure && <p className="note">{summaryVoiceMessage(state.voiceFailure.error)}</p>}
 
       <section className="summary" aria-labelledby="told-heading">
         <h2 id="told-heading" className="subtitle">
@@ -173,6 +313,24 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
         )}
       </section>
 
+      {canCorrect(state) && !correcting && (
+        <button
+          type="button"
+          className="button button--secondary button--huge"
+          aria-disabled={sending}
+          onClick={() => !sending && (props.onOpenCorrection ?? noop)()}
+        >
+          Change one answer
+        </button>
+      )}
+      {canCorrect(state) && correcting && <CorrectionPanel {...props} summary={summary} />}
+      {!correcting && state.correction.failure && (
+        <div className="alert" role="alert">
+          <AlertIcon className="icon" />
+          <p>{correctionErrorMessage(state.correction.failure.error)}</p>
+        </div>
+      )}
+
       <WhatWillBeShared summary={summary} />
 
       {state.failure && (
@@ -202,9 +360,9 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
       <button
         type="button"
         className="button button--primary button--huge"
-        aria-disabled={!enabled}
+        aria-disabled={!enabled || state.correction.sending}
         aria-describedby="share-hint"
-        onClick={() => enabled && onShare()}
+        onClick={() => enabled && !state.correction.sending && onShare()}
       >
         {sending ? 'Sharing…' : 'Share this'}
       </button>
@@ -217,6 +375,179 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
         Not now
       </button>
     </main>
+  )
+}
+
+/** "Change one answer" (VC-08): say the change, or tap an item and pick the new answer. Only one change. */
+function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
+  const { state, summary } = props
+  const { step, termCode, sending, failure } = state.correction
+  const sayTalk = props.sayTalk ?? 'idle'
+  const correct = props.onCorrect ?? noop
+  const item = summary.items.find((it) => it.term_code === termCode)
+  const error = props.sayError ?? failure?.error
+  const close = (
+    <button
+      type="button"
+      className="button button--secondary"
+      aria-disabled={sending || sayTalk !== 'idle'}
+      onClick={() => !sending && sayTalk === 'idle' && (props.onCloseCorrection ?? noop)()}
+    >
+      Keep it as it is
+    </button>
+  )
+
+  return (
+    <section className="correction" aria-labelledby="change-heading">
+      <h2 id="change-heading" className="subtitle">
+        Change one answer
+      </h2>
+      <p>You can change one thing before sharing.</p>
+
+      {step === 'menu' && (
+        <div className="correction__choices">
+          <button
+            type="button"
+            className="button button--primary button--huge"
+            onClick={() => (props.onCorrectionMode ?? noop)('say')}
+          >
+            <MicIcon className="icon" /> Say the change
+          </button>
+          {summary.items.length > 0 && (
+            <button
+              type="button"
+              className="button button--secondary button--huge"
+              onClick={() => (props.onCorrectionMode ?? noop)('tap')}
+            >
+              Tap to change
+            </button>
+          )}
+        </div>
+      )}
+
+      {step === 'say' && (
+        <>
+          <p>For example: “The rash is mild”, or “I don't have a headache”.</p>
+          <button
+            type="button"
+            className={`button talk talk--${sending ? 'sending' : sayTalk}`}
+            aria-disabled={sending || sayTalk === 'starting'}
+            onClick={() => !sending && sayTalk !== 'starting' && (props.onSayToggle ?? noop)()}
+          >
+            {sending ? (
+              <>
+                <HourglassIcon className="icon icon--large" />
+                <span>Changing it…</span>
+              </>
+            ) : sayTalk === 'listening' ? (
+              <>
+                <StopIcon className="icon icon--large" />
+                <span>Listening… tap when you're done</span>
+              </>
+            ) : sayTalk === 'starting' ? (
+              <>
+                <MicIcon className="icon icon--large" />
+                <span>Getting ready…</span>
+              </>
+            ) : (
+              <>
+                <MicIcon className="icon icon--large" />
+                <span>Tap and say the change</span>
+              </>
+            )}
+          </button>
+          {summary.items.length > 0 && (
+            <button
+              type="button"
+              className="button button--secondary"
+              aria-disabled={sending || sayTalk !== 'idle'}
+              onClick={() => !sending && sayTalk === 'idle' && (props.onCorrectionMode ?? noop)('tap')}
+            >
+              Tap to change instead
+            </button>
+          )}
+        </>
+      )}
+
+      {step === 'pick' && (
+        <fieldset className="choice">
+          <legend className="choice__question">Which one do you want to change?</legend>
+          <div className="choice__buttons choice__buttons--column">
+            {summary.items.map((it, i) => (
+              <button
+                key={`${it.term_code}-${i}`}
+                type="button"
+                className="button choice__button"
+                onClick={() => (props.onPickItem ?? noop)(it.term_code)}
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
+      {step === 'item' && item && (
+        <>
+          <fieldset className="choice">
+            <legend className="choice__question">{severityQuestion(item.label)}</legend>
+            <div className="choice__buttons">
+              {SEVERITIES.map((severity) => (
+                <button
+                  key={severity}
+                  type="button"
+                  className="button choice__button"
+                  aria-disabled={sending}
+                  onClick={() => !sending && correct({ term_code: item.term_code, severity })}
+                >
+                  {SEVERITY_WORDS[severity]}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="choice">
+            <legend className="choice__question">When did it start?</legend>
+            <div className="choice__buttons choice__buttons--column">
+              {ONSETS.map((onset) => (
+                <button
+                  key={onset}
+                  type="button"
+                  className="button choice__button"
+                  aria-disabled={sending}
+                  onClick={() => !sending && correct({ term_code: item.term_code, onset })}
+                >
+                  {ONSET_CHOICES[onset]}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <button
+            type="button"
+            className="button button--secondary button--huge"
+            aria-disabled={sending}
+            onClick={() => !sending && correct({ term_code: item.term_code, remove: true })}
+          >
+            I don't have this
+          </button>
+        </>
+      )}
+
+      <p className="status" role="status" aria-live="polite">
+        {sending && (
+          <>
+            <HourglassIcon className="icon" />
+            <span>Changing your summary…</span>
+          </>
+        )}
+      </p>
+      {error !== undefined && error !== null && (
+        <div className="alert" role="alert">
+          <AlertIcon className="icon" />
+          <p>{correctionErrorMessage(error)}</p>
+        </div>
+      )}
+      {close}
+    </section>
   )
 }
 
@@ -350,7 +681,8 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
   return (
     <main className="screen">
       <p className="progress">Receipt</p>
-      <div className={`receipt-head receipt-head--${status}`}>
+      {/* Updated in place when a queued record is sent: announced, with no page change. */}
+      <div className={`receipt-head receipt-head--${status}`} aria-live="polite">
         {status === 'sent' ? (
           <CheckIcon className="icon icon--large" />
         ) : status === 'queued' ? (
@@ -362,8 +694,14 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
           {receiptStatusText(status)}
         </h1>
       </div>
+      {status === 'queued' && <p className="lead">{QUEUED_EXPLANATION}</p>}
       {status === 'failed' && (
         <p className="lead">The safety team's service did not accept this record. Please tell your helper.</p>
+      )}
+      {receipt.alert && (
+        <p className="lead alert-line" aria-live="polite">
+          {alertText(receipt.alert)}
+        </p>
       )}
 
       <dl className="receipt">

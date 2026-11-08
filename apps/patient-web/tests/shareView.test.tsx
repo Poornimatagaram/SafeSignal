@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { RuntimeError } from '../src/api.ts'
 import { INITIAL_SHARE_STATE, type ShareState } from '../src/shareFlow.ts'
-import { ShareView } from '../src/ShareScreen.tsx'
+import { ShareView, type ShareViewProps } from '../src/ShareScreen.tsx'
 import {
   formatLocalTime,
   onsetSentence,
@@ -15,10 +15,13 @@ import {
   sharedPartsText,
 } from '../src/summaryText.ts'
 import {
+  ALERT_QUEUED,
+  ALERT_SENT,
   FIELDS,
   RECEIPT_FAILED,
   RECEIPT_QUEUED,
   RECEIPT_SENT,
+  SUMMARY_CORRECTED,
   SUMMARY_EMPTY,
   SUMMARY_NEEDS_SEVERITY,
   SUMMARY_READY,
@@ -26,10 +29,11 @@ import {
 
 const noop = () => undefined
 
-function render(patch: Partial<ShareState>): string {
+function render(patch: Partial<ShareState>, extra: Partial<ShareViewProps> = {}): string {
   const state: ShareState = { ...INITIAL_SHARE_STATE, ...patch }
   return renderToStaticMarkup(
     <ShareView
+      {...extra}
       state={state}
       onChoose={noop}
       onShare={noop}
@@ -147,9 +151,9 @@ describe('receipt screen (PV-05)', () => {
     expect(text).toContain("Thank you, that's all for today.")
   })
 
-  it('says a queued record is kept on this device and sent later', () => {
+  it('says a queued record is kept on this computer and sent later', () => {
     const text = textOf(render({ phase: 'receipt', summary: SUMMARY_READY, receipt: RECEIPT_QUEUED }))
-    expect(text).toContain('Saved on this device; it will be sent when you are back online')
+    expect(text).toContain('Saved on this computer. It will be sent automatically when the connection is back.')
     expect(text).toContain('Will be sent to Drug company safety team')
     expect(text).toContain('Not yet')
   })
@@ -201,7 +205,7 @@ describe('plain words', () => {
 
   it('names each receipt status', () => {
     expect(receiptStatusText('sent')).toBe('Shared')
-    expect(receiptStatusText('queued')).toBe('Saved on this device; it will be sent when you are back online')
+    expect(receiptStatusText('queued')).toBe('Saved on this computer.')
     expect(receiptStatusText('failed')).toBe('Not accepted')
   })
 
@@ -210,5 +214,95 @@ describe('plain words', () => {
     expect(shown).toContain('November 8, 2026')
     expect(shown).toMatch(/9:03/)
     expect(formatLocalTime('not a time')).toBe('not a time')
+  })
+})
+
+describe('spoken summary and "Change one answer" (VC-08)', () => {
+  const review = { phase: 'review' as const, summary: SUMMARY_READY }
+  const correction = (patch: Partial<ShareState['correction']>) => ({
+    ...review,
+    correction: { ...INITIAL_SHARE_STATE.correction, ...patch },
+  })
+
+  it('offers "Hear it again", "Slower" and a big "Change one answer" while unused', () => {
+    const html = render(review)
+    expect(buttonTag(html, 'Hear it again')).toContain('aria-disabled="false"')
+    expect(buttonTag(html, 'Slower')).toContain('aria-disabled="false"')
+    expect(buttonTag(html, 'Change one answer')).toContain('button--huge')
+    expect(buttonTag(html, 'Share this')).toContain('aria-disabled="false"')
+  })
+
+  it('hides "Change one answer" once used or shared, and the voice buttons with no spoken text', () => {
+    expect(() => buttonTag(render({ ...review, summary: SUMMARY_CORRECTED }), 'Change one answer')).toThrow()
+    expect(() => buttonTag(render({ ...review, summary: { ...SUMMARY_READY, shared: true } }), 'Change one answer')).toThrow()
+    expect(() => buttonTag(render({ ...review, summary: { ...SUMMARY_READY, spoken: null } }), 'Hear it again')).toThrow()
+  })
+
+  it('the menu offers saying or tapping the change, and a way out', () => {
+    const html = render(correction({ step: 'menu' }))
+    expect(buttonTag(html, 'Say the change')).toBeTruthy()
+    expect(buttonTag(html, 'Tap to change')).toBeTruthy()
+    expect(buttonTag(html, 'Keep it as it is')).toBeTruthy()
+    expect(() => buttonTag(html, 'Change one answer')).toThrow()
+    // Nothing to tap when there are no items: only saying it.
+    expect(() => buttonTag(render({ ...correction({ step: 'menu' }), summary: SUMMARY_EMPTY }), 'Tap to change')).toThrow()
+  })
+
+  it('tapping: pick the item, then how bad, when it started, or "I don\'t have this"', () => {
+    expect(buttonTag(render(correction({ step: 'pick' })), 'Rash')).toBeTruthy()
+    const html = render(correction({ step: 'item', termCode: 'SE_RASH' }))
+    const text = textOf(html)
+    expect(text).toContain('How bad is the rash?')
+    expect(text).toContain('When did it start?')
+    for (const label of ['Mild', 'Moderate', 'Severe', 'Today', '1 to 3 days ago', '4 to 7 days ago', 'More than a week ago', 'Not sure', "I don't have this"]) {
+      expect(buttonTag(html, label)).toBeTruthy()
+    }
+  })
+
+  it('saying: a big tap-to-talk button, "Listening…" while recording, and the 422 message', () => {
+    expect(buttonTag(render(correction({ step: 'say' })), 'Tap and say the change')).toContain('talk--idle')
+    const listening = render(correction({ step: 'say' }), { sayTalk: 'listening' })
+    expect(buttonTag(listening, "Listening… tap when you're done")).toBeTruthy()
+    const failure = { error: new RuntimeError('correction-not-understood', 422) }
+    const text = textOf(render(correction({ step: 'say', failure })))
+    expect(text).toContain('Sorry, I did not understand the change. Nothing was changed.')
+    expect(buttonTag(render(correction({ step: 'say', sending: true })), 'Changing it…')).toContain('aria-disabled="true"')
+  })
+
+  it('a 409 says the summary cannot be changed again', () => {
+    const failure = { error: new RuntimeError('correction-used', 409) }
+    const text = textOf(render({ ...review, summary: SUMMARY_CORRECTED, correction: { ...INITIAL_SHARE_STATE.correction, failure } }))
+    expect(text).toContain('This summary cannot be changed again.')
+  })
+
+  it('a summary that could not be read out loud says so and stays on screen', () => {
+    const text = textOf(render({ ...review, voiceFailure: { error: new RuntimeError('speech-unavailable', 503) } }))
+    expect(text).toContain('I cannot read your summary out loud right now.')
+    expect(text).toContain('Rash For review')
+  })
+})
+
+describe('queued receipt and alert line (PV-07, AL-02)', () => {
+  it('a queued receipt that turns sent shows "Shared" with the time and fingerprint', () => {
+    const html = render({ phase: 'receipt', receipt: RECEIPT_SENT })
+    expect(textOf(html)).toContain('Shared')
+    expect(textOf(html)).not.toContain('Saved on this computer')
+    expect(html).toContain(RECEIPT_SENT.payload_sha256)
+  })
+
+  it('says the care team was told, or will be told when the connection is back, with no symptom details', () => {
+    const sent = textOf(render({ phase: 'receipt', receipt: { ...RECEIPT_SENT, alert: ALERT_SENT } }))
+    expect(sent).toContain('Your care team was told about the severe symptom.')
+    const queued = textOf(render({ phase: 'receipt', receipt: { ...RECEIPT_QUEUED, alert: ALERT_QUEUED } }))
+    expect(queued).toContain('Your care team will be told about the severe symptom when the connection is back.')
+    for (const text of [sent, queued]) {
+      const line = text.slice(text.indexOf('Your care team'), text.indexOf('symptom', text.indexOf('Your care team')) + 30)
+      expect(line).not.toMatch(/rash|SE_|mild|moderate/i)
+      expect(text).not.toContain(ALERT_SENT.alert_id)
+    }
+  })
+
+  it('shows no alert line without an alert', () => {
+    expect(textOf(render({ phase: 'receipt', receipt: RECEIPT_SENT }))).not.toContain('care team')
   })
 })

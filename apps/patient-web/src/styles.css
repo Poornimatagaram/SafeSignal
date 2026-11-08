@@ -496,3 +496,29 @@ ul {
   font-weight: 700;
   line-height: 1.2;
 }
+
+/* "Change one answer" (VC-08): one panel, big choices, one change. */
+.correction {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  background: var(--panel);
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.correction__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.choice__buttons--column {
+  flex-direction: column;
+}
+
+/* The severe-symptom alert line on the receipt (AL-02): words only, no symptom details. */
+.alert-line {
+  font-weight: 600;
+}

@@ -16,7 +16,7 @@ const WORDING = [
 const QUESTION: Question = { index: 0, total: 3, question_id: 'q1', purpose: 'wellbeing', ask: 0, text: WORDING[0] }
 
 function turn(rating: TurnResult['rating'], next: TurnNext): TurnResult {
-  return { transcript: 'well, the garden, you know', symptoms: [], extraction: 'ok', rating, next }
+  return { transcript: 'well, the garden, you know', symptoms: [], extraction: 'ok', rating, next, command: null }
 }
 
 const REASK_1 = turn('rambling', { action: 'reask', ask: 1, text: WORDING[1] })
