@@ -380,6 +380,23 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 
 ---
 
+## Session 014 — 2026-11-08 (Sun) · Company portal
+
+**Goal:** build the third persona's screen so one check-in is visible to patient, doctor and company.
+
+**Outputs**
+- `apps/company-web` (D-084) on contract 2.2 (#13): Side effects, Check-ins, Survey, Program & export; CI lint-and-build job.
+
+**Verification:** `npm run lint` and `npm run build` pass. Run against a throwaway 2.2 service (temp data dir, port 8098, CORS for 5175): all three programs load; side-effect chart with crosshair tooltip and end labels; survey for cohort_A published as version 2 and reloaded; program and documents render; no console errors. Export checked with curl (the browser download was not clicked). Palette validated with the dataviz validator (light: two series under 3:1, so table view and direct labels; dark: all pass).
+
+**Found:** recharts may call a line's label renderer more than once per render, so end-label collision avoidance is keyed by cohort; completion lines overlap closely in the synthetic data (all cohorts ~74%), so the table view is the readable one there.
+
+**Next**
+1. Merge the e2e check PR and this PR; then run the Scoping Doc 26.15 checklist with teammates.
+2. CO-05 (document assistant) and CO-06 (FDA report draft) if time allows.
+
+---
+
 ## Session 015 — 2026-11-08 (Sun) · Company-side overview
 
 **Goal:** Write down what the company side does across the whole product and what is left, before merging #14 (end-to-end check) and #15 (company portal).

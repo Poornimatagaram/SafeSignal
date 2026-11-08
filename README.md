@@ -42,6 +42,7 @@ cd apps/service && uv sync
 uv run python -m sentinel_service.seed                       # once; safe to re-run
 uv run uvicorn sentinel_service.main:app --port 8000         # API docs: http://127.0.0.1:8000/docs
 scripts/reset_all.sh --seed                                  # from the repo root: wipe var/ and reseed
+(cd apps/company-web && npm install && npm run dev)           # company portal: http://localhost:5175
 ```
 
 ## Check

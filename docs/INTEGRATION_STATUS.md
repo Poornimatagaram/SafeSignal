@@ -66,6 +66,7 @@ SENTINEL_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://loca
 
 - Browser apps need their origin in `SENTINEL_ALLOWED_ORIGINS`; without it the service sends no CORS headers and browser calls fail.
 - Doctor side, to get test data before the patient runtime exists: as Dr. Patel, register Northgate's care-team key (and grant it to yourself), then run `uv run --project packages/contract-py python scripts/send_demo_envelope.py --alert` from the repo root. Register Lakeside's key as Dr. Okafor to also receive Walter's emergency envelope.
+- **Company portal:** `cd apps/company-web && npm install && npm run dev` (port 5175; reads `/v1/company/*` only).
 - **End-to-end reference:** `uv run --project apps/service python scripts/e2e_check.py` runs one check-in through every persona against a throwaway service (never `var/service`). Patient side: its `SentinelClient` calls are exactly what the egress gate should make. Doctor side: its key and grant steps mirror `keys.ts`.
 - Start clean: `scripts/reset_all.sh --seed` (stop the service first; also clear the doctor browser's site data, which holds the keys).
 - **Demo controls** (from `apps/service`): `uv run python -m sentinel_service.demo close-window pt_9c1d2e3f --in 60` makes Priya's window close in about a minute so the level 3 alert fires on cue; `... demo run-scheduler` runs one pass immediately. Walter checks in live today: if his window closes first, he gets a missed alert too, so set his window with `close-window pt_4b82d0c6 --in 3600` before the demo if needed.
