@@ -58,7 +58,7 @@ Use only `from sentinel_contract.client import SentinelClient, build_envelope` (
 - Paths: `device_runtime/` → `apps/patient-runtime/`; `device_runtime/patient.db` → `var/patient/patient.db`; `clients/sentinel_client.py` → `sentinel_contract.client` (D-030).
 
 ## Always
-- `sentinel_patient/egress_gate.py` is the ONLY module that imports `sentinel_contract.client` or any HTTP library.
+- `sentinel_patient/egress_gate.py` is the ONLY module that makes requests leaving this device: it alone imports `sentinel_contract.client` or any HTTP library. One exception: the local model client (`ollama`) may be imported where extraction and rating need it, and only for loopback hosts (`127.0.0.1`, `::1`, `localhost`); refuse any other host, and keep a guard test for both rules (D-089).
 - Write each payload to `outbox` before sending; create `rec_`/`env_`/`alt_` IDs (8 lowercase hex) before sending and reuse them on retry.
 - Seal envelopes only to organizations the patient consented to (care team; emergency organizations only with emergency consent).
 - Make the check-in work with the network off.
