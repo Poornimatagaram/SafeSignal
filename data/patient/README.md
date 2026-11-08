@@ -58,6 +58,21 @@ Ten spoken check-in answers, written to be heavy with personal identifiers, each
 2. List every identifier with its exact text from the transcript, and label the expected symptoms with the rules above.
 3. Run `uv run --project apps/patient-runtime pytest -q evals/patient` from the repository root. The dataset tests check ids, enums, that every value appears in its transcript and that all six identifier types are covered. They also pin the case count at 10, so update `test_dataset_shape` in `evals/patient/test_leakage_eval.py` when adding cases.
 
+## `leakage_held_out.json`
+
+Forty more spoken check-in answers (`lk_11` to `lk_50`) in the same format and with the same labelling rules as `leakage_transcripts.json`, kept apart as a held-out test set for the personal-data filter. They add harder cases: names that are also ordinary words (Hope, Grace, June, Frank, Bill, Patience), titles, nicknames, spelled-out names, a pet's name next to a person's, house numbers and zip codes in words, apartments, PO boxes and rural routes, spoken phone numbers and emails, extensions, a corrected phone number, identifiers in the middle of symptom sentences, and five cases with no identifiers.
+
+| | |
+| --- | --- |
+| Source | Hand-written for this project by someone who never saw the filter, extraction or rating code, nor the evaluation code. No real people: names, streets, towns, hospitals, clinics, care homes and pharmacies are invented; a few real city names appear as place names with nobody real attached. Phone numbers use the fictional 555-01xx range (two use a 555 area code with an 010 exchange); emails use the reserved `example.com`, `example.org` and `example.net` domains. |
+| Licence | MIT, the repository licence (`LICENSE`). |
+| Contract | `schema_version` 2.0; `reporter`, `term_code`, `severity` and `onset` come from `schema/enums.json`. |
+| Use | Report results on it only. Never use it to tune the filter, its patterns or word lists: once a case has been used to change the filter it no longer measures anything. |
+
+Pet names (Biscuit, Pepper) are not personal identifiers and are not listed; ordinary uses of a name word ("by the grace of God") are not listed either.
+
+185 identifiers in all (NAME 81, PLACE 40, ADDRESS 21, DATE_OF_BIRTH 17, PHONE 16, EMAIL 10); reporters self 24, parent 6, caregiver 6, other 4; 66 expected symptoms covering all 18 term codes; two cases with no symptoms.
+
 ## `reask_cases.json`
 
 Twenty spoken answers to the example survey's questions (`schema/examples/survey_config.valid.json`, q1 to q6), each labelled with the rating a correct rater gives it. Used by the answer-rating evaluation (`evals/patient/reask_eval.py`, VC-04, with VC-06 extraction reported). Scoping Doc 17.3 "Re-ask cases (20)".

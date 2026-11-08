@@ -365,3 +365,58 @@ def test_case_mix():
     onsets = {s["onset"] for c in CASES for s in c["expected"]["symptoms"]}
     assert len(onsets) >= 4
     assert any(s["severity"] is None for c in CASES for s in c["expected"]["symptoms"])
+
+
+# --------------------------------------------------------------------------------------------- held-out set
+
+HELD_OUT_PATH = REPO_ROOT / "data" / "patient" / "leakage_held_out.json"
+HELD_OUT = json.loads(HELD_OUT_PATH.read_text(encoding="utf-8"))
+HELD = HELD_OUT["transcripts"]
+
+
+def test_held_out_shape_and_ids_do_not_collide():
+    assert HELD_OUT["schema_version"] == "2.0" and "never used to tune" in HELD_OUT["source"]
+    assert [c["id"] for c in HELD] == [f"lk_{n}" for n in range(11, 51)]
+    assert not {c["id"] for c in HELD} & {c["id"] for c in CASES}
+    for case in HELD:
+        assert set(case) == {"id", "reporter", "transcript", "identifiers", "expected"}
+
+
+def test_held_out_labels_are_verbatim_valid_and_fictional():
+    types = set()
+    for case in HELD:
+        assert case["reporter"] in ENUMS["reporter"], case["id"]
+        for ident in case["identifiers"]:
+            assert ident["type"] in le.IDENTIFIER_TYPES and ident["value"] in case["transcript"], case["id"]
+            types.add(ident["type"])
+            if ident["type"] == "EMAIL":
+                assert re.search(r"example(\.| dot )(com|org|net)", ident["value"]), case["id"]  # written or spoken
+        for symptom in case["expected"]["symptoms"]:
+            assert symptom["term_code"] in ENUMS["term_code"] and symptom["onset"] in ENUMS["onset"], case["id"]
+            assert symptom["severity"] is None or symptom["severity"] in ENUMS["severity"], case["id"]
+    assert types == set(le.IDENTIFIER_TYPES)
+    assert sum(len(c["identifiers"]) for c in HELD) >= 100
+    assert any(not c["identifiers"] for c in HELD), "cases with no identifiers too"
+
+
+def test_harness_detects_every_held_out_identifier_in_its_raw_transcript():
+    for case in HELD:
+        assert len(le.find_identifiers(case["transcript"], case["identifiers"])) == len(case["identifiers"]), case["id"]
+
+
+def test_default_run_reports_each_set_separately(tmp_path, capsys):
+    out = tmp_path / "r.json"
+    code = le.main(["--data", str(DATA_PATH), "--data", str(HELD_OUT_PATH), "--out", str(out)],
+                   runtime(extract=lambda text: []))  # identity filter: every identifier survives filtering
+    report = json.loads(out.read_text())
+    assert code == le.EXIT_PASS and set(report["sets"]) == {"leakage_transcripts", "leakage_held_out"}
+    assert report["sets"]["leakage_held_out"]["cases"] == 40 and report["totals"]["cases"] == 50
+    assert report["sets"]["leakage_held_out"]["filter_residuals"] == report["sets"]["leakage_held_out"]["identifiers"]
+    assert "set leakage_held_out: 40 cases" in capsys.readouterr().out
+    assert {c["set"] for c in report["cases"]} == {"leakage_transcripts", "leakage_held_out"}
+
+
+def test_duplicate_ids_across_files_are_refused(tmp_path):
+    with pytest.raises(ValueError):
+        le.main(["--data", str(DATA_PATH), "--data", str(DATA_PATH), "--out", str(tmp_path / "r.json")],
+                runtime(extract=lambda text: []))

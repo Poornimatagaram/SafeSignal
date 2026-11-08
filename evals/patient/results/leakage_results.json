@@ -1,22 +1,22 @@
 {
   "eval": "patient_leakage",
   "requirement": "PV-01",
-  "run_at_utc": "2026-11-08T05:34:05Z",
+  "run_at_utc": "2026-11-08T07:08:14Z",
   "model": "llama3.2:3b",
-  "dataset": "data/patient/leakage_transcripts.json",
-  "dataset_sha256": "2408c70cc329d4e2dd7386292e7f913e3956cd11945ccfb5b0eb6824d983be21",
+  "dataset": "data/patient/leakage_transcripts.json + data/patient/leakage_held_out.json",
+  "dataset_sha256": "eae594ff1c69d4a7e0d0b05dbfa757f73b3d96f823e0ed385f35243f30cb6bf7",
   "pass_rule": "0 identifiers in the extraction output across all cases, and every case produced output",
   "pass": true,
   "totals": {
-    "cases": 10,
-    "identifiers": 59,
+    "cases": 50,
+    "identifiers": 244,
     "identifiers_by_type": {
-      "NAME": 16,
-      "ADDRESS": 7,
-      "PHONE": 7,
-      "EMAIL": 5,
-      "DATE_OF_BIRTH": 7,
-      "PLACE": 17
+      "NAME": 97,
+      "ADDRESS": 28,
+      "PHONE": 23,
+      "EMAIL": 15,
+      "DATE_OF_BIRTH": 24,
+      "PLACE": 57
     },
     "output_leaks": 0,
     "output_leaks_by_type": {
@@ -27,30 +27,115 @@
       "DATE_OF_BIRTH": 0,
       "PLACE": 0
     },
-    "filter_residuals": 0,
+    "filter_residuals": 19,
     "filter_residuals_by_type": {
-      "NAME": 0,
-      "ADDRESS": 0,
+      "NAME": 14,
+      "ADDRESS": 4,
       "PHONE": 0,
       "EMAIL": 0,
       "DATE_OF_BIRTH": 0,
-      "PLACE": 0
+      "PLACE": 1
     },
     "extraction_errors": 0,
     "term_match": {
-      "tp": 15,
-      "fp": 4,
-      "fn": 0,
-      "precision": 0.789,
-      "recall": 1.0,
-      "f1": 0.882,
+      "tp": 72,
+      "fp": 21,
+      "fn": 9,
+      "precision": 0.774,
+      "recall": 0.889,
+      "f1": 0.828,
       "target_f1": 0.75,
       "meets_target": true
+    }
+  },
+  "sets": {
+    "leakage_transcripts": {
+      "cases": 10,
+      "identifiers": 59,
+      "identifiers_by_type": {
+        "NAME": 16,
+        "ADDRESS": 7,
+        "PHONE": 7,
+        "EMAIL": 5,
+        "DATE_OF_BIRTH": 7,
+        "PLACE": 17
+      },
+      "output_leaks": 0,
+      "output_leaks_by_type": {
+        "NAME": 0,
+        "ADDRESS": 0,
+        "PHONE": 0,
+        "EMAIL": 0,
+        "DATE_OF_BIRTH": 0,
+        "PLACE": 0
+      },
+      "filter_residuals": 0,
+      "filter_residuals_by_type": {
+        "NAME": 0,
+        "ADDRESS": 0,
+        "PHONE": 0,
+        "EMAIL": 0,
+        "DATE_OF_BIRTH": 0,
+        "PLACE": 0
+      },
+      "extraction_errors": 0,
+      "term_match": {
+        "tp": 15,
+        "fp": 4,
+        "fn": 0,
+        "precision": 0.789,
+        "recall": 1.0,
+        "f1": 0.882,
+        "target_f1": 0.75,
+        "meets_target": true
+      }
+    },
+    "leakage_held_out": {
+      "cases": 40,
+      "identifiers": 185,
+      "identifiers_by_type": {
+        "NAME": 81,
+        "ADDRESS": 21,
+        "PHONE": 16,
+        "EMAIL": 10,
+        "DATE_OF_BIRTH": 17,
+        "PLACE": 40
+      },
+      "output_leaks": 0,
+      "output_leaks_by_type": {
+        "NAME": 0,
+        "ADDRESS": 0,
+        "PHONE": 0,
+        "EMAIL": 0,
+        "DATE_OF_BIRTH": 0,
+        "PLACE": 0
+      },
+      "filter_residuals": 19,
+      "filter_residuals_by_type": {
+        "NAME": 14,
+        "ADDRESS": 4,
+        "PHONE": 0,
+        "EMAIL": 0,
+        "DATE_OF_BIRTH": 0,
+        "PLACE": 1
+      },
+      "extraction_errors": 0,
+      "term_match": {
+        "tp": 57,
+        "fp": 17,
+        "fn": 9,
+        "precision": 0.77,
+        "recall": 0.864,
+        "f1": 0.814,
+        "target_f1": 0.75,
+        "meets_target": true
+      }
     }
   },
   "cases": [
     {
       "id": "lk_01",
+      "set": "leakage_transcripts",
       "reporter": "self",
       "status": "ok",
       "identifiers": 5,
@@ -76,6 +161,7 @@
     },
     {
       "id": "lk_02",
+      "set": "leakage_transcripts",
       "reporter": "parent",
       "status": "ok",
       "identifiers": 6,
@@ -104,6 +190,7 @@
     },
     {
       "id": "lk_03",
+      "set": "leakage_transcripts",
       "reporter": "caregiver",
       "status": "ok",
       "identifiers": 7,
@@ -131,6 +218,7 @@
     },
     {
       "id": "lk_04",
+      "set": "leakage_transcripts",
       "reporter": "self",
       "status": "ok",
       "identifiers": 6,
@@ -152,6 +240,7 @@
     },
     {
       "id": "lk_05",
+      "set": "leakage_transcripts",
       "reporter": "self",
       "status": "ok",
       "identifiers": 6,
@@ -177,6 +266,7 @@
     },
     {
       "id": "lk_06",
+      "set": "leakage_transcripts",
       "reporter": "self",
       "status": "ok",
       "identifiers": 5,
@@ -205,6 +295,7 @@
     },
     {
       "id": "lk_07",
+      "set": "leakage_transcripts",
       "reporter": "parent",
       "status": "ok",
       "identifiers": 5,
@@ -232,6 +323,7 @@
     },
     {
       "id": "lk_08",
+      "set": "leakage_transcripts",
       "reporter": "self",
       "status": "ok",
       "identifiers": 6,
@@ -260,6 +352,7 @@
     },
     {
       "id": "lk_09",
+      "set": "leakage_transcripts",
       "reporter": "other",
       "status": "ok",
       "identifiers": 5,
@@ -285,6 +378,7 @@
     },
     {
       "id": "lk_10",
+      "set": "leakage_transcripts",
       "reporter": "self",
       "status": "ok",
       "identifiers": 8,
@@ -308,6 +402,1138 @@
       "term_match": {
         "tp": 2,
         "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_11",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 4,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_NAUSEA"
+      ],
+      "extracted_terms": [
+        "SE_NAUSEA"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_12",
+      "set": "leakage_held_out",
+      "reporter": "parent",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 2,
+        "types": [
+          "NAME",
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_INJECTION_SITE",
+        "SE_IRRITABILITY"
+      ],
+      "extracted_terms": [
+        "SE_IRRITABILITY",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_13",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 0,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_COUGH",
+        "SE_DRY_SKIN"
+      ],
+      "extracted_terms": [
+        "SE_COUGH",
+        "SE_DRY_SKIN",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_14",
+      "set": "leakage_held_out",
+      "reporter": "caregiver",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_DECREASED_APPETITE",
+        "SE_FATIGUE"
+      ],
+      "extracted_terms": [
+        "SE_FATIGUE"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_15",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_EDEMA"
+      ],
+      "extracted_terms": [
+        "SE_EDEMA"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_16",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_STOMATITIS"
+      ],
+      "extracted_terms": [
+        "SE_STOMATITIS"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_17",
+      "set": "leakage_held_out",
+      "reporter": "other",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DIARRHEA",
+        "SE_FEVER"
+      ],
+      "extracted_terms": [
+        "SE_DIARRHEA",
+        "SE_FEVER"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_18",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 3,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_COUGH",
+        "SE_NASAL"
+      ],
+      "extracted_terms": [
+        "SE_COUGH",
+        "SE_NASAL",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_19",
+      "set": "leakage_held_out",
+      "reporter": "parent",
+      "status": "ok",
+      "identifiers": 8,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "PLACE"
+        ]
+      },
+      "expected_terms": [
+        "SE_NAUSEA",
+        "SE_VOMITING"
+      ],
+      "extracted_terms": [
+        "SE_NAUSEA",
+        "SE_OTHER_REVIEW",
+        "SE_VOMITING"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_20",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 0,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [],
+      "extracted_terms": [
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_21",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_PARONYCHIA"
+      ],
+      "extracted_terms": [
+        "SE_PARONYCHIA"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_22",
+      "set": "leakage_held_out",
+      "reporter": "caregiver",
+      "status": "ok",
+      "identifiers": 8,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 2,
+        "types": [
+          "ADDRESS",
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_INFUSION_REACTION"
+      ],
+      "extracted_terms": [
+        "SE_INFUSION_REACTION"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_23",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 4,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_DYSPNEA"
+      ],
+      "extracted_terms": [
+        "SE_DYSPNEA"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_24",
+      "set": "leakage_held_out",
+      "reporter": "parent",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DECREASED_APPETITE",
+        "SE_NASAL",
+        "SE_VOMITING"
+      ],
+      "extracted_terms": [
+        "SE_NASAL",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 2
+      }
+    },
+    {
+      "id": "lk_25",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 2,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_FATIGUE",
+        "SE_RASH"
+      ],
+      "extracted_terms": [
+        "SE_FATIGUE",
+        "SE_RASH"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_26",
+      "set": "leakage_held_out",
+      "reporter": "caregiver",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DRY_SKIN",
+        "SE_PARONYCHIA"
+      ],
+      "extracted_terms": [
+        "SE_DRY_SKIN",
+        "SE_PARONYCHIA"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_27",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DIARRHEA",
+        "SE_RASH"
+      ],
+      "extracted_terms": [
+        "SE_DIARRHEA",
+        "SE_RASH"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_28",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_FEVER"
+      ],
+      "extracted_terms": [
+        "SE_FEVER"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_29",
+      "set": "leakage_held_out",
+      "reporter": "other",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_NAUSEA",
+        "SE_VOMITING"
+      ],
+      "extracted_terms": [
+        "SE_VOMITING"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_30",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 0,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_FATIGUE"
+      ],
+      "extracted_terms": [
+        "SE_FATIGUE",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_31",
+      "set": "leakage_held_out",
+      "reporter": "parent",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_INJECTION_SITE",
+        "SE_IRRITABILITY"
+      ],
+      "extracted_terms": [
+        "SE_IRRITABILITY",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_32",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "ADDRESS"
+        ]
+      },
+      "expected_terms": [
+        "SE_PARONYCHIA",
+        "SE_RASH"
+      ],
+      "extracted_terms": [
+        "SE_OTHER_REVIEW",
+        "SE_PARONYCHIA",
+        "SE_RASH"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_33",
+      "set": "leakage_held_out",
+      "reporter": "caregiver",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_COUGH",
+        "SE_DYSPNEA"
+      ],
+      "extracted_terms": [
+        "SE_COUGH",
+        "SE_DYSPNEA",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_34",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 4,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DECREASED_APPETITE",
+        "SE_NAUSEA"
+      ],
+      "extracted_terms": [
+        "SE_DECREASED_APPETITE",
+        "SE_NAUSEA"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_35",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 4,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 2,
+        "types": [
+          "NAME",
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_DIARRHEA",
+        "SE_STOMATITIS"
+      ],
+      "extracted_terms": [
+        "SE_DIARRHEA",
+        "SE_STOMATITIS"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_36",
+      "set": "leakage_held_out",
+      "reporter": "other",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_FATIGUE",
+        "SE_FEVER"
+      ],
+      "extracted_terms": [
+        "SE_FATIGUE",
+        "SE_FEVER",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_37",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 4,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_OTHER_REVIEW"
+      ],
+      "extracted_terms": [
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_38",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 0,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DYSPNEA",
+        "SE_EDEMA"
+      ],
+      "extracted_terms": [
+        "SE_DYSPNEA",
+        "SE_EDEMA",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_39",
+      "set": "leakage_held_out",
+      "reporter": "parent",
+      "status": "ok",
+      "identifiers": 8,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "ADDRESS"
+        ]
+      },
+      "expected_terms": [
+        "SE_FEVER",
+        "SE_VOMITING"
+      ],
+      "extracted_terms": [
+        "SE_FEVER",
+        "SE_VOMITING"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_40",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 3,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_DRY_SKIN",
+        "SE_RASH"
+      ],
+      "extracted_terms": [
+        "SE_DRY_SKIN",
+        "SE_RASH"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_41",
+      "set": "leakage_held_out",
+      "reporter": "caregiver",
+      "status": "ok",
+      "identifiers": 7,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_DIARRHEA",
+        "SE_FATIGUE"
+      ],
+      "extracted_terms": [
+        "SE_DIARRHEA",
+        "SE_FATIGUE",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_42",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 0,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [],
+      "extracted_terms": [
+        "SE_OTHER_REVIEW",
+        "SE_RASH"
+      ],
+      "term_match": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_43",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_INFUSION_REACTION",
+        "SE_NAUSEA"
+      ],
+      "extracted_terms": [
+        "SE_NAUSEA"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_44",
+      "set": "leakage_held_out",
+      "reporter": "other",
+      "status": "ok",
+      "identifiers": 7,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_COUGH",
+        "SE_NASAL"
+      ],
+      "extracted_terms": [
+        "SE_COUGH",
+        "SE_OTHER_REVIEW"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 1,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_45",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 4,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_EDEMA"
+      ],
+      "extracted_terms": [
+        "SE_EDEMA"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_46",
+      "set": "leakage_held_out",
+      "reporter": "parent",
+      "status": "ok",
+      "identifiers": 5,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 2,
+        "types": [
+          "NAME",
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_NASAL",
+        "SE_RASH"
+      ],
+      "extracted_terms": [
+        "SE_RASH"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 1
+      }
+    },
+    {
+      "id": "lk_47",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "ADDRESS"
+        ]
+      },
+      "expected_terms": [
+        "SE_FATIGUE"
+      ],
+      "extracted_terms": [
+        "SE_FATIGUE"
+      ],
+      "term_match": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_48",
+      "set": "leakage_held_out",
+      "reporter": "caregiver",
+      "status": "ok",
+      "identifiers": 6,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 1,
+        "types": [
+          "NAME"
+        ]
+      },
+      "expected_terms": [
+        "SE_DECREASED_APPETITE",
+        "SE_FEVER"
+      ],
+      "extracted_terms": [
+        "SE_DECREASED_APPETITE",
+        "SE_FEVER"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_49",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 3,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_DIARRHEA",
+        "SE_PARONYCHIA"
+      ],
+      "extracted_terms": [
+        "SE_DIARRHEA",
+        "SE_OTHER_REVIEW",
+        "SE_PARONYCHIA"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    {
+      "id": "lk_50",
+      "set": "leakage_held_out",
+      "reporter": "self",
+      "status": "ok",
+      "identifiers": 7,
+      "output_leaks": {
+        "count": 0,
+        "types": []
+      },
+      "filter_residuals": {
+        "count": 0,
+        "types": []
+      },
+      "expected_terms": [
+        "SE_COUGH",
+        "SE_FEVER"
+      ],
+      "extracted_terms": [
+        "SE_COUGH",
+        "SE_FEVER"
+      ],
+      "term_match": {
+        "tp": 2,
+        "fp": 0,
         "fn": 0
       }
     }

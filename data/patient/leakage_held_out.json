@@ -1,0 +1,1509 @@
+{
+  "schema_version": "2.0",
+  "source": "hand-written synthetic held-out cases, no real people; never used to tune the filter",
+  "transcripts": [
+    {
+      "id": "lk_11",
+      "reporter": "self",
+      "transcript": "Hello, it's Rose Tremaine, well, I'm not calling, I'm talking to the tablet, my grandson Frank set it up for me before he went back to the university in Madison. So. I've been queasy since Tuesday, that's four days ago now. Not terrible, I'd call it mild, I can still eat dry toast. It's worse first thing in the morning before my tablet. I haven't thrown up, nothing like that. Oh, and I've moved, I'm at twelve Maple Court, apartment 4B now, if you're sending letters.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Rose Tremaine"
+        },
+        {
+          "type": "NAME",
+          "value": "Frank"
+        },
+        {
+          "type": "PLACE",
+          "value": "Madison"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "twelve Maple Court, apartment 4B"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_NAUSEA",
+            "severity": "mild",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_12",
+      "reporter": "parent",
+      "transcript": "This is Hope's mum. Hope was born on the ninth of August 2026, so she's just three months. She had her jab on Monday at the Linden Park Health Centre and her thigh has gone red and a bit hard where the jab was, about the size of a coin. That was three days ago. She's also crying more than usual, won't settle for her naps since then. No temperature, I checked twice. Our health visitor is Mrs. Adeyemi-Clarke if you want to ask her, and my number is five five five, oh one one nine.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Hope"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "ninth of August 2026"
+        },
+        {
+          "type": "PLACE",
+          "value": "Linden Park Health Centre"
+        },
+        {
+          "type": "NAME",
+          "value": "Mrs. Adeyemi-Clarke"
+        },
+        {
+          "type": "PHONE",
+          "value": "five five five, oh one one nine"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_INJECTION_SITE",
+            "severity": null,
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_IRRITABILITY",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_13",
+      "reporter": "self",
+      "transcript": "Not much to say this week really. I've had a cough, a dry tickly one, going on about ten days now, mostly at night when I lie down. Mild I suppose, it doesn't stop me doing anything. Breathing is fine, I walked to the shops and back without stopping. Appetite's good. The skin on my hands has gone flaky and cracked again, especially round the knuckles, that started maybe last week. I put the cream on it. That's it, I think. Oh, and I'm sleeping better since they changed the time I take the pill.",
+      "identifiers": [],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_COUGH",
+            "severity": "mild",
+            "onset": "over_7_days"
+          },
+          {
+            "term_code": "SE_DRY_SKIN",
+            "severity": null,
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_14",
+      "reporter": "caregiver",
+      "transcript": "Hi, I'm Grace, I'm the night aide at Willowmere Care Home, and I'm doing the check-in for June Halloran, she was born March 3rd, 1941. She's been very tired, real worn out, sleeping most of the day for the last three days. I'd say severe, she didn't come down for lunch at all yesterday. And she's off her food since then as well, just picking. Her daughter, Mrs. Petra Halloran-Webb, asked to be kept in the loop, her email is petra dot hw at example dot net.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Grace"
+        },
+        {
+          "type": "PLACE",
+          "value": "Willowmere Care Home"
+        },
+        {
+          "type": "NAME",
+          "value": "June Halloran"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "March 3rd, 1941"
+        },
+        {
+          "type": "NAME",
+          "value": "Mrs. Petra Halloran-Webb"
+        },
+        {
+          "type": "EMAIL",
+          "value": "petra dot hw at example dot net"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FATIGUE",
+            "severity": "severe",
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_DECREASED_APPETITE",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_15",
+      "reporter": "self",
+      "transcript": "My name is Arthur Briggs, that's B-R-I-G-G-S, people always put a U in it somehow. Date of birth is 7/14/38. I live out on Rural Route 2, Box 118, near Wapello Corners. So the swelling. My ankles are puffy, both legs, since about a week ago, and my shoes don't fit right. Moderate, I'd say. No breathing trouble, I can still get out to the barn. The pharmacy in town, Hartigan's Drug, gave me some of those tight stockings to try.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Arthur Briggs"
+        },
+        {
+          "type": "NAME",
+          "value": "B-R-I-G-G-S"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "7/14/38"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "Rural Route 2, Box 118"
+        },
+        {
+          "type": "PLACE",
+          "value": "Wapello Corners"
+        },
+        {
+          "type": "PLACE",
+          "value": "Hartigan's Drug"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_EDEMA",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_16",
+      "reporter": "self",
+      "transcript": "Oh, is it recording? Okay. I'm Dolores, Dolores Fenwick-Amaro, I was born in nineteen thirty-nine on the fourth of July, fireworks every birthday, ha. I've got these sores in my mouth, ulcers on the inside of my cheek and under my tongue, it hurts to eat anything with tomato in it. They started on Saturday, so about five days now. It's quite bad, I'd say severe. My dentist, Dr. Okafor at Bayshore Dental, had a look and said it's not my dentures rubbing.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Dolores"
+        },
+        {
+          "type": "NAME",
+          "value": "Dolores Fenwick-Amaro"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "nineteen thirty-nine on the fourth of July"
+        },
+        {
+          "type": "NAME",
+          "value": "Dr. Okafor"
+        },
+        {
+          "type": "PLACE",
+          "value": "Bayshore Dental"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_STOMATITIS",
+            "severity": "severe",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_17",
+      "reporter": "other",
+      "transcript": "I'm the neighbour, Lionel, from next door, he can't hear the tablet very well so I'm saying it for him. This is for Mr. Szymanski, Walt, at 806 Orchard Bend. He's had the runs, loose stools, four or five times a day since Thursday, so four days now. He said moderate when I asked him. He's drinking plenty. He also had a temperature last night, felt hot to the touch, the thermometer said thirty-eight point one. His son's number is 555-0172 extension 4, that's at his work.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Lionel"
+        },
+        {
+          "type": "NAME",
+          "value": "Mr. Szymanski"
+        },
+        {
+          "type": "NAME",
+          "value": "Walt"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "806 Orchard Bend"
+        },
+        {
+          "type": "PHONE",
+          "value": "555-0172 extension 4"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_DIARRHEA",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_FEVER",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_18",
+      "reporter": "self",
+      "transcript": "Hi, Bernadette Kowalczyk here. I need to give you my new number first, it's (555) 010-4477, no wait, that's the old one, it's 555-0167. Sorry. Anyway. I've had a runny nose, all stuffy and blocked up, for three weeks now and it won't clear. Not bad, just annoying, mild. No fever. And I've been coughing a bit since yesterday, chesty in the mornings, I don't know if that's the same thing or something new.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Bernadette Kowalczyk"
+        },
+        {
+          "type": "PHONE",
+          "value": "(555) 010-4477"
+        },
+        {
+          "type": "PHONE",
+          "value": "555-0167"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_NASAL",
+            "severity": "mild",
+            "onset": "over_7_days"
+          },
+          {
+            "term_code": "SE_COUGH",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_19",
+      "reporter": "parent",
+      "transcript": "This is about my son Teddy, Theodore Ngata, he's six, date of birth the second of May 2020. He threw up twice this morning, once after breakfast and again at school, the nurse at Ridgeline Elementary called me to come get him. He still says his tummy's queasy. No diarrhea. We live at 4410 Cottonwood Drive in Lubbock. My husband Hemi is at work but you can get him at hemi.ngata@example.com if I don't pick up.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Teddy"
+        },
+        {
+          "type": "NAME",
+          "value": "Theodore Ngata"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "second of May 2020"
+        },
+        {
+          "type": "PLACE",
+          "value": "Ridgeline Elementary"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "4410 Cottonwood Drive"
+        },
+        {
+          "type": "PLACE",
+          "value": "Lubbock"
+        },
+        {
+          "type": "NAME",
+          "value": "Hemi"
+        },
+        {
+          "type": "EMAIL",
+          "value": "hemi.ngata@example.com"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_VOMITING",
+            "severity": null,
+            "onset": "today"
+          },
+          {
+            "term_code": "SE_NAUSEA",
+            "severity": null,
+            "onset": "today"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_20",
+      "reporter": "self",
+      "transcript": "Good, I'm good. Honestly this week has been the best in a while. No rash, no stomach trouble, no coughing. I've been out in the garden pulling up the last of the tomatoes and the beans. I did forget my tablet on Sunday, but I took it the next morning, I hope that's alright. The weather's turned cold so I've got the heating on now. Nothing else to say really. Thank you for checking on me.",
+      "identifiers": [],
+      "expected": {
+        "symptoms": []
+      }
+    },
+    {
+      "id": "lk_21",
+      "reporter": "self",
+      "transcript": "Frank speaking. Frank Delacroix-Mbeki. My wife June says I should tell you about the nails. The skin around my fingernails is swollen and sore, both thumbs mostly, red and tender, it's been about two weeks. I'd say moderate because I can't do up my buttons, June does them for me now. Sorry, that's our cat Biscuit walking on the tablet. Dr. Lindqvist wants to see me at the Fairhaven Oncology Clinic on the twentieth.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Frank"
+        },
+        {
+          "type": "NAME",
+          "value": "Frank Delacroix-Mbeki"
+        },
+        {
+          "type": "NAME",
+          "value": "June"
+        },
+        {
+          "type": "NAME",
+          "value": "Dr. Lindqvist"
+        },
+        {
+          "type": "PLACE",
+          "value": "Fairhaven Oncology Clinic"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_PARONYCHIA",
+            "severity": "moderate",
+            "onset": "over_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_22",
+      "reporter": "caregiver",
+      "transcript": "I'm Marisol, the daughter-in-law, I look after Mrs. Okonkwo, Adaeze Okonkwo. Her birthday is the eleventh of November, nineteen forty-four. She lives with us at three hundred and six Briar Hill Road, Hendersonville, zip two eight seven nine one. Two days ago at her infusion at the Pinecrest Infusion Center she got chills and shaking during the drip, the nurse slowed it right down and it passed. Since then she's been fine. She called it mild.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Marisol"
+        },
+        {
+          "type": "NAME",
+          "value": "Mrs. Okonkwo"
+        },
+        {
+          "type": "NAME",
+          "value": "Adaeze Okonkwo"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "eleventh of November, nineteen forty-four"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "three hundred and six Briar Hill Road"
+        },
+        {
+          "type": "PLACE",
+          "value": "Hendersonville"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "two eight seven nine one"
+        },
+        {
+          "type": "PLACE",
+          "value": "Pinecrest Infusion Center"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_INFUSION_REACTION",
+            "severity": "mild",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_23",
+      "reporter": "self",
+      "transcript": "This is Cyrus Abernethy. Mail goes to P.O. Box 3307 in Kittredge if you send anything, not to the house. And my email, it's cyrus underscore abe at example dot org. Okay, symptoms. I've been short of breath, I can't catch my breath going up the stairs, since this morning really, and it scared me a bit. It's severe, I'd say, I had to sit down on the landing halfway up. No cough though, and no fever.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Cyrus Abernethy"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "P.O. Box 3307"
+        },
+        {
+          "type": "PLACE",
+          "value": "Kittredge"
+        },
+        {
+          "type": "EMAIL",
+          "value": "cyrus underscore abe at example dot org"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_DYSPNEA",
+            "severity": "severe",
+            "onset": "today"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_24",
+      "reporter": "parent",
+      "transcript": "Hi, this is Kemi, mum of baby Ezra, Ezra Oduya-Lindgren, born on the 30th of September 2026. He's had a snuffly blocked nose since about four days ago and he's not feeding well, I think because he can't breathe through his nose while he's on the bottle. No fever. He's been spitting up a lot as well, the last two days. We're at Flat 2, 19 Gosling Street, and we're registered with Harrowgate Lane Surgery.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Kemi"
+        },
+        {
+          "type": "NAME",
+          "value": "Ezra"
+        },
+        {
+          "type": "NAME",
+          "value": "Ezra Oduya-Lindgren"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "30th of September 2026"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "Flat 2, 19 Gosling Street"
+        },
+        {
+          "type": "PLACE",
+          "value": "Harrowgate Lane Surgery"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_NASAL",
+            "severity": null,
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_DECREASED_APPETITE",
+            "severity": null,
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_VOMITING",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_25",
+      "reporter": "self",
+      "transcript": "Spots. I've got spots on my face and my chest, like teenage acne, at my age, can you imagine. They started about ten days ago. They're sore, I'd say moderate. I also feel worn out by the afternoon but that's been going on for ages, I honestly don't remember when it started. That's all from me today. Oh, this is Augustin Pellegrini, by the way, from up in Thistlebrook.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Augustin Pellegrini"
+        },
+        {
+          "type": "PLACE",
+          "value": "Thistlebrook"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_RASH",
+            "severity": "moderate",
+            "onset": "over_7_days"
+          },
+          {
+            "term_code": "SE_FATIGUE",
+            "severity": null,
+            "onset": "unknown"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_26",
+      "reporter": "caregiver",
+      "transcript": "Hello, this is Patience Agyeman, the visiting nurse from Bramblewood Home Health. I see Mr. Bill Haverford three times a week, he was born 1/5/1937, and his phone is 555 0128. His fingertips are swollen around the nails, the big toes too, and his skin is very dry, flaking on his shins. The nails for about a week, the dry skin longer, I'd guess over a month. Mild for both. I've let his GP know, that's Dr. Marguerite Sorensen.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Patience Agyeman"
+        },
+        {
+          "type": "PLACE",
+          "value": "Bramblewood Home Health"
+        },
+        {
+          "type": "NAME",
+          "value": "Bill Haverford"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "1/5/1937"
+        },
+        {
+          "type": "PHONE",
+          "value": "555 0128"
+        },
+        {
+          "type": "NAME",
+          "value": "Dr. Marguerite Sorensen"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_PARONYCHIA",
+            "severity": "mild",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_DRY_SKIN",
+            "severity": "mild",
+            "onset": "over_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_27",
+      "reporter": "self",
+      "transcript": "The rash came up on the bus home from Saint Brendan's Church on Sunday, three days ago now, little red spots up both arms, itchy. And the diarrhea started the day after the potluck at Hazel's, she lives at 58 Quarry Lane, but I'm sure it wasn't her casserole. That was two days ago. Both of them mild, I'd say. Name's Gwendolyn Ashby, but everyone calls me Gwen.",
+      "identifiers": [
+        {
+          "type": "PLACE",
+          "value": "Saint Brendan's Church"
+        },
+        {
+          "type": "NAME",
+          "value": "Hazel"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "58 Quarry Lane"
+        },
+        {
+          "type": "NAME",
+          "value": "Gwendolyn Ashby"
+        },
+        {
+          "type": "NAME",
+          "value": "Gwen"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_RASH",
+            "severity": "mild",
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_DIARRHEA",
+            "severity": "mild",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_28",
+      "reporter": "self",
+      "transcript": "Yes, hello, Ignatius Mwangi-Holt. I'm ringing about, well, talking about the fever. I've had a temperature of thirty-eight point four since yesterday evening, with shivering under the blankets. I'd call it moderate. My oncologist told me to always report a fever, so here I am. If someone needs me it's +1 555 010 9921, that's my mobile. My wife Charity is at home too, the landline there is 555-0145. We're in Fort Collins.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Ignatius Mwangi-Holt"
+        },
+        {
+          "type": "PHONE",
+          "value": "+1 555 010 9921"
+        },
+        {
+          "type": "NAME",
+          "value": "Charity"
+        },
+        {
+          "type": "PHONE",
+          "value": "555-0145"
+        },
+        {
+          "type": "PLACE",
+          "value": "Fort Collins"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FEVER",
+            "severity": "moderate",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_29",
+      "reporter": "other",
+      "transcript": "I'm a friend from church, Mavis, I'm helping Lorraine Pike with the tablet because her glasses broke. Lorraine says she's been sick to her stomach every afternoon for nearly a week, and she threw up once, three days ago. She says the sick feeling is moderate. Lorraine's at Glenmoor Senior Apartments, 1400 Waverly Street, unit 311. If you can't reach her, email her grandson, his is t.pike.94@example.com.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Mavis"
+        },
+        {
+          "type": "NAME",
+          "value": "Lorraine Pike"
+        },
+        {
+          "type": "NAME",
+          "value": "Lorraine"
+        },
+        {
+          "type": "PLACE",
+          "value": "Glenmoor Senior Apartments"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "1400 Waverly Street, unit 311"
+        },
+        {
+          "type": "EMAIL",
+          "value": "t.pike.94@example.com"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_NAUSEA",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_VOMITING",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_30",
+      "reporter": "self",
+      "transcript": "I'm alright mostly. Little bit tired, I'd say mild tiredness, since about the weekend, so four or five days. I'm napping after lunch now, which I never used to. My mouth is fine, no ulcers. Bowels are fine. The swelling I had in my feet has gone down completely, that's better. My daughter thinks I'm doing too much with the grandchildren but what can you do. That's it from me.",
+      "identifiers": [],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FATIGUE",
+            "severity": "mild",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_31",
+      "reporter": "parent",
+      "transcript": "Okay so this is Ruby's dad, Tomasz. Ruby Kaminska-Reyes, date of birth June 21st, 2026. She had the shot at Clearwater Pediatrics three days ago and her leg is swollen after the shot, the thigh, and red round it. And she's been cranky ever since, she won't settle at all. Her temperature was normal when we checked. You can call us on five five five, oh one five three, or text if that's easier.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Ruby"
+        },
+        {
+          "type": "NAME",
+          "value": "Tomasz"
+        },
+        {
+          "type": "NAME",
+          "value": "Ruby Kaminska-Reyes"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "June 21st, 2026"
+        },
+        {
+          "type": "PLACE",
+          "value": "Clearwater Pediatrics"
+        },
+        {
+          "type": "PHONE",
+          "value": "five five five, oh one five three"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_INJECTION_SITE",
+            "severity": null,
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_IRRITABILITY",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_32",
+      "reporter": "self",
+      "transcript": "Let me just give you everything in one go so I don't forget: Philippa Marchetti, born the 8th of December 1950, 27 Heron's Rest, Bellwater, phone 555-0136, email pip.marchetti@example.net. Right. Now the side effect bit. My nails are cracked and sore down the sides, for about five days. It's mild. And since the new pills I've got pimples on my back, maybe four days, I'd say moderate.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Philippa Marchetti"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "8th of December 1950"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "27 Heron's Rest"
+        },
+        {
+          "type": "PLACE",
+          "value": "Bellwater"
+        },
+        {
+          "type": "PHONE",
+          "value": "555-0136"
+        },
+        {
+          "type": "EMAIL",
+          "value": "pip.marchetti@example.net"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_PARONYCHIA",
+            "severity": "mild",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_RASH",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_33",
+      "reporter": "caregiver",
+      "transcript": "I'm Desmond, her husband, she's lying down so I'll answer for her. Constance, my wife, Connie, has been coughing a lot, chesty, bringing stuff up, for about nine days. And she's breathing fast at night, that started last night, and I'm worried about that one, I'd say it's severe. We were at the Mercy Vale Hospital emergency department on Friday but they sent us home. Our house is the yellow one at 14 Dunmore Terrace if anyone needs to come out.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Desmond"
+        },
+        {
+          "type": "NAME",
+          "value": "Constance"
+        },
+        {
+          "type": "NAME",
+          "value": "Connie"
+        },
+        {
+          "type": "PLACE",
+          "value": "Mercy Vale Hospital"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "14 Dunmore Terrace"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_COUGH",
+            "severity": null,
+            "onset": "over_7_days"
+          },
+          {
+            "term_code": "SE_DYSPNEA",
+            "severity": "severe",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_34",
+      "reporter": "self",
+      "transcript": "Hello, my name's Odile Fairweather. Before I forget, my day number has an extension, it's 555-0150, extension 212, and the email is odile.f@example.org. I'm retired but I still volunteer two days at Saint Agnes Library. So. My appetite's gone, I'm just not hungry, I've lost a few pounds, since about a week ago. I'd say moderate. And I get queasy when I smell cooking, that's newer, two days.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Odile Fairweather"
+        },
+        {
+          "type": "PHONE",
+          "value": "555-0150, extension 212"
+        },
+        {
+          "type": "EMAIL",
+          "value": "odile.f@example.org"
+        },
+        {
+          "type": "PLACE",
+          "value": "Saint Agnes Library"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_DECREASED_APPETITE",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_NAUSEA",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_35",
+      "reporter": "self",
+      "transcript": "It's Hope here, Hope Gallagher. I've had a sore mouth, little ulcers on my tongue, since yesterday, mild. And the runny tummy is back, three days now, that one's moderate. I'm keeping water down fine. My sister Grace Gallagher drove me over to the Coldbrook Walk-In Clinic this morning and they gave me a mouthwash for the ulcers. That's everything, I think.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Hope"
+        },
+        {
+          "type": "NAME",
+          "value": "Hope Gallagher"
+        },
+        {
+          "type": "NAME",
+          "value": "Grace Gallagher"
+        },
+        {
+          "type": "PLACE",
+          "value": "Coldbrook Walk-In Clinic"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_STOMATITIS",
+            "severity": "mild",
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_DIARRHEA",
+            "severity": "moderate",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_36",
+      "reporter": "other",
+      "transcript": "This is her son, Rafael Quintero, I'm calling in from Phoenix, my mother Inés is at her own place, 2215 Sycamore Ridge Road. She told me on the phone she's been feeling feverish, hot and cold on and off, for about four days, and she's very tired with it. She didn't say how bad. Her date of birth is the 2nd of April 1943 if you need it. Her doctor is at Desert Bloom Medical Group.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Rafael Quintero"
+        },
+        {
+          "type": "PLACE",
+          "value": "Phoenix"
+        },
+        {
+          "type": "NAME",
+          "value": "Inés"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "2215 Sycamore Ridge Road"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "2nd of April 1943"
+        },
+        {
+          "type": "PLACE",
+          "value": "Desert Bloom Medical Group"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FEVER",
+            "severity": null,
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_FATIGUE",
+            "severity": null,
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_37",
+      "reporter": "self",
+      "transcript": "Hi there. Eleanor Vasquez-Holm, seventy-nine years old. I've had a lot of dizziness, the room spins when I stand up, for about two days. It's pretty bad, I'd call it severe, I nearly fell over in the kitchen. My neighbour Bob Tull came in and sat with me for a while. No feeling sick, no rash. I'm at 77 Lantern Hill, apartment 2C, in Millbrook.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Eleanor Vasquez-Holm"
+        },
+        {
+          "type": "NAME",
+          "value": "Bob Tull"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "77 Lantern Hill, apartment 2C"
+        },
+        {
+          "type": "PLACE",
+          "value": "Millbrook"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_OTHER_REVIEW",
+            "severity": "severe",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_38",
+      "reporter": "self",
+      "transcript": "So, the swelling in my legs, puffy legs, it's moderate, came on around four days ago. My socks leave deep marks in the evening. And I'm a bit out of breath if I walk fast, not when I'm sitting, it's mild, about the same time, four days. No cough, no fever. I've been putting my feet up like the leaflet says. I'm taking all my tablets on time.",
+      "identifiers": [],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_EDEMA",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_DYSPNEA",
+            "severity": "mild",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_39",
+      "reporter": "parent",
+      "transcript": "Hiya, it's Shona, Lachlan's mum. Lachlan MacAuley, he's nine, his birthday's the 17th of January 2017. He's had a fever since this morning, thirty-nine, he's hot to the touch, and he's being sick, vomited twice already. I'd say the vomiting is moderate. He's off school at Corriebank Primary. You can email me at shona dot macauley at example dot com. We're at 5 Thistle Wynd, Glenbrae.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Shona"
+        },
+        {
+          "type": "NAME",
+          "value": "Lachlan"
+        },
+        {
+          "type": "NAME",
+          "value": "Lachlan MacAuley"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "17th of January 2017"
+        },
+        {
+          "type": "PLACE",
+          "value": "Corriebank Primary"
+        },
+        {
+          "type": "EMAIL",
+          "value": "shona dot macauley at example dot com"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "5 Thistle Wynd"
+        },
+        {
+          "type": "PLACE",
+          "value": "Glenbrae"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FEVER",
+            "severity": null,
+            "onset": "today"
+          },
+          {
+            "term_code": "SE_VOMITING",
+            "severity": "moderate",
+            "onset": "today"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_40",
+      "reporter": "self",
+      "transcript": "By the grace of God I'm still here, ha. This is Mrs. Winifred Oyelowo-Banks. I live at nineteen Chestnut Walk, and my number's five five five, zero one eight one. I've had a rash on my scalp and forehead, red itchy bumps, since last week. It's mild. And my skin's dry everywhere, like paper, cracked on my heels, that's been three weeks or so, I'd say moderate.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Mrs. Winifred Oyelowo-Banks"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "nineteen Chestnut Walk"
+        },
+        {
+          "type": "PHONE",
+          "value": "five five five, zero one eight one"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_RASH",
+            "severity": "mild",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_DRY_SKIN",
+            "severity": "moderate",
+            "onset": "over_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_41",
+      "reporter": "caregiver",
+      "transcript": "Hello, this is Joaquim from Lakeshore Assisted Living, I'm the activities coordinator, the nurse is busy. Resident is Mr. Harold Penhaligon, H-A-R-O-L-D, P-E-N-H-A-L-I-G-O-N. DOB 02/29/1940. He's had loose stools since Saturday, that's four days now, and he's been very weak and worn out with it. The diarrhea is moderate, per the nurse. The family contact is his niece, email a.penhaligon@example.net.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Joaquim"
+        },
+        {
+          "type": "PLACE",
+          "value": "Lakeshore Assisted Living"
+        },
+        {
+          "type": "NAME",
+          "value": "Mr. Harold Penhaligon"
+        },
+        {
+          "type": "NAME",
+          "value": "H-A-R-O-L-D"
+        },
+        {
+          "type": "NAME",
+          "value": "P-E-N-H-A-L-I-G-O-N"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "02/29/1940"
+        },
+        {
+          "type": "EMAIL",
+          "value": "a.penhaligon@example.net"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_DIARRHEA",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_FATIGUE",
+            "severity": null,
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_42",
+      "reporter": "self",
+      "transcript": "Nothing new, love. The rash I had last month cleared right up with the cream. My husband had a cold last week, runny nose and all, but I didn't catch it, touch wood. I'm eating well, sleeping well, no tummy trouble at all. My granddaughter is getting married in the spring so I'm busy with all that. That's all, thank you.",
+      "identifiers": [],
+      "expected": {
+        "symptoms": []
+      }
+    },
+    {
+      "id": "lk_43",
+      "reporter": "self",
+      "transcript": "Morning. It's Montgomery Ashcroft, but everybody calls me Monty. I was born in Wichita on the twelfth of October nineteen forty-two. Yesterday at my infusion at the Cedar Hollow Cancer Institute I got chills during the drip, they said it was mild and stopped it for a bit. And since then I've been feeling, what's the word, queasy, still am this morning.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Montgomery Ashcroft"
+        },
+        {
+          "type": "NAME",
+          "value": "Monty"
+        },
+        {
+          "type": "PLACE",
+          "value": "Wichita"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "twelfth of October nineteen forty-two"
+        },
+        {
+          "type": "PLACE",
+          "value": "Cedar Hollow Cancer Institute"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_INFUSION_REACTION",
+            "severity": "mild",
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_NAUSEA",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_44",
+      "reporter": "other",
+      "transcript": "I'm the interpreter, Farida, for Mr. Haroun Belkacem. He says his nose is blocked and runny for two weeks, and there is a cough, dry, for one week, mild. He lives at Rural Route 4, Box 52, Sutter's Ford, and the phone is 555 0193. He wants Dr. Abernathy at Riverbend Clinic to know about this.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Farida"
+        },
+        {
+          "type": "NAME",
+          "value": "Mr. Haroun Belkacem"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "Rural Route 4, Box 52"
+        },
+        {
+          "type": "PLACE",
+          "value": "Sutter's Ford"
+        },
+        {
+          "type": "PHONE",
+          "value": "555 0193"
+        },
+        {
+          "type": "NAME",
+          "value": "Dr. Abernathy"
+        },
+        {
+          "type": "PLACE",
+          "value": "Riverbend Clinic"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_NASAL",
+            "severity": null,
+            "onset": "over_7_days"
+          },
+          {
+            "term_code": "SE_COUGH",
+            "severity": "mild",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_45",
+      "reporter": "self",
+      "transcript": "I've got swollen ankles, Dr. Penrose said to keep an eye on them. Swollen since Monday, so about three days. Also a sore where the jab was, no wait, that's not right, I haven't had a jab, I'm mixing it up with my husband. Scratch that. It's just the ankles, and they're mild. I'm Marjorie Tennant, 88 Kingfisher Close, and my phone is 555.0114.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Dr. Penrose"
+        },
+        {
+          "type": "NAME",
+          "value": "Marjorie Tennant"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "88 Kingfisher Close"
+        },
+        {
+          "type": "PHONE",
+          "value": "555.0114"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_EDEMA",
+            "severity": "mild",
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_46",
+      "reporter": "parent",
+      "transcript": "This is Willa's mam. Willa Brennan-Osei, born the 3rd of July 2026, so she's four months. She's had nappy rash, quite bad, severe really, raw and red, the last five days. And she's a bit snuffly, I couldn't tell you since when. Our dog Pepper and Willa are inseparable, ha, so maybe it's the dog. We go to Saint Columba's Family Practice. My mobile is 555-0108.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Willa"
+        },
+        {
+          "type": "NAME",
+          "value": "Willa Brennan-Osei"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "3rd of July 2026"
+        },
+        {
+          "type": "PLACE",
+          "value": "Saint Columba's Family Practice"
+        },
+        {
+          "type": "PHONE",
+          "value": "555-0108"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_RASH",
+            "severity": "severe",
+            "onset": "4_7_days"
+          },
+          {
+            "term_code": "SE_NASAL",
+            "severity": null,
+            "onset": "unknown"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_47",
+      "reporter": "self",
+      "transcript": "Well I just got back from visiting my sister in Albuquerque, we flew through Denver, and I think the travel wore me out, I'm exhausted, no energy at all, since I got back four days ago. I'd say moderate. My sister is Rosalind Okerlund, she says hello. My address is 63 Sandpiper Way, Port Ellery, nine seven four one zero, in case it's still the old one on file.",
+      "identifiers": [
+        {
+          "type": "PLACE",
+          "value": "Albuquerque"
+        },
+        {
+          "type": "PLACE",
+          "value": "Denver"
+        },
+        {
+          "type": "NAME",
+          "value": "Rosalind Okerlund"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "63 Sandpiper Way"
+        },
+        {
+          "type": "PLACE",
+          "value": "Port Ellery"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "nine seven four one zero"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FATIGUE",
+            "severity": "moderate",
+            "onset": "4_7_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_48",
+      "reporter": "caregiver",
+      "transcript": "Ward sister here, Sister Agnes Mulcahy, Fernlea Nursing Home. The patient is Cornelius Abara, date of birth 9-30-1936. He had a temperature last night, thirty-eight point two, and he's been off his food today, only a few spoons of soup at lunch. He doesn't have a cough. Contact is fernlea.office@example.org or our main line, five five five, oh one nine nine.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Sister Agnes Mulcahy"
+        },
+        {
+          "type": "PLACE",
+          "value": "Fernlea Nursing Home"
+        },
+        {
+          "type": "NAME",
+          "value": "Cornelius Abara"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "9-30-1936"
+        },
+        {
+          "type": "EMAIL",
+          "value": "fernlea.office@example.org"
+        },
+        {
+          "type": "PHONE",
+          "value": "five five five, oh one nine nine"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_FEVER",
+            "severity": null,
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_DECREASED_APPETITE",
+            "severity": null,
+            "onset": "today"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_49",
+      "reporter": "self",
+      "transcript": "Oh, where do I start. My nephew, Bartholomew, he's the one who set this up, he works at Hollingsworth Pharmacy, he says to tell you everything. So. My fingertips are swollen and the nails hurt, it's been building up for maybe ten days. I'd say mild still. And I had diarrhea yesterday, just the once, nothing since. The dog's fine. Bartholomew says hi. I'm Agatha Lindell, by the way.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Bartholomew"
+        },
+        {
+          "type": "PLACE",
+          "value": "Hollingsworth Pharmacy"
+        },
+        {
+          "type": "NAME",
+          "value": "Agatha Lindell"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_PARONYCHIA",
+            "severity": "mild",
+            "onset": "over_7_days"
+          },
+          {
+            "term_code": "SE_DIARRHEA",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lk_50",
+      "reporter": "self",
+      "transcript": "Clement Ibekwe. Born nineteen thirty-eight, May the fifth. Home is twenty-two Larch Avenue, Saltcoat Bay. I've been chesty, coughing a lot up, for three days, moderate, and I've a temperature too, feverish since last night. If you can't get me, my granddaughter Noor can be reached at noor dot ibekwe at example dot org or five five five oh one four six.",
+      "identifiers": [
+        {
+          "type": "NAME",
+          "value": "Clement Ibekwe"
+        },
+        {
+          "type": "DATE_OF_BIRTH",
+          "value": "nineteen thirty-eight, May the fifth"
+        },
+        {
+          "type": "ADDRESS",
+          "value": "twenty-two Larch Avenue"
+        },
+        {
+          "type": "PLACE",
+          "value": "Saltcoat Bay"
+        },
+        {
+          "type": "NAME",
+          "value": "Noor"
+        },
+        {
+          "type": "EMAIL",
+          "value": "noor dot ibekwe at example dot org"
+        },
+        {
+          "type": "PHONE",
+          "value": "five five five oh one four six"
+        }
+      ],
+      "expected": {
+        "symptoms": [
+          {
+            "term_code": "SE_COUGH",
+            "severity": "moderate",
+            "onset": "1_3_days"
+          },
+          {
+            "term_code": "SE_FEVER",
+            "severity": null,
+            "onset": "1_3_days"
+          }
+        ]
+      }
+    }
+  ]
+}

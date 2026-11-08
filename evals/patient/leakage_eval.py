@@ -1,6 +1,7 @@
 """Patient-side personal-data leakage evaluation (Scoping Doc PV-01, 17.3).
 
-For every synthetic transcript in data/patient/leakage_transcripts.json:
+For every synthetic transcript in data/patient/leakage_transcripts.json (10 cases the filter was developed against)
+and data/patient/leakage_held_out.json (40 held-out cases written without seeing the filter, never used to tune it):
   1. red = redact(transcript)                       # sentinel_patient.filter
   2. out = [asdict(s) for s in extract_symptoms(red.text)]   # sentinel_patient.extract
   3. look for the case's known identifiers in json.dumps(out)  -> output leaks (PV-01, pass/fail)
@@ -14,7 +15,10 @@ Never prints or writes transcript text or identifier values: only case ids, iden
 term codes from schema/enums.json.
 
 Run from the repository root:
-    uv run --project apps/patient-runtime python evals/patient/leakage_eval.py [--data PATH] [--out PATH]
+    uv run --project apps/patient-runtime python evals/patient/leakage_eval.py [--data PATH ...] [--out PATH]
+
+Each data file is reported as its own set ("sets" in the results) as well as in the totals, so the held-out result
+is never hidden inside the tuned one.
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_DIR = REPO_ROOT / "apps" / "patient-runtime"
 ENUMS_PATH = REPO_ROOT / "schema" / "enums.json"
 DEFAULT_DATA = REPO_ROOT / "data" / "patient" / "leakage_transcripts.json"
+HELD_OUT_DATA = REPO_ROOT / "data" / "patient" / "leakage_held_out.json"
 DEFAULT_OUT = REPO_ROOT / "evals" / "patient" / "results" / "leakage_results.json"
 
 IDENTIFIER_TYPES = ("NAME", "ADDRESS", "PHONE", "EMAIL", "DATE_OF_BIRTH", "PLACE")
@@ -191,6 +196,7 @@ def evaluate_case(case: dict[str, Any], runtime: Runtime) -> dict[str, Any]:
     tp, fp, fn = term_counts(expected, extracted)
     return {
         "id": case["id"],
+        "set": case.get("set", "data"),
         "reporter": case["reporter"],
         "status": status,
         "identifiers": len(identifiers),
@@ -212,10 +218,7 @@ def _by_type(type_lists: Iterable[list[str]]) -> dict[str, int]:
     return {t: counts.get(t, 0) for t in IDENTIFIER_TYPES}
 
 
-def build_report(
-    case_results: list[dict[str, Any]], cases: list[dict[str, Any]], *, model: str, run_at: str, dataset: str,
-    dataset_sha256: str,
-) -> dict[str, Any]:
+def _totals(case_results: list[dict[str, Any]], cases: list[dict[str, Any]]) -> dict[str, Any]:
     tp = sum(c["term_match"]["tp"] for c in case_results)
     fp = sum(c["term_match"]["fp"] for c in case_results)
     fn = sum(c["term_match"]["fn"] for c in case_results)
@@ -234,6 +237,19 @@ def build_report(
         "term_match": {"tp": tp, "fp": fp, "fn": fn, **scores, "target_f1": SE01_TARGET_F1,
                        "meets_target": scores["f1"] >= SE01_TARGET_F1},
     }
+    return totals
+
+
+def build_report(
+    case_results: list[dict[str, Any]], cases: list[dict[str, Any]], *, model: str, run_at: str, dataset: str,
+    dataset_sha256: str,
+) -> dict[str, Any]:
+    totals = _totals(case_results, cases)
+    leaks, errors = totals["output_leaks"], totals["extraction_errors"]
+    sets: dict[str, dict[str, Any]] = {}
+    for name in dict.fromkeys(case.get("set", "data") for case in cases):
+        idx = [i for i, case in enumerate(cases) if case.get("set", "data") == name]
+        sets[name] = _totals([case_results[i] for i in idx], [cases[i] for i in idx])
     return {
         "eval": "patient_leakage",
         "requirement": "PV-01",
@@ -244,6 +260,7 @@ def build_report(
         "pass_rule": "0 identifiers in the extraction output across all cases, and every case produced output",
         "pass": bool(case_results) and leaks == 0 and errors == 0,
         "totals": totals,
+        "sets": sets,
         "cases": case_results,
     }
 
@@ -277,6 +294,11 @@ def print_summary(report: dict[str, Any], out_path: str) -> None:
           f" [{_short(t['filter_residuals_by_type'])}]")
     print(f"Term match (informational, SE-01 target F1 {tm['target_f1']}): precision {tm['precision']:.3f}"
           f" recall {tm['recall']:.3f} F1 {tm['f1']:.3f} (tp {tm['tp']}, fp {tm['fp']}, fn {tm['fn']})")
+    if len(report.get("sets", {})) > 1:
+        for name, st in report["sets"].items():
+            print(f"  set {name}: {st['cases']} cases | output leaks {st['output_leaks']} of {st['identifiers']}"
+                  f" | filter residuals {st['filter_residuals']} of {st['identifiers']}"
+                  f" [{_short(st['filter_residuals_by_type'])}] | term F1 {st['term_match']['f1']:.3f}")
     print(f"PV-01: {verdict}. Results: {out_path}")
 
 
@@ -289,14 +311,21 @@ def _display_path(path: Path) -> str:
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Patient-side personal-data leakage evaluation (PV-01).")
-    parser.add_argument("--data", type=Path, default=DEFAULT_DATA, help="transcripts file (default: %(default)s)")
+    parser.add_argument("--data", type=Path, action="append",
+                        help="transcripts file, repeatable (default: the tuned set and the held-out set)")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="results file (default: %(default)s)")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None, runtime: Runtime | None = None) -> int:
     args = parse_args(argv)
-    cases = load_cases(args.data)
+    paths = args.data or [p for p in (DEFAULT_DATA, HELD_OUT_DATA) if p.exists()]
+    cases = []
+    for path in paths:
+        cases += [{**case, "set": path.stem} for case in load_cases(path)]
+    ids = [case["id"] for case in cases]
+    if len(set(ids)) != len(ids):
+        raise ValueError("case ids must be unique across data files")
     model = os.environ.get("PATIENT_OLLAMA_MODEL") or DEFAULT_MODEL
 
     if runtime is None:
@@ -320,8 +349,8 @@ def main(argv: list[str] | None = None, runtime: Runtime | None = None) -> int:
         cases,
         model=model,
         run_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        dataset=_display_path(args.data),
-        dataset_sha256=hashlib.sha256(args.data.read_bytes()).hexdigest(),
+        dataset=" + ".join(_display_path(p) for p in paths),
+        dataset_sha256=hashlib.sha256(b"".join(p.read_bytes() for p in paths)).hexdigest(),
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

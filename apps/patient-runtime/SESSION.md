@@ -3,6 +3,11 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08 (overnight), 40 held-out leakage transcripts (50 in total)** (branch `patient/test/leakage-held-out`). They were written by a fresh agent that never read the filter, extraction or eval code, and I did not retune the filter.
+  - **Honest result:** PV-01 passes, with 0 of 244 identifiers in the extraction output.
+  - **The filter is weaker on unseen text:** 19 of 185 held-out identifiers survive filtering, about 10% (NAME 14, ADDRESS 4, PLACE 1), against 0 of 59 on the tuned set. They reach only the local model, which runs on the device; the outbound record is built from coded fields only.
+  - **Term F1:** 0.814 on the held-out set and 0.828 overall.
+- **2026-11-08 (overnight), restart safety merged as PR #34** (`da77567`).
 - **2026-11-08 (overnight), restart safety** (branch `patient/feat/restart-safety`).
   - **Tests:** 762 runtime, 54 eval and 251 web; both evals pass.
   - **Live check:** I stopped the runtime mid check-in (rash, moderate) and restarted it. The summary showed the same items and the same record id. Approval sent that id (201), and the draft file was removed.
@@ -173,7 +178,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **`say` speaking rate has a floor:** 115 wpm was only 1.1× longer. Slow is now 60 wpm (about 1.3× longer), and Whisper still transcribes it word for word.
 - **Presidio DEBUG logs contain words from the text.** Fixed by holding its logger at WARNING.
 - **vitest 3 had critical advisories** (tinypool, @vitest/mocker). Moved to vitest 5.1 with vite 6.4; `npm audit` reports 0 vulnerabilities.
-- **The leakage set is not held out.** The filter agent ran it while tuning the filter, so the 0/59 result is optimistic. Fix in Next: add cases the filter has never seen.
+- **The leakage set was not held out.** The filter agent ran it while tuning the filter, so the 0/59 result was optimistic. Fixed by adding 40 held-out cases: 19 of 185 identifiers survive filtering there.
 - **Earlier:**
   - The rebase onto contract 2.0 broke A1 seeding; fixed by rewriting it for the new tables.
   - The local `patient.db` from 1.0 was refused by the version guard; I deleted it and it was recreated on 2.0.
@@ -191,7 +196,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - The model sometimes drops a second symptom; the guard can remove codes but never add them.
   - "Cracked skin on my fingers" can become `SE_OTHER_REVIEW` instead of `SE_DRY_SKIN`.
   - Some curated cues are broad ("dry", "toilet").
-- **Grow the leakage set to the 50 transcripts in Scoping Doc 17.3**, including held-out cases the filter was never tuned on. Ask the company owner to add a source-and-licence row for `data/patient/` to `data/README.md` (Scoping Doc 16.1).
+- **Filter misses on the held-out set:** 19 of 185, mostly names. Improve the filter on NEW cases written for that purpose, never on `leakage_held_out.json`; then rerun the held-out set once. Ask the company owner to add a source-and-licence row for `data/patient/` to `data/README.md` (Scoping Doc 16.1).
 - **Known rating misses** (from the rating agent's probes and the held-out eval):
   - Some vague answers are rated complete instead of partial.
   - "Took" counts as an adherence answer even in "I took the dog out".
