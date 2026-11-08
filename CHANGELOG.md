@@ -7,6 +7,13 @@ All changes to the project, newest first. Schema-only history is also kept in `s
 ### Added
 - `docs/company/company-side-overview.md`: what the company side does across the product and what is left.
 
+## 2026-11-08 — Session 013: end-to-end check across personas (branch `company/test/e2e-check`)
+
+### Added
+- `scripts/e2e_check.py`: starts a throwaway service (temp data dir, free port, scheduler off), seeds it, and drives one check-in through every persona over real HTTP: patient device via `SentinelClient` (consent, record, one envelope per organization, severe alert), doctors as doctor-web does (personal and org keys, key grants, decrypt and hash check, ack, emergency access), caregiver alerts, company export and aggregates. 58 checks covering the automatable items of Scoping Doc 26.15 (D-083).
+- CI: the end-to-end check runs in the `contract-and-service` job.
+- `README.md`: the check is listed under Check and in the layout table.
+
 ## 2026-11-08 — Session 012: real-data seed, contract 2.2 (branch `company/feat/real-data-seed`)
 
 ### Added
