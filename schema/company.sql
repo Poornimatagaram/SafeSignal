@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS enrollment (
   cohort_id       TEXT NOT NULL REFERENCES cohort(cohort_id),
   checkin_window  TEXT NOT NULL,                -- D-005: 'HH:MM-HH:MM' in UTC, e.g. '14:00-17:00'
   start_date      TEXT NOT NULL,                -- D-069: first due check-in (YYYY-MM-DD); cadence counts from here
+  synthetic       INTEGER NOT NULL DEFAULT 0 CHECK (synthetic IN (0,1)),  -- D-075: seeded history only; the scheduler skips it
   active          INTEGER NOT NULL CHECK (active IN (0,1))
 );
 

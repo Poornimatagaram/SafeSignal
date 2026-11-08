@@ -2,6 +2,20 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 010: missed check-in scheduler (branch `company/feat/missed-checkin-scheduler`)
+
+### Added
+- `apps/service/sentinel_service/scheduler.py`: due-day detection per cohort schedule and patient window, missed scheduler records, level 1–3 alerts with deliveries; background loop in the service (D-074).
+- `apps/service/sentinel_service/demo.py`: `close-window` and `run-scheduler` demo controls (D-076).
+- `apps/service/tests/test_scheduler.py` (9 tests); service suite 44 tests.
+- Decisions D-074 to D-076.
+
+### Changed
+- Contract 2.1 (additive): `enrollment.synthetic`; `CONTRACT_VERSION` 2.1 in both contract packages; OpenAPI regenerated (D-075).
+- `schema/demo_fixtures.json`: Priya's emergency contact (911) and `demo_missed_tail: 2` (D-076); seed honours both and flags synthetic enrollments.
+- Tests read `CONTRACT_VERSION` instead of a hard-coded version.
+- `docs/INTEGRATION_STATUS.md` and the doctor brief describe the live scheduler and demo controls.
+
 ## 2026-11-07 — Session 009: main brought up to date; merge workflow fixed (branch `company/docs/merge-workflow`)
 
 ### Merged into `main`

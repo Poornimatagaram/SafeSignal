@@ -45,7 +45,7 @@ Headers on every request: `X-Role: doctor`, `X-Actor-Id: <your doctor_id>`. Allo
 ## Changed from the scoping doc and from contract 1.x (these override Sections 25–26)
 - **Organizations replace individual doctors** as recipients: `/v1/doctors/{id}/patients|envelopes|alerts` and `/ack` are now under `/v1/orgs/{org_id}/...` (D-064).
 - **Emergency access** (D-065): reasons are `unresponsive_patient`, `emergency_admission`, `escalation_level_3`. Every use is logged and notifies the patient's caregiver and care team; show a clear "emergency access" banner and the reason.
-- **Alerts** (D-068): `alert_type` is `missed`, `severe` or `emergency_access`; `escalation_level` is 1, 2 or 3 for missed check-ins (3 = emergency contacts were notified). Show `created_at` as the event time.
+- **Alerts** (D-068, D-074): `alert_type` is `missed`, `severe` or `emergency_access`; `escalation_level` is 1, 2 or 3 for missed check-ins (3 = emergency contacts were notified). The service scheduler raises `missed` alerts within one interval (30 s) after a window closes. Show `created_at` as the event time (when the window closed).
 - **Doctor payload 2.0**: adds `reporter` (`self`, `parent`, `caregiver`, `other`) and `age_years` (0–120; patients of every age, D-058). Show who answered on every timeline entry.
 - **`doctor_view.sql`**: `dr_org_key`; `org_id` on `dr_patient` and `dr_alert`; `age_years`, `shared`; `reporter` on timeline entries; `dr_sync_state` keyed per organization.
 - **Timeline entry ID** is `<envelope_id>:<term_code>`; an envelope with no symptoms still updates `dr_patient.last_checkin`.
