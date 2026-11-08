@@ -1,0 +1,2 @@
+# Vite and vitest caches (generated). The root .gitignore already covers node_modules/ and dist/.
+.vite/

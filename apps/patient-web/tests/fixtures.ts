@@ -1,0 +1,104 @@
+// Synthetic runtime responses shared by the tests (no real patient data).
+import type { CheckinSummary, EgressReceipt } from '../src/api.ts'
+
+export const BASE = 'http://127.0.0.1:8001'
+export const SID = 'ses_1a2b3c4d'
+export const SERVICE_RECORDS = 'http://127.0.0.1:8000/v1/records'
+
+export const FIELDS = [
+  'consent.care_team',
+  'consent.caregiver',
+  'cohort_id',
+  'drug_version',
+  'input_mode',
+  'iso_week',
+  'patient_ref',
+  'program_id',
+  'record_id',
+  'reporter',
+  'schema_version',
+  'status',
+  'symptoms[].known_side_effect',
+  'symptoms[].onset',
+  'symptoms[].possible_link_flag',
+  'symptoms[].severity',
+  'symptoms[].term_code',
+  'unanswered_questions',
+]
+
+export const RECORD = {
+  schema_version: '2.0',
+  record_id: 'rec_7f3c9a1e',
+  patient_ref: 'pt_4b82d0c6',
+  program_id: 'prog_demo_01',
+  cohort_id: 'cohort_B',
+  drug_version: 'v2',
+  iso_week: '2026-W45',
+  status: 'completed',
+  reporter: 'self',
+  input_mode: 'voice',
+  symptoms: [
+    { term_code: 'SE_RASH', severity: 'moderate', onset: '1_3_days', known_side_effect: true, possible_link_flag: false },
+  ],
+  unanswered_questions: 0,
+  consent: { care_team: true, caregiver: false },
+}
+
+const SHARE = {
+  destination: 'Drug company safety team (Sentinel service)',
+  method: 'POST',
+  url: SERVICE_RECORDS,
+  fields: FIELDS,
+}
+
+/** A rash with everything known: ready to share. */
+export const SUMMARY_READY: CheckinSummary = {
+  session_id: SID,
+  shared: false,
+  items: [{ term_code: 'SE_RASH', label: 'Rash', severity: 'moderate', onset: '1_3_days', known_side_effect: true }],
+  needs_severity: [],
+  unanswered_questions: 0,
+  text: 'You told me about: rash, moderate, started 1 to 3 days ago.',
+  share: { ...SHARE, record: RECORD },
+}
+
+/** A rash whose severity the patient still has to choose: no record yet. */
+export const SUMMARY_NEEDS_SEVERITY: CheckinSummary = {
+  ...SUMMARY_READY,
+  items: [
+    { term_code: 'SE_RASH', label: 'Rash', severity: null, onset: '1_3_days', known_side_effect: true },
+    { term_code: 'SE_FATIGUE', label: 'Fatigue', severity: 'mild', onset: null, known_side_effect: true },
+  ],
+  needs_severity: ['SE_RASH'],
+  text: 'You told me about: rash, started 1 to 3 days ago; fatigue, mild.',
+  share: { ...SHARE, record: null },
+}
+
+/** Nothing to report: sharing still says "no new problems". */
+export const SUMMARY_EMPTY: CheckinSummary = {
+  ...SUMMARY_READY,
+  items: [],
+  unanswered_questions: 1,
+  text: 'You did not tell me about any new problems.',
+  share: { ...SHARE, record: { ...RECORD, symptoms: [], unanswered_questions: 1 } },
+}
+
+export const RECEIPT_SENT: EgressReceipt = {
+  status: 'sent',
+  record_id: 'rec_7f3c9a1e',
+  destination: 'Drug company safety team (Sentinel service)',
+  method: 'POST',
+  url: SERVICE_RECORDS,
+  fields_sent: FIELDS,
+  payload_sha256: '3f2a9c0b7d1e4f5a6b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c',
+  sent_at: '2026-11-08T14:03:12Z',
+  response_code: 201,
+}
+
+export const RECEIPT_QUEUED: EgressReceipt = { ...RECEIPT_SENT, status: 'queued', sent_at: null, response_code: null }
+
+export const RECEIPT_FAILED: EgressReceipt = { ...RECEIPT_SENT, status: 'failed', response_code: 422 }
+
+export function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}

@@ -37,11 +37,16 @@ Settings:
 | `PATIENT_OLLAMA_HOST` | `http://127.0.0.1:11434`; loopback only |
 | `PATIENT_OLLAMA_MODEL` | `llama3.2:3b` |
 
+The Sentinel service must be reachable for the first check-in, because that is when the survey and term list are downloaded. Check-ins after that work offline. For local testing, run `apps/service` on port 8000 (`docs/INTEGRATION_STATUS.md`).
+
 ## API (localhost only)
 - `GET /health`
-- `GET /checkin/question?index=&ask=`: the question text.
+- `POST /checkin/sessions`: refreshes the survey and term list through the egress gate (the cache is kept when offline) and starts a check-in. Returns `{session_id, total}`; 503 if the questions were never downloaded.
+- `GET /checkin/question?index=&ask=`: the question text, from the cached survey.
 - `GET /checkin/question/audio?index=&ask=&slow=`: the question as WAV.
-- `POST /checkin/turn?question_id=&ask=`: send the raw audio body; returns `{transcript, symptoms, extraction}`.
+- `POST /checkin/turn?session_id=&question_id=&ask=`: send the raw audio body; returns `{transcript, symptoms, extraction}`.
+- `GET /checkin/sessions/{id}/summary`: plain words, `needs_severity`, and the exact record that would be shared. Sends nothing.
+- `POST /checkin/sessions/{id}/approve` with body `{"severities": {...}}`: the only route that sends. Returns the receipt: `{status, record_id, destination, method, url, fields_sent, payload_sha256, sent_at, response_code}`.
 
 ## Check
 ```bash

@@ -35,6 +35,6 @@ export default defineConfig(({ mode }) => {
     // Port 5173 is fixed: the runtime's CORS allows only http://127.0.0.1:5173 and http://localhost:5173.
     server: { host: '127.0.0.1', port: 5173, strictPort: true },
     preview: { host: '127.0.0.1', port: 5173, strictPort: true },
-    test: { include: ['tests/**/*.test.ts'], environment: 'node' },
+    test: { include: ['tests/**/*.test.{ts,tsx}'], environment: 'node' },
   }
 })

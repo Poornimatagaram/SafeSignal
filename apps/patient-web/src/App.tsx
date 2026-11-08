@@ -1,29 +1,44 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { createRuntimeClient, type Question, type TurnResult } from './api.ts'
+import { createRuntimeClient, type CheckinSession, type Question, type TurnResult } from './api.ts'
 import { createPlayer, type Player } from './player.ts'
 import { startRecording, type ActiveRecording } from './recorder.ts'
-import { answerErrorMessage, questionErrorMessage, symptomText, voiceErrorMessage } from './messages.ts'
-import { AlertIcon, ArrowIcon, CheckIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
+import {
+  answerErrorMessage,
+  needsRestart,
+  questionErrorMessage,
+  startErrorMessage,
+  symptomText,
+  voiceErrorMessage,
+} from './messages.ts'
+import { createShareFlow, type ShareFlow } from './shareFlow.ts'
+import { ShareScreen } from './ShareScreen.tsx'
+import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
 
 const client = createRuntimeClient()
 
-type Screen = 'start' | 'question' | 'done'
+/** start -> question (one per survey question) -> share (summary, approval, receipt). */
+type Screen = 'start' | 'question' | 'share'
 /** Push-to-talk is a toggle (tap to start, tap to stop): holding a button is hard with a hand tremor. */
 type Talk = 'idle' | 'starting' | 'listening' | 'sending'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('start')
+  const [starting, setStarting] = useState(false)
+  const [startError, setStartError] = useState<string | null>(null)
+  // The summary, approval and receipt; created after the last question. Its share() is the only path to approve.
+  const [shareFlow, setShareFlow] = useState<ShareFlow | null>(null)
   const [question, setQuestion] = useState<Question | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<{ index: number; message: string } | null>(null)
   const [talk, setTalk] = useState<Talk>('idle')
   // The transcript lives only in this component's memory, and only until the next question.
   const [reply, setReply] = useState<TurnResult | null>(null)
-  const [answerError, setAnswerError] = useState<string | null>(null)
+  const [answerError, setAnswerError] = useState<{ message: string; restart: boolean } | null>(null)
   const [voiceNote, setVoiceNote] = useState<string | null>(null)
   const [voiceLoading, setVoiceLoading] = useState(false)
   const [speaking, setSpeaking] = useState(false)
 
+  const session = useRef<CheckinSession | null>(null) // today's check-in; every answer is sent with its id
   const player = useRef<Player | null>(null)
   const recording = useRef<ActiveRecording | null>(null)
   const talkNow = useRef<Talk>('idle')
@@ -33,7 +48,6 @@ export default function App() {
 
   const talkButton = useRef<HTMLButtonElement>(null)
   const nextButton = useRef<HTMLButtonElement>(null)
-  const doneHeading = useRef<HTMLHeadingElement>(null)
 
   const updateTalk = useCallback((next: Talk) => {
     talkNow.current = next
@@ -88,10 +102,16 @@ export default function App() {
     return generation.current
   }, [])
 
+  /** After the last question: show the summary. Nothing is shared until the patient taps "Share this". */
   const finish = useCallback(() => {
     resetForQuestionChange()
     setLoading(false)
-    setScreen('done')
+    const current = session.current
+    if (!current) return
+    const flow = createShareFlow(client, current.session_id)
+    setShareFlow(flow)
+    setScreen('share')
+    void flow.load() // GET the summary only
   }, [resetForQuestionChange])
 
   const loadQuestion = useCallback(
@@ -116,12 +136,37 @@ export default function App() {
     [finish, resetForQuestionChange, speak],
   )
 
-  const start = () => {
+  const start = async () => {
+    if (starting) return
     // This tap also unlocks audio playback for the rest of the check-in.
     if (!player.current) player.current = createPlayer(setSpeaking)
     player.current.unlock()
-    setScreen('question')
-    void loadQuestion(0)
+    setStartError(null)
+    setStarting(true)
+    try {
+      const opened = await client.startSession()
+      if (!mounted.current) return
+      session.current = opened
+      setScreen('question')
+      void loadQuestion(0)
+    } catch (error) {
+      if (mounted.current) setStartError(startErrorMessage(error))
+    } finally {
+      if (mounted.current) setStarting(false)
+    }
+  }
+
+  /** Back to the start screen with a fresh check-in (the runtime lost this one, or it was already shared). */
+  const restart = () => {
+    recording.current?.cancel()
+    recording.current = null
+    updateTalk('idle')
+    resetForQuestionChange()
+    setLoading(false)
+    session.current = null
+    setShareFlow(null)
+    setStartError(null)
+    setScreen('start')
   }
 
   const next = () => {
@@ -148,7 +193,7 @@ export default function App() {
       } catch (error) {
         if (!mounted.current) return
         updateTalk('idle')
-        setAnswerError(answerErrorMessage(error))
+        setAnswerError({ message: answerErrorMessage(error), restart: false })
       }
       return
     }
@@ -165,10 +210,13 @@ export default function App() {
       const gen = generation.current
       try {
         const audio = await active.stop() // also releases the microphone
-        const result = await client.postTurn(question.question_id, question.ask, audio)
+        const sessionId = session.current?.session_id ?? ''
+        const result = await client.postTurn(sessionId, question.question_id, question.ask, audio)
         if (gen === generation.current && mounted.current) setReply(result)
       } catch (error) {
-        if (gen === generation.current && mounted.current) setAnswerError(answerErrorMessage(error))
+        if (gen === generation.current && mounted.current) {
+          setAnswerError({ message: answerErrorMessage(error), restart: needsRestart(error) })
+        }
       } finally {
         if (mounted.current) updateTalk('idle')
       }
@@ -186,32 +234,41 @@ export default function App() {
   useEffect(() => {
     if (heard) nextButton.current?.focus({ preventScroll: true })
   }, [heard])
-  useEffect(() => {
-    if (screen === 'done') doneHeading.current?.focus({ preventScroll: true })
-  }, [screen])
 
   if (screen === 'start') {
     return (
       <main className="screen screen--start">
         <h1 className="title">Your daily check-in</h1>
         <p className="lead">I will ask you a few short questions out loud. Answer in your own words.</p>
-        <p className="lead">Your voice stays on this computer.</p>
-        <button type="button" className="button button--primary button--huge" onClick={start}>
-          Start check-in
+        <p className="lead">Your voice stays on this computer. Nothing is shared until you say so.</p>
+        <p className="status" role="status" aria-live="polite">
+          {starting && (
+            <>
+              <HourglassIcon className="icon" />
+              <span>Getting your check-in ready…</span>
+            </>
+          )}
+        </p>
+        {startError && (
+          <div className="alert" role="alert">
+            <AlertIcon className="icon" />
+            <p>{startError}</p>
+          </div>
+        )}
+        <button
+          type="button"
+          className="button button--primary button--huge"
+          aria-disabled={starting}
+          onClick={() => void start()}
+        >
+          {startError ? 'Try again' : 'Start check-in'}
         </button>
       </main>
     )
   }
 
-  if (screen === 'done') {
-    return (
-      <main className="screen screen--done">
-        <CheckIcon className="icon icon--huge" />
-        <h1 className="title" tabIndex={-1} ref={doneHeading}>
-          Thank you, that's all for today.
-        </h1>
-      </main>
-    )
+  if (screen === 'share' && shareFlow) {
+    return <ShareScreen flow={shareFlow} onRestart={restart} />
   }
 
   const isLast = question !== null && question.index + 1 >= question.total
@@ -291,7 +348,12 @@ export default function App() {
           {answerError && (
             <div className="alert" role="alert">
               <AlertIcon className="icon" />
-              <p>{answerError}</p>
+              <p>{answerError.message}</p>
+              {answerError.restart && (
+                <button type="button" className="button button--primary" onClick={restart}>
+                  Start again
+                </button>
+              )}
             </div>
           )}
 

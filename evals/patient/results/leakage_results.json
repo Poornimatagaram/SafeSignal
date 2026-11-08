@@ -1,7 +1,7 @@
 {
   "eval": "patient_leakage",
   "requirement": "PV-01",
-  "run_at_utc": "2026-11-08T00:50:34Z",
+  "run_at_utc": "2026-11-08T03:15:10Z",
   "model": "llama3.2:3b",
   "dataset": "data/patient/leakage_transcripts.json",
   "dataset_sha256": "2408c70cc329d4e2dd7386292e7f913e3956cd11945ccfb5b0eb6824d983be21",
@@ -193,11 +193,12 @@
       ],
       "extracted_terms": [
         "SE_DRY_SKIN",
+        "SE_OTHER_REVIEW",
         "SE_PARONYCHIA"
       ],
       "term_match": {
         "tp": 2,
-        "fp": 0,
+        "fp": 1,
         "fn": 0
       }
     },
@@ -220,12 +221,11 @@
       ],
       "extracted_terms": [
         "SE_FATIGUE",
-        "SE_OTHER_REVIEW",
         "SE_STOMATITIS"
       ],
       "term_match": {
         "tp": 2,
-        "fp": 1,
+        "fp": 0,
         "fn": 0
       }
     },
