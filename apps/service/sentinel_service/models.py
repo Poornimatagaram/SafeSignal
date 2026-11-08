@@ -209,6 +209,9 @@ class CompletionRow(BaseModel):
     patients: int
     completion_rate: float
     missed_rate: float
+    voice_records: int   # answered records by input mode (2.2, D-059)
+    text_records: int
+    mixed_records: int
 
 
 class SurveyPublished(BaseModel):
@@ -237,3 +240,44 @@ class ExportRecord(BaseModel):
     input_mode: Optional[InputMode]  # null for scheduler records
     unanswered_questions: int
     symptoms: list[ExportSymptom]
+
+
+class Company(BaseModel):
+    company_id: str
+    display_name: str
+    note: Optional[str]
+
+
+class CohortInfo(BaseModel):
+    cohort_id: str
+    drug_version: str
+    label: str
+    target_size: Optional[int]
+    source_arm: Optional[str]  # real trial arm the cohort's rates come from (D-081)
+    enrolled: int
+
+
+class ProgramInfo(BaseModel):
+    program_id: str
+    drug_name: str
+    label: Optional[str]
+    population: Optional[str]
+    source_trial: Optional[str]
+    source_url: Optional[str]
+    cohorts: list[CohortInfo]
+
+
+class ProgramsResponse(BaseModel):
+    company: Optional[Company]
+    programs: list[ProgramInfo]
+
+
+class Document(BaseModel):
+    doc_id: str
+    program_id: Optional[str]
+    kind: Optional[Literal["protocol", "sap", "label"]]
+    title: str
+    source_url: str
+    version: str
+    approved_by: str
+    approved_at: str
