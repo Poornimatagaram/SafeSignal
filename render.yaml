@@ -1,0 +1,50 @@
+# Render Blueprint: the company side's free hosting (D-085). Deploy guide: docs/DEPLOY.md.
+# Patient runtime is never deployed (Scoping Doc 26.12); doctor-web and patient-web host themselves.
+services:
+  # Service: FastAPI + SQLite + missed check-in scheduler. Free tier: sleeps after 15 min idle, and the disk
+  # resets to the build's seeded state on every restart or deploy (synthetic demo data only).
+  - type: web
+    name: safesignal-service
+    runtime: python
+    plan: free
+    rootDir: apps/service
+    buildCommand: pip install uv && uv sync --frozen --no-dev && uv run --no-sync python -m sentinel_service.seed
+    startCommand: uv run --no-sync python -m sentinel_service.seed && uv run --no-sync uvicorn sentinel_service.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - apps/service/**
+        - packages/contract-py/**
+        - schema/**
+        - render.yaml
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      # Comma-separated browser origins (no trailing slash): company portal, each doctor-web, hosted patient-web.
+      # Set in the Render dashboard so new origins need no pull request.
+      - key: SENTINEL_ALLOWED_ORIGINS
+        sync: false
+
+  # Company portal: static Vite build.
+  - type: web
+    name: safesignal-company
+    runtime: static
+    rootDir: apps/company-web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - apps/company-web/**
+        - packages/contract-ts/**
+        - schema/**
+        - render.yaml
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Baked in at build time; change it, then redeploy.
+      - key: VITE_COMPANY_SERVICE_URL
+        value: https://safesignal-service.onrender.com

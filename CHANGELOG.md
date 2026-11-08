@@ -2,6 +2,13 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 016: free deployment on Render (branch `company/ci/render-deploy`)
+
+### Added
+- `render.yaml`: Render Blueprint for the service (free web service; seeds at build; `/healthz` health check; `SENTINEL_ALLOWED_ORIGINS` set in the dashboard) and the company portal (static site, SPA rewrite). Each redeploys only when its own paths change (D-085).
+- `docs/DEPLOY.md`: first-time Render setup, adding teammates' origins, free-tier behaviour.
+- `README.md`: pointer to the deploy guide.
+
 ## 2026-11-08 — Session 015: company-side overview (branch `company/docs/company-side-overview`)
 
 ### Added
