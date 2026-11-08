@@ -34,6 +34,10 @@ dist/
 # Local design-tool output (critiques reference scratchpad paths; not project docs)
 .impeccable/
 
+# Demo video renders (contain narration audio) and HyperFrames local tool state
+docs/demo-video/*/renders/
+docs/demo-video/*/.hyperframes/
+
 # Runtime databases for every app live here (wiped by scripts/reset_all.sh)
 var/
 
