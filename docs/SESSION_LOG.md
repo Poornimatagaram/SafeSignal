@@ -416,3 +416,26 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Merge this PR, then #14 and #15 (each needs `main` merged in for the log files).
 2. Plan the next steps with the product owner.
 
+---
+
+## Session 016 — 2026-11-08 (Sun) · Free deployment on Render
+
+**Goal:** Host the service and company portal for free so teammates can integrate their deployed apps while the portal UI is reworked in parallel.
+
+**Outputs**
+- `render.yaml` (Blueprint: service + company portal), `docs/DEPLOY.md` (setup and operations), README pointer (D-085).
+- Shared handoff doc for the doctor and patient teams: settings, env vars, the origin to send back, checks and troubleshooting.
+
+**Verification**
+- Simulated the Render service locally: `uv sync --frozen --no-dev`, seed at build (4 s, 3000 patients, 29 MB), no-op seed at start, `uvicorn` on `$PORT`; `/healthz` returned `seeded: true`; a CORS preflight from an allowed origin returned `access-control-allow-origin`.
+- Portal: `npm ci && npm run build` with `VITE_COMPANY_SERVICE_URL` set; the URL is in the bundle. `render.yaml` parses as YAML.
+- Not yet run on Render itself.
+
+**Open items**
+- Connect the Blueprint in Render; confirm the final service URL.
+- Collect doctor-web and patient-web origins and add them to `SENTINEL_ALLOWED_ORIGINS`.
+
+**Next**
+1. Merge this PR, apply the Blueprint, check `/healthz` and the portal.
+2. Add teammates' origins as they arrive; run one check-in through every persona on the hosted service.
+

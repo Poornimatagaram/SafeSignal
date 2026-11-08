@@ -45,6 +45,8 @@ scripts/reset_all.sh --seed                                  # from the repo roo
 (cd apps/company-web && npm install && npm run dev)           # company portal: http://localhost:5175
 ```
 
+Hosted (free, Render): `render.yaml`; setup and teammates' settings in `docs/DEPLOY.md`.
+
 ## Check
 ```bash
 (cd packages/contract-py && uv run pytest -q)
