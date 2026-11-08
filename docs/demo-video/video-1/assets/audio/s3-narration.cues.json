@@ -1,0 +1,39 @@
+{
+  "voice": "heart_nicole",
+  "speed": 0.95,
+  "pause_scale": 1.0,
+  "split": "sentence",
+  "duration": 12.063,
+  "sentences": [
+    {
+      "i": 0,
+      "text": "His doctor gets ten minutes, every few months.",
+      "start": 0.0,
+      "end": 2.898
+    },
+    {
+      "i": 1,
+      "text": "How have you been?",
+      "start": 3.498,
+      "end": 4.494
+    },
+    {
+      "i": 2,
+      "text": "Fine.",
+      "start": 5.144,
+      "end": 5.799
+    },
+    {
+      "i": 3,
+      "text": "He's forgotten how he felt two months ago.",
+      "start": 6.399,
+      "end": 8.773
+    },
+    {
+      "i": 4,
+      "text": "So the months in between stay blank.",
+      "start": 9.373,
+      "end": 11.463
+    }
+  ]
+}
