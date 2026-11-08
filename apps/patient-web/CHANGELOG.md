@@ -2,6 +2,10 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Docs and screenshots
+- Changed: `README.md` is now one line linking to the patient README in `apps/patient-runtime/README.md`.
+- Added: `docs/screenshots/` with every screen at phone size, and `capture.mjs` to retake them.
+
 ## 2026-11-08: Mobile-first redesign
 - Changed: the whole screen is now phone-sized and chat-style.
   - At most 430px wide and centred, drawn inside a phone frame on wide screens for the demo.
