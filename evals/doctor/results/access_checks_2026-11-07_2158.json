@@ -1,0 +1,123 @@
+{
+  "run_at": "2026-11-08T02:58:29Z",
+  "contract": "2.0",
+  "base_url": "http://127.0.0.1:8010",
+  "passed": 19,
+  "total": 19,
+  "results": [
+    {
+      "section": "Access control",
+      "check": "Company role cannot reach any relay endpoint",
+      "pass": true,
+      "detail": "11 endpoints all 403"
+    },
+    {
+      "section": "Access control",
+      "check": "A doctor outside the organization cannot read its envelopes or patients",
+      "pass": true,
+      "detail": "Rivera envelopes 403, Okafor patients 403"
+    },
+    {
+      "section": "Access control",
+      "check": "A member cannot fetch another member's key grant",
+      "pass": true,
+      "detail": "-> 403"
+    },
+    {
+      "section": "Access control",
+      "check": "A non-admin member cannot set the org key or add members",
+      "pass": true,
+      "detail": "org key 403, add member 403"
+    },
+    {
+      "section": "Access control",
+      "check": "A patient cannot send an envelope to an organization without a link",
+      "pass": true,
+      "detail": "-> 403"
+    },
+    {
+      "section": "Access control",
+      "check": "Requests without X-Role / X-Actor-Id are refused",
+      "pass": true,
+      "detail": "-> 401"
+    },
+    {
+      "section": "Access control",
+      "check": "Revoking consent stops the next envelope",
+      "pass": true,
+      "detail": "envelope -> 403; listed: False"
+    },
+    {
+      "section": "Access control",
+      "check": "Doctor change: a granted member reads, a revoked member is refused and loses the grant",
+      "pass": true,
+      "detail": "add 200, grant 201, read 200, revoke 200, read after 403, grant after 403"
+    },
+    {
+      "section": "End to end",
+      "check": "Walter's envelope reaches the care team within 1 minute",
+      "pass": true,
+      "detail": "send 201, visible after 0.0s"
+    },
+    {
+      "section": "Privacy",
+      "check": "Relay returns only ciphertext to the care team",
+      "pass": true,
+      "detail": "394 bytes, parses as JSON: False, plaintext markers: 0"
+    },
+    {
+      "section": "End to end",
+      "check": "Org key decrypts it and the hash matches",
+      "pass": true,
+      "detail": "sha256 match"
+    },
+    {
+      "section": "End to end",
+      "check": "A member can acknowledge the envelope",
+      "pass": true,
+      "detail": "-> 200"
+    },
+    {
+      "section": "End to end",
+      "check": "Severe alert reaches the care team and the caregiver",
+      "pass": true,
+      "detail": "after 0.0s"
+    },
+    {
+      "section": "Privacy",
+      "check": "Caregiver alerts carry no symptom details (AL-03)",
+      "pass": true,
+      "detail": "fields: alert_id, alert_type, created_at, escalation_level, patient_ref, received_at"
+    },
+    {
+      "section": "Access control",
+      "check": "The emergency hospital has no routine access",
+      "pass": true,
+      "detail": "sealed copy 201; routine patients: 0"
+    },
+    {
+      "section": "Access control",
+      "check": "Emergency access needs a coded reason and an emergency link",
+      "pass": true,
+      "detail": "bad reason 422, care-team org 403"
+    },
+    {
+      "section": "End to end",
+      "check": "Emergency access releases the history and notifies caregiver and care team",
+      "pass": true,
+      "detail": "200, 1 envelope(s), notified ['caregiver', 'care_team']"
+    },
+    {
+      "section": "End to end",
+      "check": "Care team and caregiver see an emergency_access alert",
+      "pass": true,
+      "detail": "after 0.0s"
+    },
+    {
+      "section": "End to end",
+      "check": "Emergency org key decrypts the released history",
+      "pass": true,
+      "detail": "sha256 match"
+    }
+  ]
+}
