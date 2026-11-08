@@ -16,7 +16,7 @@ This README covers both halves of the patient feature: the **runtime** (`apps/pa
 | **Receipt** | **Who I share with** | **Setup** | **What this computer sent** |
 | <img src="../patient-web/docs/screenshots/receipt.png" alt="Shared, with the fields in plain words" width="190"> | <img src="../patient-web/docs/screenshots/consent.png" alt="Share with my doctor and my caregiver switches" width="190"> | <img src="../patient-web/docs/screenshots/setup.png" alt="Choosing the care team, caregiver and emergency contacts" width="190"> | <img src="../patient-web/docs/screenshots/network-log.png" alt="Every request that left this computer" width="190"> |
 
-The screenshots were taken in a headless browser with synthetic data for Walter (`pt_4b82d0c6`). To retake them, see [`apps/patient-web/docs/screenshots/`](../patient-web/docs/screenshots/).
+The screenshots were taken in a headless browser with synthetic data for Walter (`pt_4b82d0c6`). [`before-after.png`](../patient-web/docs/screenshots/before-after.png) compares the old and new look. To retake them, see [`apps/patient-web/docs/screenshots/`](../patient-web/docs/screenshots/).
 
 ## How a check-in flows
 
@@ -84,6 +84,7 @@ Settings, CORS origins and the demo-morning checklist are in [`DEMO.md`](DEMO.md
 - State machines without React: `questionFlow.ts`, `shareFlow.ts`, `consentFlow.ts`, `setupFlow.ts` and `networkLog.ts`. `api.ts` is the only code that calls `fetch`, and only the runtime.
 - Every word on screen is in `strings.ts`, ready for a second language.
 - A sound bar on every screen: Mute/Unmute (remembered for the browser session only) and Stop while something is playing.
+- The look is calm and rounded: coral, cream and sage, gentle motion that stops under reduced-motion, and AA contrast checked by a test.
 - The layout is phone-sized (430px), and the app is installable (a manifest and a small offline-shell worker that never caches runtime calls).
 
 **Runtime API** (localhost only): `GET /health`; `POST /checkin/sessions`; `GET /checkin/question[/audio]`; `POST /checkin/turn` (audio); `POST /checkin/turn/text` (typed); `GET /checkin/sessions/{id}/summary[/audio]`; `POST …/correction`; `POST …/approve` (the only route that sends a check-in); `GET …/receipt`; `GET|PUT /consent`; `PUT /consent/setup`; `GET /network-log`.
@@ -115,7 +116,7 @@ cd apps/patient-runtime && uv run pytest -q                                   # 
 cd ../.. && uv run --project apps/patient-runtime pytest -q evals/patient     # 59 passed
 uv run --project apps/patient-runtime python evals/patient/leakage_eval.py    # PV-01, needs Ollama
 uv run --project apps/patient-runtime python evals/patient/reask_eval.py      # VC-04
-npm test --prefix apps/patient-web                                            # 327 passed
+npm test --prefix apps/patient-web                                            # 346 passed
 ```
 
 | Eval | Result |

@@ -1,31 +1,41 @@
 /* Patient screen (NF-08), phone-sized: one bold sentence, one big action, a friendly conversation.
-   Text at least 24 px (questions at least 32 px), WCAG AA contrast or better, tap targets at least 64 px, visible
-   focus outlines, icons always next to words. System fonts only: nothing is downloaded. */
+   A calm, warm look: cream, coral and a little sage; soft borders, rounded cards and gentle shadows.
+   Text at least 24 px (questions at least 32 px), WCAG AA contrast or better (tests/contrast.test.ts checks the
+   token pairs), tap targets at least 64 px, strong focus outlines, icons always next to words. System fonts only:
+   nothing is downloaded. Every animation stops under "reduce motion". */
 
 :root {
   color-scheme: light;
-  --ink: #1c1917; /* on --paper: about 16:1 */
-  --ink-soft: #44403c; /* on --paper: about 9:1 */
-  --paper: #fff8f0; /* warm cream */
+  --ink: #2b211c; /* warm near-black; on --cream 14.9:1, on --cream-deep 13.5:1 */
+  --ink-soft: #6b5548; /* secondary text; on --cream-deep (the darkest background) 6.0:1 */
+  --cream: #fff8f1; /* the page, top of the gradient */
+  --cream-deep: #fdebdd; /* the page, bottom of the gradient */
   --card: #ffffff;
-  --panel: #f6ece1;
-  --line: #1c1917;
-  --primary: #a6360f; /* burnt orange; white text on this: about 6.6:1 */
-  --primary-hover: #872b0b;
-  --me: #134e4a; /* Walter's bubbles: deep teal; white text on this: about 9.5:1 */
-  --bubble: #ffe7d1; /* the helper's bubbles; ink on this: about 14:1 */
-  --sun: #f6b33c;
-  --listening: #8a1111; /* white text on this: about 9:1 */
-  --alert-bg: #fff1dc;
-  --alert-line: #8a4b00;
-  --focus: #1c1917;
-  --radius: 22px;
+  --tint: #fbe3d3; /* coral-tinted panels; --ink on this 12.7:1 */
+  --coral: #f2846b; /* decoration, progress fill, glow; --ink on this 6.2:1 (never white text) */
+  --coral-deep: #d9603f; /* white text on this 3.7:1: large text only (every label on it is 25 px+ bold) */
+  --coral-press: #c24e2e; /* hover / pressed; white on this 4.8:1 */
+  --listening: #a83a22; /* the talk button while listening; white on this 6.4:1 */
+  --sage: #dce8d5; /* Walter's own answers */
+  --sage-line: #9db892;
+  --sage-ink: #1f2a1c; /* on --sage 11.8:1 */
+  --sage-deep: #3e6b34; /* ticks and "on" switches; on white 6.3:1 */
+  --line: #efd9ca; /* soft warm borders on cards */
+  --line-strong: #e2b39e; /* secondary buttons and fields: still clearly a box */
+  --alert-bg: #fff1dc; /* --ink on this 14.1:1 */
+  --alert-line: #c98a2b;
+  --focus: #2b211c;
+  --shadow: 0 1px 2px rgba(80, 40, 20, 0.06), 0 8px 24px rgba(80, 40, 20, 0.08);
+  --shadow-small: 0 1px 2px rgba(80, 40, 20, 0.08), 0 3px 8px rgba(80, 40, 20, 0.06);
+  --radius: 26px;
+  --radius-big: 32px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --shell-width: 430px;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: ui-rounded, 'SF Pro Rounded', 'SF Pro Text', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: max(24px, 150%); /* never below 24 px; grows with a larger browser font setting */
   line-height: 1.45;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--cream);
 }
 
 *,
@@ -36,7 +46,9 @@
 
 body {
   margin: 0;
-  background: var(--paper);
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 100%) fixed;
+  background-color: var(--cream);
   color: var(--ink);
   font-size: 1rem; /* 24 px */
   -webkit-text-size-adjust: 100%;
@@ -68,8 +80,14 @@ ol {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 10px 20px 0;
-  background: var(--paper);
+  padding: 12px 20px 8px;
+  /* Solid, so text scrolling underneath is hidden cleanly instead of showing through as a smudge. */
+  background: var(--cream, #fff8f1);
+}
+
+.app-header .button {
+  border-radius: 999px;
+  padding: 10px 22px;
 }
 
 /* The phone-sized frame: at most 430 px wide, centred. */
@@ -79,7 +97,6 @@ ol {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  background: var(--paper);
 }
 
 .app-shell__viewport {
@@ -91,9 +108,9 @@ ol {
   :root {
     min-height: 100%;
     background:
-      radial-gradient(circle at 15% 20%, #ffe2c2 0, transparent 40%),
-      radial-gradient(circle at 85% 80%, #d7ece8 0, transparent 40%),
-      #f7eadc;
+      radial-gradient(circle at 12% 18%, #ffd9c7 0, transparent 38%),
+      radial-gradient(circle at 88% 82%, #dce8d5 0, transparent 40%),
+      #fbeee3;
   }
 
   body {
@@ -101,12 +118,15 @@ ol {
   }
 
   .app-shell {
-    height: min(932px, calc(100vh - 48px));
+    height: min(932px, calc(100vh - 40px));
     min-height: 0;
-    margin: 24px auto;
-    border: 14px solid #1c1917;
+    margin: 20px auto;
+    border: 12px solid #3a2e28;
     border-radius: 56px;
-    box-shadow: 0 30px 60px rgba(28, 25, 23, 0.25);
+    background: linear-gradient(180deg, var(--cream) 0%, var(--cream-deep) 100%);
+    box-shadow:
+      0 2px 4px rgba(80, 40, 20, 0.08),
+      0 30px 60px rgba(80, 40, 20, 0.22);
     overflow: hidden;
   }
 
@@ -123,11 +143,20 @@ ol {
   .app-shell__viewport > .screen {
     flex: 1 0 auto;
   }
+
+  /* Clear of the frame's rounded bottom corners. */
+  .app-shell__viewport > .screen:not(.screen--chat) {
+    padding-bottom: 48px;
+  }
+
+  .app-shell__viewport .dock {
+    padding-bottom: 32px;
+  }
 }
 
 .screen {
   min-height: inherit;
-  padding: 28px 20px 40px;
+  padding: 20px 20px calc(40px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -142,11 +171,12 @@ ol {
   font-size: 1.75rem; /* 42 px */
   line-height: 1.15;
   margin: 0;
+  letter-spacing: -0.01em;
   overflow-wrap: anywhere;
 }
 
 .lead {
-  font-size: 1.1rem; /* about 26 px */
+  font-size: 1.05rem; /* about 25 px */
   color: var(--ink-soft);
 }
 
@@ -155,6 +185,24 @@ ol {
   font-size: 1rem; /* 24 px */
   font-weight: 700;
   color: var(--ink-soft);
+}
+
+/* "Question 2 of 6" has a soft bar under it. The words say it; the bar is only a picture of them. */
+.progress-bar {
+  height: 14px;
+  margin-top: -14px;
+  border-radius: 999px;
+  background: var(--tint);
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  display: block;
+  height: 100%;
+  min-width: 14px;
+  border-radius: 999px;
+  background: var(--coral);
+  transition: width 600ms var(--ease);
 }
 
 .subtitle {
@@ -169,27 +217,28 @@ ol {
 
 /* Home: one bold sentence, one giant button, the rest lower down. */
 .screen--home {
-  gap: 20px;
+  gap: 18px;
+  padding-top: 4px;
 }
 
 .home__picture {
+  display: block;
   width: 100%;
-  max-width: 300px;
-  height: auto;
+  height: 168px;
   align-self: center;
+  filter: drop-shadow(0 8px 18px rgba(80, 40, 20, 0.08));
 }
 
 .home__greeting {
-  font-size: 2rem; /* 48 px */
+  font-size: 1.85rem; /* about 44 px */
   font-weight: 800;
-  letter-spacing: -0.01em;
 }
 
 /* The live region stays in the page (screen readers need it there) but takes no room while empty. */
 .screen--home .status:empty,
 .dock .status:empty {
   min-height: 0;
-  margin: -10px 0;
+  margin: -9px 0;
 }
 
 .home__privacy {
@@ -202,9 +251,9 @@ ol {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 12px;
   padding-top: 24px;
-  border-top: 3px solid var(--panel);
+  border-top: 2px solid var(--line);
 }
 
 /* Buttons: at least 64 px tall, large labels, an icon only ever next to words. */
@@ -216,26 +265,40 @@ ol {
   min-height: 64px;
   min-width: 64px;
   padding: 12px 22px;
-  border: 3px solid var(--line);
+  border: 2px solid var(--line-strong);
   border-radius: var(--radius);
   font: inherit;
-  font-size: 1.05rem; /* about 25 px */
+  font-size: 1.05rem; /* about 25 px, bold: large text, so white on --coral-deep passes AA */
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
   cursor: pointer;
+  box-shadow: var(--shadow-small);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 120ms var(--ease),
+    box-shadow 160ms var(--ease),
+    background-color 160ms var(--ease);
+}
+
+.button:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 2px rgba(80, 40, 20, 0.08);
 }
 
 .button--primary {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--coral-deep);
+  border-color: var(--coral-deep);
   color: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(80, 40, 20, 0.1),
+    0 8px 20px rgba(217, 96, 63, 0.28);
 }
 
 .button--primary:hover {
-  background: var(--primary-hover);
+  background: var(--coral-press);
+  border-color: var(--coral-press);
 }
 
 .button--secondary {
@@ -244,28 +307,26 @@ ol {
 }
 
 .button--secondary:hover {
-  background: var(--panel);
+  background: var(--tint);
 }
 
 .button--huge {
   width: 100%;
   min-height: 88px;
-  font-size: 1.25rem; /* 30 px */
+  font-size: 1.2rem; /* about 29 px */
 }
 
 /* "Start today's check-in": the one big action. */
 .button--start {
-  min-height: 140px;
+  min-height: 128px;
   flex-direction: column;
-  gap: 10px;
-  font-size: 1.4rem; /* about 34 px */
-  border-radius: 32px;
-  box-shadow: 0 10px 0 #6e230a;
-}
-
-.button--start:active {
-  transform: translateY(4px);
-  box-shadow: 0 6px 0 #6e230a;
+  gap: 8px;
+  font-size: 1.35rem; /* about 32 px */
+  text-wrap: balance; /* "Start today's / check-in", never "check- / in" */
+  border-radius: var(--radius-big);
+  box-shadow:
+    0 2px 4px rgba(80, 40, 20, 0.1),
+    0 14px 32px rgba(217, 96, 63, 0.35);
 }
 
 .button--row {
@@ -273,16 +334,35 @@ ol {
   text-align: left;
 }
 
+.button--row .icon {
+  color: var(--coral-deep);
+}
+
 .button[aria-disabled='true'] {
   cursor: not-allowed;
   opacity: 0.65;
 }
 
-/* Thick, offset outline that shows on light and dark buttons alike. */
+.button[aria-disabled='true']:active {
+  transform: none;
+}
+
+/* A primary button that cannot be used yet ("Send" with an empty box): a quiet panel with dark words, not faded
+   white-on-coral, so its words stay easy to read. */
+.button--primary[aria-disabled='true'],
+.button--primary[aria-disabled='true']:hover {
+  background: var(--tint);
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* A thick, offset outline that shows on light and coral buttons alike (ink on cream about 15:1). */
 .button:focus-visible,
 [tabindex='-1']:focus-visible {
-  outline: 5px solid var(--focus);
-  outline-offset: 4px;
+  outline: 4px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .button:focus:not(:focus-visible) {
@@ -299,6 +379,7 @@ ol {
   flex: 1 1 auto; /* as wide as its words; whole buttons wrap to the next row, never the words */
   gap: 8px;
   padding: 12px 12px;
+  border-radius: 999px;
 }
 
 /* A button's words stay on one line ("Repeat", "Slower", "Stop", "Mute"). */
@@ -329,7 +410,7 @@ ol {
 
 .type-answer__send {
   gap: 8px;
-  padding: 12px 16px;
+  padding: 12px 18px;
 }
 
 /* Push-to-talk: one full-width toggle. State shows as text and icon, not colour alone. */
@@ -337,32 +418,59 @@ ol {
   width: 100%;
   min-height: 112px;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   font-size: 1.35rem; /* about 32 px */
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--coral-deep);
+  border-color: var(--coral-deep);
   color: #ffffff;
-  border-radius: 32px;
+  border-radius: var(--radius-big);
+  box-shadow:
+    0 2px 4px rgba(80, 40, 20, 0.1),
+    0 12px 28px rgba(217, 96, 63, 0.32);
 }
 
 .talk:hover {
-  background: var(--primary-hover);
+  background: var(--coral-press);
+  border-color: var(--coral-press);
 }
 
+/* Listening: a deeper colour, a stop icon and the words, and a slow breathing glow. */
 .talk--listening,
 .talk--listening:hover {
   background: var(--listening);
-  border-color: var(--ink);
-  border-style: dashed;
-  border-width: 6px;
+  border-color: var(--listening);
+  animation: breathe 2.4s ease-in-out infinite;
 }
 
 .talk--starting,
 .talk--sending {
-  background: var(--panel);
-  border-color: var(--ink);
+  background: var(--tint);
+  border-color: var(--line-strong);
   color: var(--ink);
+  box-shadow: var(--shadow-small);
   opacity: 1;
+}
+
+.talk--starting:hover,
+.talk--sending:hover {
+  background: var(--tint);
+  border-color: var(--line-strong);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 2px 4px rgba(80, 40, 20, 0.1),
+      0 0 0 0 rgba(242, 132, 107, 0.45);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow:
+      0 2px 4px rgba(80, 40, 20, 0.1),
+      0 0 0 14px rgba(242, 132, 107, 0.22);
+  }
 }
 
 .icon {
@@ -372,8 +480,8 @@ ol {
 }
 
 .icon--large {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
 }
 
 .status {
@@ -386,34 +494,25 @@ ol {
 }
 
 .rec-dot {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   flex: none;
   border-radius: 50%;
   background: var(--listening);
-  border: 3px solid var(--ink);
-  animation: pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 4px rgba(242, 132, 107, 0.35);
+  animation: pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes pulse {
   50% {
-    transform: scale(0.7);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rec-dot {
-    animation: none;
-  }
-  .button--start:active {
-    transform: none;
+    transform: scale(0.75);
   }
 }
 
 /* The check-in conversation. */
 .screen--chat {
   padding-bottom: 0;
-  gap: 16px;
+  gap: 18px;
 }
 
 .chat {
@@ -434,24 +533,39 @@ ol {
 .bubble {
   max-width: 92%;
   padding: 16px 20px;
-  border-radius: 26px;
+  border-radius: 28px;
   overflow-wrap: anywhere;
+  box-shadow: var(--shadow-small);
+  animation: bubble-in 300ms ease-out both;
 }
 
-/* The helper's bubbles: left, warm, with the app's mark. */
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The helper's bubbles: left, white cards, with the app's mark. */
 .bubble--app {
   align-self: flex-start;
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: var(--bubble);
+  background: var(--card);
   color: var(--ink);
-  border: 3px solid transparent;
-  border-bottom-left-radius: 8px;
+  border: 2px solid var(--line);
+  border-bottom-left-radius: 10px;
 }
 
+/* The question being asked now: a coral edge and a deeper shadow. */
 .bubble--current {
-  border-color: var(--ink);
+  border-color: var(--coral);
+  box-shadow: var(--shadow);
 }
 
 .bubble__avatar {
@@ -461,18 +575,21 @@ ol {
   margin-top: 2px;
 }
 
-/* Walter's own words: right, deep teal, white text. */
+/* Walter's own words: right, soft sage, dark text. */
 .bubble--me {
   align-self: flex-end;
-  background: var(--me);
-  color: #ffffff;
-  border-bottom-right-radius: 8px;
+  background: var(--sage);
+  color: var(--sage-ink);
+  border: 2px solid var(--sage-line);
+  border-bottom-right-radius: 10px;
 }
 
 /* "Saying it again" / "Saying it more slowly": a small bubble. */
 .bubble--small {
   padding: 8px 18px;
-  background: var(--panel);
+  background: var(--tint);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .bubble--small .note {
@@ -480,8 +597,50 @@ ol {
   font-style: italic;
 }
 
+/* "Getting the next question ready": three soft dots in a question bubble (decoration; the status line says it). */
+.bubble--typing {
+  align-items: center;
+}
+
+.typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 6px;
+}
+
+.typing__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--coral);
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+.typing__dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing__dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
 .question {
-  font-size: 1.5rem; /* 36 px; never below 32 px */
+  font-size: 1.45rem; /* about 35 px; never below 32 px */
   line-height: 1.25;
   font-weight: 700;
   margin: 0;
@@ -518,12 +677,16 @@ ol {
   position: sticky;
   bottom: 0;
   margin: 0 -20px;
-  padding: 14px 20px 20px;
+  padding: 16px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--paper);
-  border-top: 3px solid var(--panel);
+  background: rgba(253, 239, 228, 0.96);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius-big) var(--radius-big) 0 0;
+  box-shadow: 0 -8px 24px rgba(80, 40, 20, 0.07);
 }
 
 .alert {
@@ -533,8 +696,14 @@ ol {
   gap: 14px;
   padding: 18px 20px;
   background: var(--alert-bg);
-  border: 3px solid var(--alert-line);
+  border: 2px solid var(--alert-line);
+  border-left-width: 8px;
   border-radius: var(--radius);
+  box-shadow: var(--shadow-small);
+}
+
+.alert > .icon {
+  color: #8a4b00;
 }
 
 .alert p {
@@ -545,9 +714,9 @@ ol {
 .card {
   padding: 22px 20px;
   background: var(--card);
-  border: 3px solid var(--line);
-  border-radius: 28px;
-  box-shadow: 0 8px 0 var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-big);
+  box-shadow: var(--shadow);
 }
 
 .summary,
@@ -572,8 +741,8 @@ ol {
   flex-direction: column;
   gap: 10px;
   padding: 18px;
-  background: var(--paper);
-  border: 3px solid var(--line);
+  background: var(--cream);
+  border: 2px solid var(--line);
   border-radius: var(--radius);
   font-size: 1.05rem;
 }
@@ -590,10 +759,10 @@ ol {
 /* "For review": a word in a box, never a cause and never colour alone. */
 .tag {
   display: inline-block;
-  padding: 2px 12px;
-  border: 3px solid var(--ink);
+  padding: 2px 14px;
+  border: 2px solid var(--coral);
   border-radius: 999px;
-  background: var(--card);
+  background: var(--tint);
   font-size: 1rem;
   font-weight: 700;
 }
@@ -601,7 +770,7 @@ ol {
 .choice {
   margin: 0;
   padding: 16px;
-  border: 3px dashed var(--ink);
+  border: 2px dashed var(--line-strong);
   border-radius: var(--radius);
   background: var(--card);
   display: flex;
@@ -630,14 +799,15 @@ ol {
 }
 
 .choice__button:hover {
-  background: var(--panel);
+  background: var(--tint);
 }
 
+/* The picked one: filled, with a dark ring, so it never relies on colour alone. */
 .choice__button--on,
 .choice__button--on:hover {
-  background: var(--primary);
+  background: var(--coral-deep);
   border-color: var(--ink);
-  border-width: 5px;
+  border-width: 4px;
   color: #ffffff;
 }
 
@@ -666,7 +836,7 @@ ol {
 }
 
 .parts--checked .icon {
-  color: var(--me);
+  color: var(--sage-deep);
   margin-top: 2px;
 }
 
@@ -687,9 +857,9 @@ ol {
 .record {
   margin: 0;
   padding: 16px;
-  background: var(--panel);
-  border: 3px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--tint);
+  border: 1px solid var(--line);
+  border-radius: 20px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.35;
@@ -705,13 +875,15 @@ ol {
   align-items: center;
   gap: 16px;
   padding: 18px 20px;
-  border-radius: 28px;
+  border-radius: var(--radius-big);
   background: var(--card);
-  border: 3px solid var(--line);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
 }
 
 .receipt-head--sent {
-  background: #e3f1ee;
+  background: var(--sage);
+  border-color: var(--sage-line);
 }
 
 .receipt-head__title {
@@ -728,8 +900,9 @@ ol {
 .receipt > div {
   padding: 18px 20px;
   background: var(--card);
-  border: 3px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-small);
 }
 
 .receipt dt {
@@ -746,8 +919,8 @@ ol {
 
 .fingerprint {
   padding: 10px 14px;
-  background: var(--panel);
-  border-radius: 10px;
+  background: var(--tint);
+  border-radius: 14px;
   word-break: break-all;
 }
 
@@ -756,6 +929,10 @@ ol {
   align-items: center;
   gap: 16px;
   margin-top: 8px;
+}
+
+.closing > .icon {
+  color: var(--coral-deep);
 }
 
 .closing__text {
@@ -770,8 +947,8 @@ ol {
   flex-direction: column;
   gap: 18px;
   padding: 20px;
-  background: var(--panel);
-  border: 3px solid var(--line);
+  background: var(--tint);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
@@ -800,7 +977,7 @@ ol {
 
 .care-box {
   padding-top: 18px;
-  border-top: 3px solid var(--line);
+  border-top: 2px solid var(--line);
 }
 
 /* "Who I share with" (CN-01, CN-03): each switch is one big row. On/Off shows as a word and the knob's side,
@@ -826,7 +1003,7 @@ ol {
   width: 100%;
   min-height: 96px;
   padding: 14px 20px;
-  border: 3px solid var(--line);
+  border: 2px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--card);
   color: var(--ink);
@@ -835,21 +1012,32 @@ ol {
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--shadow-small);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 120ms var(--ease),
+    box-shadow 160ms var(--ease),
+    background-color 160ms var(--ease);
 }
 
 .switch:hover {
-  background: var(--panel);
+  background: var(--tint);
+}
+
+.switch:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 2px rgba(80, 40, 20, 0.08);
 }
 
 .switch--on {
-  border-width: 5px;
+  border-color: var(--sage-deep);
+  border-width: 3px;
 }
 
 .switch:focus-visible {
-  outline: 5px solid var(--focus);
-  outline-offset: 4px;
+  outline: 4px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .switch:focus:not(:focus-visible) {
@@ -873,29 +1061,32 @@ ol {
   width: 88px;
   height: 50px;
   flex: none;
-  border: 3px solid var(--ink);
+  border: 2px solid var(--ink-soft);
   border-radius: 999px;
-  background: var(--card);
+  background: var(--tint);
 }
 
 .switch--on .switch__track {
-  background: var(--me);
+  background: var(--sage-deep);
+  border-color: var(--sage-deep);
 }
 
 .switch__thumb {
   position: absolute;
-  top: 3px;
+  top: 4px;
   left: 4px;
   width: 38px;
   height: 38px;
-  border: 3px solid var(--ink);
+  border: 2px solid var(--ink-soft);
   border-radius: 50%;
   background: var(--card);
+  box-shadow: var(--shadow-small);
 }
 
 .switch--on .switch__thumb {
   left: auto;
   right: 4px;
+  border-color: var(--card);
 }
 
 .switch__word {
@@ -921,8 +1112,9 @@ ol {
 .review {
   padding: 20px;
   background: var(--card);
-  border: 3px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .review > .button {
@@ -948,17 +1140,19 @@ ol {
   min-height: 72px;
   width: 100%;
   padding: 12px 18px;
-  border: 3px solid var(--line);
-  border-radius: var(--radius);
+  border: 2px solid var(--line-strong);
+  border-radius: 22px;
   font: inherit;
   font-size: 1.15rem; /* about 28 px */
   color: var(--ink);
   background: var(--card);
+  box-shadow: inset 0 1px 3px rgba(80, 40, 20, 0.08);
 }
 
 .input:focus-visible {
-  outline: 5px solid var(--focus);
+  outline: 4px solid var(--focus);
   outline-offset: 3px;
+  border-color: var(--coral);
 }
 
 .problems {
@@ -986,8 +1180,9 @@ ol {
   gap: 10px;
   padding: 20px;
   background: var(--card);
-  border: 3px solid var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 .netlog__row > .button {
@@ -1013,8 +1208,8 @@ ol {
   flex-direction: column;
   gap: 14px;
   padding: 16px;
-  background: var(--panel);
-  border-radius: var(--radius);
+  background: var(--tint);
+  border-radius: 20px;
 }
 
 .netlog__details dt {
@@ -1028,8 +1223,23 @@ ol {
 /* SE-04 "Marked for review": words in a dashed box, never colour alone and never a cause. */
 .item__flag {
   padding: 12px 14px;
-  border: 3px dashed var(--ink);
-  border-radius: 10px;
+  border: 2px dashed var(--coral-deep);
+  border-radius: 16px;
   background: var(--card);
   font-weight: 600;
+}
+
+/* "Reduce motion": no fades, slides, dots, glows or presses; everything appears at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .button:active,
+  .switch:active {
+    transform: none;
+  }
 }

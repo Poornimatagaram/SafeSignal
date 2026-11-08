@@ -149,50 +149,61 @@ export function ShareIcon({ className }: IconProps) {
   )
 }
 
-/** The app's own mark: a speech bubble holding a heart. Drawn here; public/icon.svg is the same drawing. */
+/** The app's own mark: a speech bubble holding a heart, in the app's coral. (public/icon.svg is the same drawing.) */
 export function HelperAvatar({ className }: IconProps) {
   return (
     <svg aria-hidden={true} focusable={false} viewBox="0 0 48 48" className={className}>
-      <circle cx="24" cy="24" r="24" fill="#a6360f" />
-      <path d="M12 15a5 5 0 0 1 5-5h14a5 5 0 0 1 5 5v11a5 5 0 0 1-5 5h-8l-7 6v-6a5 5 0 0 1-4-5z" fill="#fff8f0" />
+      <circle cx="24" cy="24" r="24" fill="#f2846b" />
+      <path d="M12 15a5 5 0 0 1 5-5h14a5 5 0 0 1 5 5v11a5 5 0 0 1-5 5h-8l-7 6v-6a5 5 0 0 1-4-5z" fill="#fff8f1" />
       <path
         d="M24 27.5s-6.5-3.8-6.5-8.1a3.4 3.4 0 0 1 6.5-1.6 3.4 3.4 0 0 1 6.5 1.6c0 4.3-6.5 8.1-6.5 8.1z"
-        fill="#a6360f"
+        fill="#d9603f"
       />
     </svg>
   )
 }
 
-/** The home screen's picture: a morning sun over a chat bubble and a cup of tea. Decorative only. */
+/** The sun's soft rays: short rounded strokes around the upper half of the sun. */
+const SUN = { x: 160, y: 122, r: 46 }
+const RAYS = [200, 225, 250, 270, 290, 315, 340].map((deg) => {
+  const a = (deg * Math.PI) / 180
+  const at = (r: number) => `${(SUN.x + r * Math.cos(a)).toFixed(1)} ${(SUN.y + r * Math.sin(a)).toFixed(1)}`
+  return `M${at(SUN.r + 12)}L${at(SUN.r + 24)}`
+})
+
+/** The home screen's picture: a gentle sunrise with a heart, over soft rolling hills. Decorative only. */
 export function WelcomeIllustration({ className }: IconProps) {
   return (
-    <svg aria-hidden={true} focusable={false} viewBox="0 0 240 150" className={className}>
-      <circle cx="170" cy="62" r="34" fill="#f6b33c" />
-      <g stroke="#f6b33c" strokeWidth="6" strokeLinecap="round">
-        <path d="M170 12v-8M212 30l6-6M224 62h8M128 30l-6-6" />
+    <svg aria-hidden={true} focusable={false} viewBox="0 0 320 172" className={className}>
+      <defs>
+        <clipPath id="welcome-card">
+          <rect x="0" y="0" width="320" height="172" rx="32" />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#welcome-card)">
+        <rect x="0" y="0" width="320" height="172" fill="#fde4d6" />
+        <circle cx={SUN.x} cy={SUN.y} r="104" fill="#fcd9c8" />
+        <circle cx={SUN.x} cy={SUN.y} r="78" fill="#fbcdb9" />
+        <g stroke="#f6a48f" strokeWidth="6" strokeLinecap="round">
+          {RAYS.map((d) => (
+            <path key={d} d={d} />
+          ))}
+        </g>
+        <circle cx={SUN.x} cy={SUN.y} r={SUN.r} fill="#f2846b" />
+        <path
+          d="M160 120s-15-8.8-15-18.6a7.8 7.8 0 0 1 15-3.4 7.8 7.8 0 0 1 15 3.4c0 9.8-15 18.6-15 18.6z"
+          fill="#fff8f1"
+        />
+        <rect x="30" y="34" width="62" height="18" rx="9" fill="#fff8f1" opacity="0.9" />
+        <rect x="48" y="24" width="30" height="18" rx="9" fill="#fff8f1" opacity="0.9" />
+        <rect x="236" y="44" width="54" height="16" rx="8" fill="#fff8f1" opacity="0.9" />
+        <path d="M0 134c52-30 104-30 160-8s110 18 160-6v52H0z" fill="#c9dcbf" />
+        <path d="M0 150c64-20 128-16 184 2s96 8 136-6v26H0z" fill="#a9c79c" />
+        <path d="M0 164c80-12 200-12 320 0v8H0z" fill="#f8d2bd" />
+        <circle cx="62" cy="128" r="5" fill="#fff8f1" />
+        <circle cx="262" cy="138" r="5" fill="#fff8f1" />
+        <circle cx="244" cy="148" r="4" fill="#f2846b" />
       </g>
-      <path d="M0 118c40-22 90-30 140-20s80 6 100-4v56H0z" fill="#f3d9c0" />
-      <path
-        d="M24 34a14 14 0 0 1 14-14h70a14 14 0 0 1 14 14v34a14 14 0 0 1-14 14H64l-22 18V82h-4a14 14 0 0 1-14-14z"
-        fill="#ffffff"
-        stroke="#1c1917"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
-      <g fill="#a6360f">
-        <circle cx="52" cy="51" r="6" />
-        <circle cx="73" cy="51" r="6" />
-        <circle cx="94" cy="51" r="6" />
-      </g>
-      <path d="M150 100h44v18a18 18 0 0 1-18 18h-8a18 18 0 0 1-18-18z" fill="#134e4a" />
-      <path d="M194 106h6a8 8 0 0 1 0 16h-7" fill="none" stroke="#134e4a" strokeWidth="5" />
-      <path
-        d="M163 92c-4-6 4-8 0-14M178 92c-4-6 4-8 0-14"
-        fill="none"
-        stroke="#7c6f64"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
     </svg>
   )
 }

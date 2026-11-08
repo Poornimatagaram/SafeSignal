@@ -2,6 +2,22 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Modern, calm look
+- Changed: a softer, calmer style, with the same behaviour and tests.
+  - Colours: coral `#F2846B`, with a deeper coral `#D9603F` wherever white text sits on it (only on bold text of 25px or more, which meets AA for large text). A warm cream gradient background, sage green for Walter's bubbles, and soft borders and layered shadows instead of black outlines. Corners are 26–32px.
+  - The font is the rounded system font (`ui-rounded`, SF Pro Rounded), with no web fonts. Buttons shrink slightly and lose some shadow when pressed.
+  - The app colour in `index.html` and the manifest, and the icons (SVG and PNG), now use the new coral.
+- Added: gentle motion, all switched off under `prefers-reduced-motion`.
+  - Bubbles fade and slide in.
+  - A "typing" dots bubble appears before each new question. The question is spoken as soon as it arrives; only the bubble waits, up to 700ms from the start of loading.
+  - The talk button has a soft breathing pulse while listening.
+  - A smooth progress bar sits under "Question N of M". It is hidden from screen readers, so only the words are announced.
+- Added: a new home illustration drawn as inline SVG: a sunrise with a heart, sage hills and clouds.
+- Added: `tests/contrast.test.ts` reads the colour values from `styles.css` and checks AA contrast for every text and background pair.
+- Fixed: on a wide screen, the footer "Your voice stays on this computer…" was cut off at the bottom of the phone frame. The frame now has bottom padding, and the illustration is smaller, so the footer is visible without scrolling at 1200×900.
+- Fixed: the sound bar at the top is solid, so text scrolling under it is hidden cleanly instead of showing through blurred.
+- Docs: all README screenshots were retaken, and `docs/screenshots/before-after.png` compares the old and new home and check-in screens.
+
 ## 2026-11-08: Typing, Mute and Stop
 - Added: "Or type your answer" under the talk button: a big text box (1000 characters, no spell check, because some browsers send the words to an online spell checker) with **Send** beside it. Typed answers go through the runtime's `POST /checkin/turn/text` and are handled by the same code as spoken ones. Typed "repeat" and "slower" work as commands. The box is cleared after a successful send and kept if sending fails; it is never saved in the browser.
 - Added: a sound bar at the top of every screen. **Mute/Unmute** works at any time: it stops sound at once and blocks the questions, re-asks and summary from playing. The choice is remembered for this browser session only (`sessionStorage`, `soundSetting.ts`). **Stop** sits beside it only while a question or the summary is playing. Tapping Repeat or Slower while muted shows "Sound is off. Tap Unmute to hear it."

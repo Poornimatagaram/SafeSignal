@@ -26,12 +26,12 @@ export type Bubble =
 
 const C = S.checkin
 
-export function ChatThread({ bubbles }: { bubbles: readonly Bubble[] }) {
+export function ChatThread({ bubbles, typing = false }: { bubbles: readonly Bubble[]; typing?: boolean }) {
   const end = useRef<HTMLLIElement>(null)
   // The newest bubble stays in view (no smooth scrolling: it can make people feel unwell).
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'end' })
-  }, [bubbles.length])
+  }, [bubbles.length, typing])
 
   // The latest question is the one being asked; earlier wordings stay visible above it.
   const latestQuestion = bubbles.reduce((last, bubble, i) => (bubble.kind === 'question' ? i : last), -1)
@@ -40,8 +40,26 @@ export function ChatThread({ bubbles }: { bubbles: readonly Bubble[] }) {
       {bubbles.map((bubble, i) => (
         <BubbleItem key={i} bubble={bubble} current={i === latestQuestion} />
       ))}
+      {typing && <TypingBubble />}
       <li className="chat__end" ref={end} aria-hidden="true" />
     </ol>
+  )
+}
+
+/**
+ * Three soft dots in a question bubble while the next question is on its way. Decoration only: the status line
+ * already says "Getting the question…", so screen readers do not hear it twice.
+ */
+function TypingBubble() {
+  return (
+    <li className="bubble bubble--app bubble--typing" aria-hidden="true">
+      <HelperAvatar className="bubble__avatar" />
+      <span className="typing">
+        <span className="typing__dot" />
+        <span className="typing__dot" />
+        <span className="typing__dot" />
+      </span>
+    </li>
   )
 }
 

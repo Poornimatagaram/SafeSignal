@@ -31,6 +31,14 @@ import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, St
 
 const C = S.checkin
 
+/** The "typing" dots show at least this long before a new question bubble (never with "reduce motion"). */
+const TYPING_MS = 700
+
+/** The person asked their device for less motion: questions then appear at once, with no dots first. */
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+}
+
 const client = createRuntimeClient()
 
 /** start -> question (one per survey question) -> share (summary, approval, receipt); start <-> consent <-> setup. */
@@ -70,6 +78,10 @@ export default function App() {
   // The conversation for the current question only (question, re-asks, Walter's words). Cleared on every question
   // change, like the transcript: Walter's words stay in memory no longer than one question.
   const [thread, setThread] = useState<Bubble[]>([])
+  // Presentation only: the dots before a new question bubble, and the progress bar's fill (0 to 1).
+  const [typing, setTyping] = useState(false)
+  const typingTimer = useRef<number | undefined>(undefined)
+  const [progress, setProgress] = useState(0)
   const say = useCallback((...bubbles: Bubble[]) => setThread((shown) => [...shown, ...bubbles]), [])
   // "Who I share with": created when opened from the start screen, disposed when leaving it.
   const [consentFlow, setConsentFlow] = useState<ConsentFlow | null>(null)
@@ -172,6 +184,8 @@ export default function App() {
     setReply(null)
     setNotice(null)
     setThread([])
+    window.clearTimeout(typingTimer.current)
+    setTyping(false)
     setAnswerError(null)
     setVoiceNote(null)
     setVoiceLoading(false)
@@ -203,6 +217,8 @@ export default function App() {
     async (index: number) => {
       const gen = resetForQuestionChange()
       setLoading(true)
+      setTyping(true)
+      const askedAt = Date.now()
       try {
         const next = await client.getQuestion(index, 0)
         if (gen !== generation.current || !mounted.current) return
@@ -211,10 +227,23 @@ export default function App() {
           return
         }
         setQuestion(next)
-        setThread([{ kind: 'question', text: next.text }])
+        setProgress((next.index + 1) / Math.max(1, next.total))
+        // The voice never waits for the dots: only the bubble does, and only for the rest of a short moment.
         void speak(next, false)
+        const showBubble = () => {
+          if (gen !== generation.current || !mounted.current) return
+          setTyping(false)
+          // In front of anything already said, so nothing is lost if an answer came in very quickly.
+          setThread((shown) => [{ kind: 'question', text: next.text }, ...shown])
+        }
+        const wait = prefersReducedMotion() ? 0 : TYPING_MS - (Date.now() - askedAt)
+        if (wait > 0) typingTimer.current = window.setTimeout(showBubble, wait)
+        else showBubble()
       } catch (error) {
-        if (gen === generation.current && mounted.current) setLoadError({ index, message: questionErrorMessage(error) })
+        if (gen === generation.current && mounted.current) {
+          setTyping(false)
+          setLoadError({ index, message: questionErrorMessage(error) })
+        }
       } finally {
         if (gen === generation.current && mounted.current) setLoading(false)
       }
@@ -234,6 +263,7 @@ export default function App() {
       const opened = await client.startSession()
       if (!mounted.current) return
       session.current = opened
+      setProgress(0)
       setScreen('question')
       void loadQuestion(0)
     } catch (error) {
@@ -462,6 +492,10 @@ export default function App() {
     return (
       <main className="screen screen--chat">
         <h1 className="progress">{question ? C.progress(question.index + 1, question.total) : C.progressNone}</h1>
+        {/* A picture of the words above (they are what screen readers hear), so it is hidden from them. */}
+        <div className="progress-bar" aria-hidden="true">
+          <span className="progress-bar__fill" style={{ width: `${Math.round(progress * 100)}%` }} />
+        </div>
 
         {loadError && (
           <div className="alert" role="alert">
@@ -478,7 +512,7 @@ export default function App() {
           </div>
         )}
 
-        {question && <ChatThread bubbles={thread} />}
+        {(question || typing) && <ChatThread bubbles={thread} typing={typing} />}
 
         {question && voiceNote && <p className="note">{voiceNote}</p>}
 

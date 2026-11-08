@@ -24,6 +24,8 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Old synthetic audio:** `apps/patient-runtime/{a,b,c,s}.wav` (from Nov 7, gitignored). Delete them when convenient.
 
 ## Done
+- **2026-11-08, modern calm look for the patient screen** (branch `patient/feat/modern-look`). An agent restyled `src/`. I updated the app colour, the manifest and the icons, made the sound bar solid, and retook every screenshot. I also made a before/after image (`apps/patient-web/docs/screenshots/before-after.png`) and checked the footer in the phone frame at 1200×900. Results: 346 web tests (19 of them new contrast tests), 782 runtime tests, 59 eval tests, PV-01 PASS, VC-04 PASS (17 of 20). Each screenshot run (three today) shares one synthetic record with the service, so the morning reset still matters.
+- **2026-11-08, voice controls merged as PR #47** (`c8ab853`).
 - **2026-11-08, softer voice, typed answers, Mute and Stop** (branch `patient/feat/voice-controls`). Two parallel agents, one per app, worked to an API contract I fixed first. I checked it live: a typed answer on the restarted runtime gave 200 with CORS from the screen, coded `SE_RASH`, and stored `input_mode = text`; blank text gave 400. In headless Chrome at 375px: Repeat, Slower, Stop and Mute are each one line, there is no horizontal overflow, mute writes only `sessionStorage`, and a typed answer shows as Walter's bubble. Results: 782 runtime tests, 327 web tests, 59 eval tests, PV-01 PASS, VC-04 PASS (17 of 20).
 - **2026-11-08, restarted the demo processes from `main`.** I stopped the old service (8000) and the old runtime (PID 15222 on 8001), then started the service (contract 2.3), the runtime and the screen. All health checks pass. I did not reseed.
 - **2026-11-08 (overnight), one README for the patient feature, with screenshots** (branch `patient/docs/patient-readme`). An agent captured the screenshots by driving the real app in headless Chrome at 390px. I wrote the README.
@@ -120,6 +122,8 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **White text sits only on the deeper coral `#D9603F`, and only in bold text of 25px or more.** White on `#D9603F` is 3.7:1, which passes AA for large text only. A test reads the colours from `styles.css`, so a later colour change can't quietly break contrast.
+- **The typing dots never delay the voice.** The question is spoken as soon as it arrives, and only the bubble waits, so the dots add no waiting time for Walter.
 - **Stop sits in the top bar next to Mute, not in the dock.** At 375×812 the dock (status, Repeat/Slower/Stop, talk button, text box and Send) covered the question while it was being read. Putting Stop beside Mute, Send beside the box, and making the talk button 112px tall keeps the question visible. All sound controls are now in one place on every screen.
 - **Mute is kept in `sessionStorage`, never `localStorage`**, as asked ("for the session only"). It is the only browser storage the screen uses, and a privacy test checks that.
 - **The voice is chosen by name from what is installed**, with no download. Neither "Ava (Premium)" nor "Samantha (Enhanced)" is installed on this Mac, so it uses the system default until one is added in System Settings → Accessibility → Spoken Content.
@@ -200,6 +204,8 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **After the restyle, scrolled text showed through the see-through sound bar** ("Question 3 of 6" appeared as a blurred smudge in the check-in screenshot). Fixed by making the bar solid.
+- **The first screenshot run after the restyle stopped with a Node error** partway through. A rerun finished cleanly with all 12 PNGs, and I only kept PNGs from a complete run.
 - **On a 375×812 phone the new dock hid the question** while it was read out. I found it in the headless Chrome check, not in the tests. Fixed as in Decisions above.
 - **Headless Chrome's fake microphone never started** (`getUserMedia` hung in Chrome 156 headless). The screenshot script replaces `getUserMedia` with a quiet synthetic stream in the page, and swaps each recorded answer for a `say` WAV on its way to the runtime. This affects the capture script only, not the app.
 - **Live SE-04 run: an exposure answer became a symptom.** "I started a new hand cream" came back from the model as a symptom, the guard coded it `SE_OTHER_REVIEW`, and it was flagged too. Fixed: exposure answers keep only symptoms they name, with a test.
@@ -223,7 +229,6 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 
 ## Next
 - **Before the demo:** the service, runtime and screen are running from `main` (restarted 2026-11-08). The service owner still has to reset and reseed, and then doctor-web registers both hospital keys again. To use the softer voice, install "Ava (Premium)" (System Settings → Accessibility → Spoken Content → Manage Voices).
-- **Next task:** restyle the screen (branch `patient/feat/modern-look`): coral, rounded shapes, gentle motion, an inline SVG illustration, and the cut-off footer fixed.
 - **Filter misses on the held-out set:** 19 of 185, mostly names. Improve the filter on NEW cases written for that purpose, never on `leakage_held_out.json`; then rerun the held-out set once.
 - **Screen:** show who is answering on every screen (brief), the check-in schedule and reminders (AL-04), and a Spanish strings table. Typing a correction to the summary has no box yet (the runtime already accepts JSON). At 375×812 the question bubble is still partly under the dock while it is read out; the chat scrolls.
 - **Not yet built:** re-checking the receipt hash in the browser; the exact record preview after picking a missing severity; caregiver "summary" (hidden until it is defined and the service delivers it).
