@@ -2,7 +2,7 @@
 
 What the Sentinel service (`apps/service`) actually does today. Maintained by the company owner only; check it before debugging anything that touches the service.
 
-**Last updated:** 2026-11-07 · Session 008 · **contract `2.0`** (payload `schema_version` `"2.0"`; the service accepts only 2.0)
+**Last updated:** 2026-11-08 · Session 010 · **contract `2.1`** (payload `schema_version` `"2.0"`; the service accepts only 2.0 payloads)
 
 ## Contract 2.0 in one paragraph
 
@@ -18,7 +18,8 @@ Records belong to a **hospital or clinic (organization)**, not to one doctor: pa
   - Organizations (all fictional): **Northgate Medical Center** `org_5e1a2b3c` is the care team for Walter and Priya (Dr. Shah attending, **Dr. Patel admin**); **Lakeside Emergency Hospital** `org_8f4d6a2e` is Walter's emergency hospital (**Dr. Okafor admin**). Dr. Rivera `dr_c71e0f9a` is registered but not a member (doctor-change demo).
   - **No keys are seeded**: every doctor and organization key is generated in the doctor's browser.
   - Anna `cg_7e21c9a4` is Walter's caregiver (alerts only). Walter's emergency contacts: 911 and Lakeside.
-  - Historical missed check-in alerts with escalation levels (Priya: levels 1 and 2), each with its delivery records.
+  - Historical missed check-in alerts with escalation levels, each with its delivery records. **Priya missed the last 2 days**, and she consented to one emergency contact (911): when **today's** window closes (13:00–14:00 UTC) without a check-in, the scheduler raises **level 3**, notifying Priya, Northgate and her emergency contact (in-app record).
+  - History runs through yesterday relative to the day you seed. Reseed on demo day.
 - **Company views aggregate real records**, including records sent by the patient runtime.
 
 ## Endpoints
@@ -38,15 +39,15 @@ Records belong to a **hospital or clinic (organization)**, not to one doctor: pa
 | `POST /v1/orgs/{org_id}/emergency-access` | Real | Emergency organizations only; coded reason; logged; notifies caregiver and care team |
 | `GET /v1/caregivers/{id}/alerts` | Real | Includes `escalation_level` and `emergency_access` alerts |
 | `/v1/company/*` | Real | Export includes `reporter` and `input_mode` |
-| Missed check-in scheduler (live escalation) | **Not built yet (next)** | Only seeded history contains missed check-ins |
+| Missed check-in scheduler | **Real** | Runs every 30 s (`SERVICE_SCHEDULER_INTERVAL`; off with `SERVICE_SCHEDULER=off`). Watches demo (non-synthetic) patients only; alert within one interval after a window closes; level = consecutive misses (max 3) |
 
 ## Switch-over plan
 
 | When | Becomes real | What teammates do |
 | --- | --- | --- |
 | H3 | **Done:** SQLite store, seed | — |
-| Now | **Done:** contract 2.0 | Build against 2.0 (briefs updated); there is no 1.x compatibility |
-| Next | Missed check-in scheduler with the 3-level escalation | Doctor and caregiver views see new `missed` alerts within 1 minute |
+| Done | Contract 2.0 | Build against 2.0 (briefs updated); there is no 1.x compatibility |
+| Done | Missed check-in scheduler with the 3-level escalation | Poll `/alerts?since=`: new `missed` alerts appear within one scheduler interval |
 | Then | Integration run on the team hotspot | Run the Scoping Doc 26.15 checklist together |
 
 ## Running it for your app
@@ -61,6 +62,7 @@ SENTINEL_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174,http://loca
 - Browser apps need their origin in `SENTINEL_ALLOWED_ORIGINS`; without it the service sends no CORS headers and browser calls fail.
 - Doctor side, to get test data before the patient runtime exists: as Dr. Patel, register Northgate's care-team key (and grant it to yourself), then run `uv run --project packages/contract-py python scripts/send_demo_envelope.py --alert` from the repo root. Register Lakeside's key as Dr. Okafor to also receive Walter's emergency envelope.
 - Start clean: `scripts/reset_all.sh --seed` (stop the service first; also clear the doctor browser's site data, which holds the keys).
+- **Demo controls** (from `apps/service`): `uv run python -m sentinel_service.demo close-window pt_9c1d2e3f --in 60` makes Priya's window close in about a minute so the level 3 alert fires on cue; `... demo run-scheduler` runs one pass immediately. Walter checks in live today: if his window closes first, he gets a missed alert too, so set his window with `close-window pt_4b82d0c6 --in 3600` before the demo if needed.
 
 ## Reporting a problem
 
