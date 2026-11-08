@@ -44,7 +44,7 @@ The Sentinel service must be reachable for the first check-in, because that is w
 - `POST /checkin/sessions`: refreshes the survey and term list through the egress gate (the cache is kept when offline) and starts a check-in. Returns `{session_id, total}`; 503 if the questions were never downloaded.
 - `GET /checkin/question?index=&ask=`: the question text, from the cached survey.
 - `GET /checkin/question/audio?index=&ask=&slow=`: the question as WAV.
-- `POST /checkin/turn?session_id=&question_id=&ask=`: send the raw audio body; returns `{transcript, symptoms, extraction}`.
+- `POST /checkin/turn?session_id=&question_id=&ask=`: send the raw audio body; returns `{transcript, symptoms, extraction, rating, next}`. `next` is `{action: "reask", ask, text}` or `{action: "next"}`, with `unanswered: true` after 2 re-asks.
 - `GET /checkin/sessions/{id}/summary`: plain words, `needs_severity`, and the exact record that would be shared. Sends nothing.
 - `POST /checkin/sessions/{id}/approve` with body `{"severities": {...}}`: the only route that sends. Returns the receipt: `{status, record_id, destination, method, url, fields_sent, payload_sha256, sent_at, response_code}`.
 
@@ -52,6 +52,7 @@ The Sentinel service must be reachable for the first check-in, because that is w
 ```bash
 cd apps/patient-runtime && uv run pytest -q
 cd ../.. && uv run --project apps/patient-runtime python evals/patient/leakage_eval.py   # PV-01 leakage eval; needs Ollama
+uv run --project apps/patient-runtime python evals/patient/reask_eval.py                # VC-04 re-ask eval (target 16 of 20)
 uv run --project apps/patient-runtime pytest -q evals/patient
 npm test --prefix apps/patient-web
 ```

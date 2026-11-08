@@ -130,6 +130,7 @@ NETWORK_MODULES = {"sentinel_contract.client", "httpx", "requests", "urllib", "u
                    "aiohttp", "socket", "websockets", "huggingface_hub", "ollama"}
 # egress_gate.py is the one path off the device. extract.py may reach only the local model server (Ollama on
 # loopback; extract.py refuses any other host), so it may import the ollama client and nothing else on this list.
+# rating.py reaches the model only through extract.py's client.
 ALLOWED = {"egress_gate.py": NETWORK_MODULES, "extract.py": {"ollama"}}
 
 

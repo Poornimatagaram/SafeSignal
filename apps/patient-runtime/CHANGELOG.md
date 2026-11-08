@@ -2,6 +2,24 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Task A5, answer rating and re-asking (branch `patient/feat/reask`)
+
+### Added
+- `rating.py` (VC-04, VC-06): rates each answer complete, partial, off_topic, rambling or no_answer.
+  - Rules run first and override the local model.
+  - The model only judges what the rules can't, and only through `extract.py`'s loopback client.
+  - For a rambling answer, `relevant_text` holds only the sentences that answer the question, copied from the patient's own words and never written by the model.
+  - If the model fails, the rules decide (`source: rules_fallback`).
+- Re-ask flow (VC-05):
+  - `POST /checkin/turn` now returns `rating` and `next`.
+  - An answer that isn't complete is re-asked with `asks[1]`, then `asks[2]`. After 2 re-asks the question is given up and counted as unanswered.
+  - Ratings are stored in `answer_turn.rating`.
+  - Only the relevant part of a rambling answer is used for symptoms, severity and onset; off-topic and no-answer replies add nothing.
+- Tests: `test_rating.py`, plus re-ask tests in `test_checkin_api.py`; 541 runtime tests in total.
+
+### Changed
+- A question counts as answered only when an answer was rated complete.
+
 ## 2026-11-08: Task A4, egress gate, approve before sharing, receipt (branch `patient/feat/egress-gate`)
 
 ### Added

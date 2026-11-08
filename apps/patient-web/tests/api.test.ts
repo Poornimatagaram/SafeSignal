@@ -29,6 +29,9 @@ const TURN = {
   extraction: 'ok',
 }
 
+/** What an older runtime's turn reads as: a complete answer, then move on. */
+const OLD_RUNTIME_DEFAULTS = { rating: 'complete', next: { action: 'next', unanswered: false } }
+
 function mockFetch(response: Response | (() => Promise<Response>)) {
   return vi.fn<FetchLike>(typeof response === 'function' ? response : async () => response)
 }
@@ -127,7 +130,7 @@ describe('postTurn', () => {
     const recording = new Blob([new Uint8Array(32)], { type: 'audio/webm;codecs=opus' })
     const fetchMock = mockFetch(json(TURN))
     const result = await createRuntimeClient(BASE, fetchMock).postTurn(SID, 'q1', 0, recording)
-    expect(result).toEqual(TURN)
+    expect(result).toEqual({ ...TURN, ...OLD_RUNTIME_DEFAULTS })
     const { url, init } = lastCall(fetchMock)
     expect(url).toBe(`${BASE}/checkin/turn?session_id=${SID}&question_id=q1&ask=0`)
     expect(init.method).toBe('POST')
@@ -153,13 +156,52 @@ describe('postTurn', () => {
   it('accepts symptoms: null when the local model is down', async () => {
     const body = { transcript: 'my nails are cracked', symptoms: null, extraction: 'unavailable' }
     const client = createRuntimeClient(BASE, mockFetch(json(body)))
-    await expect(client.postTurn(SID, 'q1', 0, new Blob(['a'], { type: 'audio/webm' }))).resolves.toEqual(body)
+    await expect(client.postTurn(SID, 'q1', 0, new Blob(['a'], { type: 'audio/webm' }))).resolves.toEqual({
+      ...body,
+      ...OLD_RUNTIME_DEFAULTS,
+    })
   })
 
   it('accepts a symptom without severity', async () => {
     const body = { ...TURN, symptoms: [{ term_code: 'SE_RASH', label: 'Rash', severity: null, onset: null }] }
     const client = createRuntimeClient(BASE, mockFetch(json(body)))
-    await expect(client.postTurn(SID, 'q1', 0, new Blob(['a'], { type: 'audio/webm' }))).resolves.toEqual(body)
+    await expect(client.postTurn(SID, 'q1', 0, new Blob(['a'], { type: 'audio/webm' }))).resolves.toEqual({
+      ...body,
+      ...OLD_RUNTIME_DEFAULTS,
+    })
+  })
+
+  it('reads a re-ask (VC-05): rating and the simpler wording', async () => {
+    const next = { action: 'reask', ask: 1, text: 'Have you felt any different in your body since yesterday?' }
+    const body = { ...TURN, rating: 'rambling', next }
+    const client = createRuntimeClient(BASE, mockFetch(json(body)))
+    const result = await client.postTurn(SID, 'q1', 0, new Blob(['a'], { type: 'audio/webm' }))
+    expect(result.rating).toBe('rambling')
+    expect(result.next).toEqual(next)
+  })
+
+  it('reads "next" with and without unanswered', async () => {
+    for (const [next, unanswered] of [
+      [{ action: 'next', unanswered: true }, true],
+      [{ action: 'next' }, false],
+    ] as const) {
+      const client = createRuntimeClient(BASE, mockFetch(json({ ...TURN, rating: 'no_answer', next })))
+      const result = await client.postTurn(SID, 'q1', 2, new Blob(['a'], { type: 'audio/webm' }))
+      expect(result.rating).toBe('no_answer')
+      expect(result.next).toEqual({ action: 'next', unanswered })
+    }
+  })
+
+  it.each([
+    ['null', { rating: null, next: null }, 'complete'],
+    ['missing', {}, 'complete'],
+    ['unknown', { rating: 'excellent', next: { action: 'dance' } }, 'complete'],
+    ['a re-ask with no wording', { rating: 'partial', next: { action: 'reask', ask: 1 } }, 'partial'],
+  ])('reads %s rating/next as an answer that moves on', async (_name, extra, rating) => {
+    const client = createRuntimeClient(BASE, mockFetch(json({ ...TURN, ...extra })))
+    const result = await client.postTurn(SID, 'q1', 0, new Blob(['a'], { type: 'audio/webm' }))
+    expect(result.rating).toBe(rating)
+    expect(result.next).toEqual({ action: 'next', unanswered: false })
   })
 
   it('never sends an empty recording', async () => {

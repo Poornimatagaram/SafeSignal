@@ -1,0 +1,350 @@
+{
+  "eval": "patient_reask_rating",
+  "requirement": "VC-04 (pass/fail); VC-06 extraction reported",
+  "run_at_utc": "2026-11-08T03:41:12Z",
+  "dataset": "data/patient/reask_cases.json",
+  "dataset_sha256": "cf67dd021c653f2ab954f1f221e7ec994199a6e56791e8bbde3f87d500e6e7e4",
+  "pass_rule": "at least 16 of 20 ratings correct",
+  "pass": true,
+  "totals": {
+    "cases": 20,
+    "ratings_correct": 17,
+    "rating_accuracy": 0.85,
+    "target_correct": 16.0,
+    "errors": 0,
+    "per_rating": {
+      "complete": {
+        "cases": 5,
+        "correct": 5
+      },
+      "partial": {
+        "cases": 4,
+        "correct": 2
+      },
+      "off_topic": {
+        "cases": 3,
+        "correct": 3
+      },
+      "rambling": {
+        "cases": 5,
+        "correct": 5
+      },
+      "no_answer": {
+        "cases": 3,
+        "correct": 2
+      }
+    },
+    "confusion": {
+      "complete": {
+        "complete": 5,
+        "partial": 0,
+        "off_topic": 0,
+        "rambling": 0,
+        "no_answer": 0,
+        "INVALID": 0,
+        "ERROR": 0
+      },
+      "partial": {
+        "complete": 2,
+        "partial": 2,
+        "off_topic": 0,
+        "rambling": 0,
+        "no_answer": 0,
+        "INVALID": 0,
+        "ERROR": 0
+      },
+      "off_topic": {
+        "complete": 0,
+        "partial": 0,
+        "off_topic": 3,
+        "rambling": 0,
+        "no_answer": 0,
+        "INVALID": 0,
+        "ERROR": 0
+      },
+      "rambling": {
+        "complete": 0,
+        "partial": 0,
+        "off_topic": 0,
+        "rambling": 5,
+        "no_answer": 0,
+        "INVALID": 0,
+        "ERROR": 0
+      },
+      "no_answer": {
+        "complete": 0,
+        "partial": 0,
+        "off_topic": 1,
+        "rambling": 0,
+        "no_answer": 2,
+        "INVALID": 0,
+        "ERROR": 0
+      }
+    },
+    "rambling_extraction": {
+      "cases": 5,
+      "pass": 4
+    },
+    "source_mix": {
+      "model": 6,
+      "rules": 14
+    }
+  },
+  "cases": [
+    {
+      "id": "rq_01",
+      "question_id": "q1",
+      "purpose": "wellbeing",
+      "ask": 0,
+      "status": "ok",
+      "expected": "complete",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_02",
+      "question_id": "q2",
+      "purpose": "symptom_screen",
+      "ask": 0,
+      "status": "ok",
+      "expected": "rambling",
+      "got": "rambling",
+      "source": "rules",
+      "rating_pass": true,
+      "extraction": {
+        "relevant_kept": 2,
+        "relevant_expected": 2,
+        "off_topic_kept": 0,
+        "off_topic_listed": 3,
+        "pass": true
+      }
+    },
+    {
+      "id": "rq_03",
+      "question_id": "q3",
+      "purpose": "severity",
+      "ask": 1,
+      "status": "ok",
+      "expected": "partial",
+      "got": "partial",
+      "source": "model",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_04",
+      "question_id": "q4",
+      "purpose": "onset",
+      "ask": 0,
+      "status": "ok",
+      "expected": "complete",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_05",
+      "question_id": "q5",
+      "purpose": "adherence",
+      "ask": 1,
+      "status": "ok",
+      "expected": "partial",
+      "got": "partial",
+      "source": "model",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_06",
+      "question_id": "q6",
+      "purpose": "exposure",
+      "ask": 2,
+      "status": "ok",
+      "expected": "off_topic",
+      "got": "off_topic",
+      "source": "model",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_07",
+      "question_id": "q1",
+      "purpose": "wellbeing",
+      "ask": 1,
+      "status": "ok",
+      "expected": "off_topic",
+      "got": "off_topic",
+      "source": "model",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_08",
+      "question_id": "q1",
+      "purpose": "wellbeing",
+      "ask": 2,
+      "status": "ok",
+      "expected": "no_answer",
+      "got": "no_answer",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_09",
+      "question_id": "q4",
+      "purpose": "onset",
+      "ask": 2,
+      "status": "ok",
+      "expected": "no_answer",
+      "got": "no_answer",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_10",
+      "question_id": "q6",
+      "purpose": "exposure",
+      "ask": 1,
+      "status": "ok",
+      "expected": "no_answer",
+      "got": "off_topic",
+      "source": "model",
+      "rating_pass": false
+    },
+    {
+      "id": "rq_11",
+      "question_id": "q3",
+      "purpose": "severity",
+      "ask": 0,
+      "status": "ok",
+      "expected": "rambling",
+      "got": "rambling",
+      "source": "rules",
+      "rating_pass": true,
+      "extraction": {
+        "relevant_kept": 2,
+        "relevant_expected": 2,
+        "off_topic_kept": 1,
+        "off_topic_listed": 2,
+        "pass": false
+      }
+    },
+    {
+      "id": "rq_12",
+      "question_id": "q4",
+      "purpose": "onset",
+      "ask": 1,
+      "status": "ok",
+      "expected": "rambling",
+      "got": "rambling",
+      "source": "rules",
+      "rating_pass": true,
+      "extraction": {
+        "relevant_kept": 1,
+        "relevant_expected": 1,
+        "off_topic_kept": 0,
+        "off_topic_listed": 2,
+        "pass": true
+      }
+    },
+    {
+      "id": "rq_13",
+      "question_id": "q5",
+      "purpose": "adherence",
+      "ask": 0,
+      "status": "ok",
+      "expected": "rambling",
+      "got": "rambling",
+      "source": "rules",
+      "rating_pass": true,
+      "extraction": {
+        "relevant_kept": 1,
+        "relevant_expected": 1,
+        "off_topic_kept": 0,
+        "off_topic_listed": 2,
+        "pass": true
+      }
+    },
+    {
+      "id": "rq_14",
+      "question_id": "q6",
+      "purpose": "exposure",
+      "ask": 0,
+      "status": "ok",
+      "expected": "rambling",
+      "got": "rambling",
+      "source": "rules",
+      "rating_pass": true,
+      "extraction": {
+        "relevant_kept": 1,
+        "relevant_expected": 1,
+        "off_topic_kept": 0,
+        "off_topic_listed": 3,
+        "pass": true
+      }
+    },
+    {
+      "id": "rq_15",
+      "question_id": "q2",
+      "purpose": "symptom_screen",
+      "ask": 2,
+      "status": "ok",
+      "expected": "complete",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_16",
+      "question_id": "q3",
+      "purpose": "severity",
+      "ask": 2,
+      "status": "ok",
+      "expected": "complete",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_17",
+      "question_id": "q5",
+      "purpose": "adherence",
+      "ask": 2,
+      "status": "ok",
+      "expected": "complete",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": true
+    },
+    {
+      "id": "rq_18",
+      "question_id": "q2",
+      "purpose": "symptom_screen",
+      "ask": 1,
+      "status": "ok",
+      "expected": "partial",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": false
+    },
+    {
+      "id": "rq_19",
+      "question_id": "q4",
+      "purpose": "onset",
+      "ask": 1,
+      "status": "ok",
+      "expected": "partial",
+      "got": "complete",
+      "source": "rules",
+      "rating_pass": false
+    },
+    {
+      "id": "rq_20",
+      "question_id": "q5",
+      "purpose": "adherence",
+      "ask": 2,
+      "status": "ok",
+      "expected": "off_topic",
+      "got": "off_topic",
+      "source": "model",
+      "rating_pass": true
+    }
+  ]
+}

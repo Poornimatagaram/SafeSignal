@@ -22,10 +22,10 @@ from fastapi.responses import Response
 
 from sentinel_contract import SCHEMA_VERSION, ContractError
 
-from . import egress_gate, extract, stt, tts
+from . import egress_gate, extract, rating, stt, tts
 from . import filter as pii_filter
-from .checkin import (DESTINATION_LABEL, AlreadyShared, CheckinStore, NeedsSeverity, NoTerms, UnknownQuestion,
-                      UnknownSession)
+from .checkin import (DESTINATION_LABEL, SYMPTOM_PURPOSES, AlreadyShared, CheckinStore, NeedsSeverity,
+                      NoTerms, UnknownQuestion, UnknownSession)
 from .config import Settings
 from .db import connect, init_db
 from .survey import NoSurvey, latest_survey, term_labels
@@ -37,7 +37,8 @@ SESSION_ID = r"^ses_[a-f0-9]{8}$"
 
 def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber | None = None,
                speaker: tts.Speaker | None = None, redactor: Callable[[str], Any] | None = None,
-               extractor: Callable[[str], list] | None = None, sentinel_client: Any = None) -> FastAPI:
+               extractor: Callable[[str], list] | None = None, rater: Callable[..., Any] | None = None,
+               sentinel_client: Any = None) -> FastAPI:
     """Pass fakes for the speech, filter, model and service client in tests; by default they load lazily."""
     settings = settings or Settings.from_env()
     store = CheckinStore(settings.db_path, settings.patient_ref)
@@ -68,6 +69,7 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
     get_speaker = (lambda: speaker) if speaker else tts.get_speaker
     redact = redactor or pii_filter.redact
     extract_symptoms = extractor or extract.extract_symptoms
+    rate_answer = rater or rating.rate_answer
 
     @app.get("/health")
     def health() -> dict:
@@ -139,7 +141,7 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
         if int(request.headers.get("content-length") or 0) > stt.MAX_AUDIO_BYTES:
             raise HTTPException(413, "recording too large")
         _session_errors(store.check_open, session_id)
-        wants_symptoms = _session_errors(store.asks_about_symptoms, session_id, question_id)
+        question = _session_errors(store.question, session_id, question_id)
         audio = bytearray()
         async for chunk in request.stream():
             audio += chunk
@@ -157,22 +159,26 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
         finally:
             audio.clear()  # PV-03: the recording is never written to disk and is dropped here
 
-        extraction, filtered_text, found = "ok", "", []
+        extraction, answer_text, found, rated = "ok", "", [], "no_answer"
         if transcript.strip():
-            filtered = await run_in_threadpool(redact, transcript)  # PV-01: before the model sees anything
-            filtered_text = filtered.text
-            if wants_symptoms:  # severity, onset and adherence answers use rules only, never the model
+            filtered = await run_in_threadpool(redact, transcript)  # PV-01: before any model sees anything
+            r = await run_in_threadpool(rate_answer, question, ask, filtered.text)  # VC-04
+            rated = r.rating
+            # VC-06: from a rambling reply keep only the sentences that answer the question
+            answer_text = r.relevant_text if rated == "rambling" else filtered.text
+            if question["purpose"] in SYMPTOM_PURPOSES and rated not in ("off_topic", "no_answer") and answer_text:
                 try:
-                    found = await run_in_threadpool(extract_symptoms, filtered_text)
+                    found = await run_in_threadpool(extract_symptoms, answer_text)
                 except extract.ExtractionError:
                     extraction, found = "unavailable", None
         accepted = await run_in_threadpool(_session_errors, store.record_turn, session_id, question_id, ask,
-                                           transcript, filtered_text, found)
+                                           transcript, answer_text, found, rated)
         labels = term_labels()
         symptoms = None if accepted is None else [
             {"term_code": s.term_code, "label": labels.get(s.term_code, s.term_code), "severity": s.severity,
              "onset": s.onset} for s in accepted]
-        return {"transcript": transcript, "symptoms": symptoms, "extraction": extraction}
+        return {"transcript": transcript, "symptoms": symptoms, "extraction": extraction, "rating": rated,
+                "next": store.next_step(question, ask, rated)}  # VC-05
 
     @app.get("/checkin/sessions/{session_id}/summary")
     def checkin_summary(session_id: str = Path(..., pattern=SESSION_ID)) -> dict:

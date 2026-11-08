@@ -18,11 +18,29 @@ export interface NotedSymptom {
   onset?: string | null
 }
 
+export const TURN_RATINGS = ['complete', 'partial', 'off_topic', 'rambling', 'no_answer'] as const
+/** How well the answer fit the question (VC-05). */
+export type TurnRating = (typeof TURN_RATINGS)[number]
+
+/** Most re-asks of one question: ask 1 = simpler wording, ask 2 = choices or yes/no. */
+export const MAX_ASK = 2
+
+/** What the runtime wants next (VC-05). */
+export type TurnNext =
+  /** Ask the SAME question again with `ask`, worded as `text`. */
+  | { action: 'reask'; ask: number; text: string }
+  /** Move on to the next question; `unanswered` when it was given up after the re-asks. */
+  | { action: 'next'; unanswered: boolean }
+
 export interface TurnResult {
   transcript: string
   /** null when the local model is down (`extraction` is then "unavailable"). */
   symptoms: NotedSymptom[] | null
   extraction: string
+  /** Always set: a missing or null rating (older runtimes) reads as "complete". */
+  rating: TurnRating
+  /** Always set: a missing or unreadable `next` (older runtimes) reads as "move on". */
+  next: TurnNext
 }
 
 /** One check-in, opened by "Start check-in". Every answer and the approval belong to it. */
@@ -231,7 +249,7 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
       if (!res.ok) throw failure(res, { 404: 'session-not-found', 409: 'already-shared' })
       const body = await readJson(res)
       if (!isTurnResult(body)) throw new RuntimeError('bad-response', res.status)
-      return body
+      return { ...body, rating: readRating(body.rating), next: readNext(body.next) }
     },
 
     async getSummary(sessionId) {
@@ -348,7 +366,27 @@ function isEgressReceipt(value: unknown): value is EgressReceipt {
   )
 }
 
-function isTurnResult(value: unknown): value is TurnResult {
+/** A missing, null or unknown rating reads as "complete" (older runtimes send none). */
+export function readRating(value: unknown): TurnRating {
+  return TURN_RATINGS.find((rating) => rating === value) ?? 'complete'
+}
+
+/** A missing or unreadable `next` reads as "move on", so a turn is never lost over it. */
+export function readNext(value: unknown): TurnNext {
+  if (
+    isRecord(value) &&
+    value.action === 'reask' &&
+    typeof value.ask === 'number' &&
+    Number.isInteger(value.ask) &&
+    typeof value.text === 'string' &&
+    value.text.trim() !== ''
+  ) {
+    return { action: 'reask', ask: value.ask, text: value.text }
+  }
+  return { action: 'next', unanswered: isRecord(value) && value.action === 'next' && value.unanswered === true }
+}
+
+function isTurnResult(value: unknown): value is Omit<TurnResult, 'rating' | 'next'> & { rating?: unknown; next?: unknown } {
   return (
     isRecord(value) &&
     typeof value.transcript === 'string' &&

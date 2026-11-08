@@ -97,12 +97,24 @@ class FakePipeline:
         return found
 
 
+def fake_rate(question, ask, text):
+    """Stand-in for rating.rate_answer: 'pardon' = no answer, 'weather' = off topic, 'A | B' = rambling with B relevant."""
+    if not text.strip() or "pardon" in text:
+        return SimpleNamespace(rating="no_answer", relevant_text="", source="rules")
+    if "|" in text:
+        return SimpleNamespace(rating="rambling", relevant_text=text.split("|", 1)[1].strip(), source="rules")
+    if "weather" in text:
+        return SimpleNamespace(rating="off_topic", relevant_text="", source="rules")
+    return SimpleNamespace(rating="complete", relevant_text=text, source="rules")
+
+
 def make_client(tmp_path, **kw):
     pipeline = kw.get("pipeline", FakePipeline())
     sentinel = kw.get("sentinel", FakeClient())
     app = create_app(Settings(db_path=tmp_path / "patient.db", patient_ref=WALTER),
                      transcriber=EchoTranscriber(), speaker=kw.get("speaker", FakeSpeaker()),
-                     redactor=pipeline.redact, extractor=pipeline.extract, sentinel_client=sentinel)
+                     redactor=pipeline.redact, extractor=pipeline.extract, rater=kw.get("rater", fake_rate),
+                     sentinel_client=sentinel)
     return TestClient(app, client=kw.get("client", LOCAL)), pipeline, sentinel
 
 
@@ -177,7 +189,7 @@ def test_turn_filters_before_the_model_and_stores_the_answer_locally(tmp_path):
         r = answer(c, sid, "q1", "Walter here, I have an itchy rash")
     assert r.json() == {"transcript": "Walter here, I have an itchy rash",
                         "symptoms": [{"term_code": "SE_RASH", "label": "Rash", "severity": None, "onset": "unknown"}],
-                        "extraction": "ok"}
+                        "extraction": "ok", "rating": "complete", "next": {"action": "next"}}
     assert pipeline.model_saw == ["[NAME] here, I have an itchy rash"]
     turns = rows(tmp_path, "SELECT question_id, attempt, prompt_text, transcript_text FROM answer_turn")
     assert turns == [{"question_id": "q1", "attempt": 0, "prompt_text": "How have you been feeling since yesterday?",
@@ -188,7 +200,8 @@ def test_turn_keeps_transcript_when_the_model_is_down(tmp_path):
     c, _, _ = make_client(tmp_path, pipeline=FakePipeline(error=extract.ExtractionUnavailable("down")))
     with c:
         body = answer(c, start(c), "q2", "a rash").json()
-    assert body == {"transcript": "a rash", "symptoms": None, "extraction": "unavailable"}
+    assert body == {"transcript": "a rash", "symptoms": None, "extraction": "unavailable", "rating": "complete",
+                    "next": {"action": "next"}}
 
 
 def test_turn_rejects_bad_requests(tmp_path):
@@ -325,3 +338,46 @@ def test_cors_preflight_from_patient_web(tmp_path):
         r = c.options("/checkin/sessions", headers={"Origin": "http://127.0.0.1:5173",
                                                     "Access-Control-Request-Method": "POST"})
     assert r.status_code == 200 and r.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
+# ---------- rating and re-asking (VC-04 to VC-06) ----------
+
+def test_unclear_answers_are_reasked_twice_then_given_up(tmp_path):
+    c, pipeline, _ = make_client(tmp_path)
+    with c:
+        sid = start(c)
+        first = answer(c, sid, "q2", "pardon?").json()
+        second = answer(c, sid, "q2", "pardon, what?", ask=1).json()
+        third = answer(c, sid, "q2", "the weather is lovely", ask=2).json()
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+    assert (first["rating"], first["next"]) == ("no_answer", {"action": "reask", "ask": 1,
+                                                              "text": "Any new rash, spots or nail changes?"})
+    assert second["next"] == {"action": "reask", "ask": 2, "text": "Is it a rash, a nail problem, or nothing new?"}
+    assert (third["rating"], third["next"]) == ("off_topic", {"action": "next", "unanswered": True})
+    assert pipeline.model_saw == []  # nothing in those answers was worth extracting
+    assert summary["unanswered_questions"] == 6 and summary["items"] == []
+    assert [r["rating"] for r in rows(tmp_path, "SELECT rating FROM answer_turn ORDER BY turn_id")] == [
+        "no_answer", "no_answer", "off_topic"]
+
+
+def test_rambling_answer_keeps_only_the_part_that_answers(tmp_path):
+    c, pipeline, _ = make_client(tmp_path)
+    with c:
+        sid = start(c)
+        body = answer(c, sid, "q2", "Walter here, my grandson visited and we had cake | I have a rash").json()
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+    assert body["rating"] == "rambling" and body["next"] == {"action": "reask", "ask": 1,
+                                                             "text": "Any new rash, spots or nail changes?"}
+    assert pipeline.model_saw == ["I have a rash"]  # the model never saw the cake story
+    assert [i["term_code"] for i in summary["items"]] == ["SE_RASH"]
+
+
+def test_complete_answer_moves_on_and_a_reasked_complete_answer_counts(tmp_path):
+    c, _, _ = make_client(tmp_path)
+    with c:
+        sid = start(c)
+        assert answer(c, sid, "q1", "pardon?").json()["next"]["action"] == "reask"
+        done = answer(c, sid, "q1", "I feel fine", ask=1).json()
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+    assert (done["rating"], done["next"]) == ("complete", {"action": "next"})
+    assert summary["unanswered_questions"] == 5

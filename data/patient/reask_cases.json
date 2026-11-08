@@ -1,0 +1,192 @@
+{
+  "schema_version": "2.0",
+  "source": "hand-written synthetic cases, no real people",
+  "survey": "schema/examples/survey_config.valid.json",
+  "cases": [
+    {
+      "id": "rq_01",
+      "question_id": "q1",
+      "ask": 0,
+      "style": "plain",
+      "answer": "I've been feeling a bit tired since yesterday, but otherwise alright.",
+      "expected_rating": "complete",
+      "expected_relevant": ["a bit tired"]
+    },
+    {
+      "id": "rq_02",
+      "question_id": "q2",
+      "ask": 0,
+      "style": "slow",
+      "answer": "Well now... my grandson Tobias Wendemuth came by on Sunday... he's studying to be an engineer, you know, very clever boy... we watched the football together... oh, and I've got a rash on my arms... and my nails are cracked... the team lost again, of course.",
+      "expected_rating": "rambling",
+      "expected_relevant": ["a rash on my arms", "my nails are cracked"],
+      "expected_not_relevant": ["studying to be an engineer", "watched the football", "the team lost again"]
+    },
+    {
+      "id": "rq_03",
+      "question_id": "q3",
+      "ask": 1,
+      "style": "slow",
+      "answer": "Well... it comes and goes... I suppose.",
+      "expected_rating": "partial",
+      "expected_relevant": ["it comes and goes"]
+    },
+    {
+      "id": "rq_04",
+      "question_id": "q4",
+      "ask": 0,
+      "style": "slow",
+      "answer": "Well... let me see now... it started... three days ago, I believe.",
+      "expected_rating": "complete",
+      "expected_relevant": ["three days ago"]
+    },
+    {
+      "id": "rq_05",
+      "question_id": "q5",
+      "ask": 1,
+      "style": "plain",
+      "answer": "I had some of them, I think, the white ones. Not sure about the others.",
+      "expected_rating": "partial",
+      "expected_relevant": ["I had some of them"]
+    },
+    {
+      "id": "rq_06",
+      "question_id": "q6",
+      "ask": 2,
+      "style": "plain",
+      "answer": "Is the post here yet? I'm waiting for a letter from my brother Edmund Ravelstock.",
+      "expected_rating": "off_topic",
+      "expected_relevant": []
+    },
+    {
+      "id": "rq_07",
+      "question_id": "q1",
+      "ask": 1,
+      "style": "slow",
+      "answer": "My neighbour Gertrude Pollinger has a new cat... a grey one... with white paws.",
+      "expected_rating": "off_topic",
+      "expected_relevant": []
+    },
+    {
+      "id": "rq_08",
+      "question_id": "q1",
+      "ask": 2,
+      "style": "slow",
+      "answer": "Um... hmm... well...",
+      "expected_rating": "no_answer",
+      "expected_relevant": []
+    },
+    {
+      "id": "rq_09",
+      "question_id": "q4",
+      "ask": 2,
+      "style": "plain",
+      "answer": "",
+      "expected_rating": "no_answer",
+      "expected_relevant": []
+    },
+    {
+      "id": "rq_10",
+      "question_id": "q6",
+      "ask": 1,
+      "style": "plain",
+      "answer": "Sorry, what was that? I didn't catch it.",
+      "expected_rating": "no_answer",
+      "expected_relevant": []
+    },
+    {
+      "id": "rq_11",
+      "question_id": "q3",
+      "ask": 0,
+      "style": "slow",
+      "answer": "Oh... it's a long story... my late wife Hildegard always said I made a fuss about nothing... she used to grow tomatoes in the back garden, the best in the street... anyway... the rash is quite bad, it keeps me up at night... and the tomatoes this year were terrible, all split.",
+      "expected_rating": "rambling",
+      "expected_relevant": ["the rash is quite bad", "keeps me up at night"],
+      "expected_not_relevant": ["grow tomatoes", "the tomatoes this year were terrible"]
+    },
+    {
+      "id": "rq_12",
+      "question_id": "q4",
+      "ask": 1,
+      "style": "slow",
+      "answer": "Well... I was at my sister Margarethe's for her birthday party... there was a lovely cake, chocolate with cherries... and the nails, I think they started cracking two days ago... she's turning eighty-eight, can you believe it.",
+      "expected_rating": "rambling",
+      "expected_relevant": ["started cracking two days ago"],
+      "expected_not_relevant": ["chocolate with cherries", "turning eighty-eight"]
+    },
+    {
+      "id": "rq_13",
+      "question_id": "q5",
+      "ask": 0,
+      "style": "slow",
+      "answer": "The pharmacy delivery man was late again... he always comes on his bicycle, rain or shine... my dog barked at him the whole time... but yes, I took my medicine after breakfast... he's a nice young man really.",
+      "expected_rating": "rambling",
+      "expected_relevant": ["I took my medicine after breakfast"],
+      "expected_not_relevant": ["comes on his bicycle", "my dog barked at him"]
+    },
+    {
+      "id": "rq_14",
+      "question_id": "q6",
+      "ask": 0,
+      "style": "plain",
+      "answer": "So this week was hectic, my daughter moved house and we spent two days packing boxes and driving back and forth, and the traffic was awful, honestly the worst I've seen, but to answer you, I started a new hand cream on Monday, a lavender one, and otherwise the same food as always, and then on Wednesday the removal van broke down.",
+      "expected_rating": "rambling",
+      "expected_relevant": ["started a new hand cream"],
+      "expected_not_relevant": ["packing boxes", "the traffic was awful", "the removal van broke down"]
+    },
+    {
+      "id": "rq_15",
+      "question_id": "q2",
+      "ask": 2,
+      "style": "plain",
+      "answer": "Nothing new.",
+      "expected_rating": "complete",
+      "expected_relevant": ["Nothing new"]
+    },
+    {
+      "id": "rq_16",
+      "question_id": "q3",
+      "ask": 2,
+      "style": "plain",
+      "answer": "Yes. I couldn't do up my buttons this morning.",
+      "expected_rating": "complete",
+      "expected_relevant": ["couldn't do up my buttons"]
+    },
+    {
+      "id": "rq_17",
+      "question_id": "q5",
+      "ask": 2,
+      "style": "plain",
+      "answer": "Yes.",
+      "expected_rating": "complete",
+      "expected_relevant": ["Yes"]
+    },
+    {
+      "id": "rq_18",
+      "question_id": "q2",
+      "ask": 1,
+      "style": "plain",
+      "answer": "Something on my skin, maybe. I'm not sure what it is.",
+      "expected_rating": "partial",
+      "expected_relevant": ["Something on my skin"]
+    },
+    {
+      "id": "rq_19",
+      "question_id": "q4",
+      "ask": 1,
+      "style": "plain",
+      "answer": "Not today. Before that, I think.",
+      "expected_rating": "partial",
+      "expected_relevant": ["Before that"]
+    },
+    {
+      "id": "rq_20",
+      "question_id": "q5",
+      "ask": 2,
+      "style": "slow",
+      "answer": "The television's been broken... since Thursday, you know... nothing on but static.",
+      "expected_rating": "off_topic",
+      "expected_relevant": []
+    }
+  ]
+}
