@@ -2,6 +2,11 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 015: company-side overview (branch `company/docs/company-side-overview`)
+
+### Added
+- `docs/company/company-side-overview.md`: what the company side does across the product and what is left.
+
 ## 2026-11-08 — Session 012: real-data seed, contract 2.2 (branch `company/feat/real-data-seed`)
 
 ### Added
