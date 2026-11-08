@@ -12,7 +12,7 @@
 - `schema/`: the contract (tables, payloads, enums, terms, demo IDs, API). Never invent fields, tables or endpoints outside it.
 - `docs/DECISIONS.md`: overrides `docs/scoping-document.md` wherever they differ.
 - `docs/INTEGRATION_STATUS.md`: what the service does today.
-- `README.md` and `CODEOWNERS`: layout, ownership, ports, names.
+- `README.md`: layout, ports, names. `CODEOWNERS`: ownership.
 
 ## Rules for everyone
 - Edit only the folders your owner owns (`CODEOWNERS`). `schema/` and `packages/` are read-only outside the company side; request changes from the company owner.
