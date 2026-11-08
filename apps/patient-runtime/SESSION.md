@@ -3,6 +3,8 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08 (overnight), one README for the patient feature, with screenshots** (branch `patient/docs/patient-readme`). An agent captured the screenshots by driving the real app in headless Chrome at 390px. I wrote the README.
+- **2026-11-08 (overnight), mobile-first patient screen merged as PR #39** (`363f12c`).
 - **2026-11-08 (overnight), mobile-first patient screen** (branch `patient/feat/mobile-ui`, built by an agent in its own worktree).
   - **Tests:** 294 web tests pass; the build is clean and `npm audit` reports 0 vulnerabilities.
   - **Phone-width check:** I measured the home screen myself in headless Chrome emulating a 390px phone: no horizontal overflow. A plain `--window-size=390` screenshot looks clipped, but that comes from the headless window, not the page.
@@ -172,6 +174,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **Headless Chrome's fake microphone never started** (`getUserMedia` hung in Chrome 156 headless). The screenshot script replaces `getUserMedia` with a quiet synthetic stream in the page, and swaps each recorded answer for a `say` WAV on its way to the runtime. This affects the capture script only, not the app.
 - **Live SE-04 run: an exposure answer became a symptom.** "I started a new hand cream" came back from the model as a symptom, the guard coded it `SE_OTHER_REVIEW`, and it was flagged too. Fixed: exposure answers keep only symptoms they name, with a test.
 - **Two A7 commit subjects and the PR title were over 72 characters,** and CI's ownership and commit-message check failed on the title. I rebuilt the two unpushed commits with shorter subjects, using a backup branch, cherry-pick and no force-push, and shortened the PR title. A rerun of the failed job reuses the old event, so it still saw the old title. Closing and reopening the PR started a fresh run, which passed. Lesson: count subjects and PR titles before committing (`scripts/check_commits.sh`), and keep PR titles to 72 characters too.
 - **My first A7 live-check script crashed after the envelope part.** It read the preview record of a check-in that was still waiting for a severity choice, where the record is null by design. I reran the consent part on its own; the runtime was fine.

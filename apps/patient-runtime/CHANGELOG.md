@@ -2,6 +2,19 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: One README for the patient feature (branch `patient/docs/patient-readme`)
+
+### Changed
+- `README.md` now covers the runtime and the patient screen:
+  - What this is, a hero screenshot and screenshots of every screen.
+  - A Mermaid flow (voice → speech-to-text → filter → extract → approval → egress gate → company record and sealed copies).
+  - A "never leaves the device" box and a quick start.
+  - Collapsible sections for architecture, privacy guarantees, tests and eval results, and the file map.
+- `apps/patient-web/README.md` is now one line linking here.
+
+### Added
+- `apps/patient-web/docs/screenshots/`: screenshots of every patient screen, taken in headless Chrome at phone size (390px at 2x) with synthetic Walter data, plus `capture.mjs`, which reruns the whole capture (its own runtime on 8011, a temporary database and build, `say` WAVs in place of the microphone).
+
 ## 2026-11-08: Demo guide (branch `patient/docs/demo-guide`)
 
 ### Added
