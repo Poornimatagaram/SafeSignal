@@ -99,6 +99,16 @@ export function answerErrorMessage(error: unknown): string {
   return SOMETHING_WRONG
 }
 
+/** For problems sending a typed answer. The typed words stay in the box so nothing has to be typed again. */
+export function typedAnswerErrorMessage(error: unknown): string {
+  if (error instanceof RuntimeError) {
+    if (error.kind === 'empty-text') return E.typed.empty
+    if (error.kind === 'text-too-long') return E.typed.tooLong
+    if (error.kind === 'speech-unavailable') return E.typed.unavailable
+  }
+  return answerErrorMessage(error)
+}
+
 /** For a change to the summary that did not go through (VC-08). */
 export function correctionErrorMessage(error: unknown): string {
   if (error instanceof RuntimeError) {

@@ -2,7 +2,8 @@
 // own bubble, and a re-ask, "say that again" or "slower" is a bubble too. The thread holds ONE question only: it is
 // cleared when the question changes, so Walter's words stay in memory no longer than before (src/App.tsx).
 import { useEffect, useRef } from 'react'
-import type { TurnResult, VoiceCommand } from './api.ts'
+import type { Question, TurnResult, VoiceCommand } from './api.ts'
+import { afterTurn, type AfterTurn } from './questionFlow.ts'
 import { symptomText } from './messages.ts'
 import { S } from './strings.ts'
 import { HelperAvatar } from './Icons.tsx'
@@ -139,5 +140,21 @@ export function bubblesAfterTurn(
       return [...out, { kind: 'move-on' }]
     case 'answered':
       return words ? [...out, { kind: 'noted', reply: result }] : [{ kind: 'no-words' }]
+  }
+}
+
+/**
+ * What one answer leads to, spoken or typed (the same path for both): the next step and the bubbles to add.
+ * A typed answer shows as Walter's own bubble exactly like a spoken one.
+ */
+export function turnOutcome(question: Question, result: TurnResult): { step: AfterTurn; bubbles: Bubble[] } {
+  const step = afterTurn(question, result)
+  switch (step.kind) {
+    case 'reask':
+      return { step, bubbles: bubblesAfterTurn(result, step.kind, { text: step.question.text }) }
+    case 'command':
+      return { step, bubbles: bubblesAfterTurn(result, step.kind, { text: step.question.text, command: step.command }) }
+    default:
+      return { step, bubbles: bubblesAfterTurn(result, step.kind) }
   }
 }

@@ -2,6 +2,11 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Typing, Mute and Stop
+- Added: "Or type your answer" under the talk button: a big text box (1000 characters, no spell check, because some browsers send the words to an online spell checker) with **Send** beside it. Typed answers go through the runtime's `POST /checkin/turn/text` and are handled by the same code as spoken ones. Typed "repeat" and "slower" work as commands. The box is cleared after a successful send and kept if sending fails; it is never saved in the browser.
+- Added: a sound bar at the top of every screen. **Mute/Unmute** works at any time: it stops sound at once and blocks the questions, re-asks and summary from playing. The choice is remembered for this browser session only (`sessionStorage`, `soundSetting.ts`). **Stop** sits beside it only while a question or the summary is playing. Tapping Repeat or Slower while muted shows "Sound is off. Tap Unmute to hear it."
+- Fixed: "Hear it again" is now **Repeat**, and button words never wrap, so the voice buttons stay on one line at 375px.
+
 ## 2026-11-08: Docs and screenshots
 - Changed: `README.md` is now one line linking to the patient README in `apps/patient-runtime/README.md`.
 - Added: `docs/screenshots/` with every screen at phone size, and `capture.mjs` to retake them.

@@ -50,6 +50,24 @@ export function SpeakerIcon({ className }: IconProps) {
   )
 }
 
+export function SpeakerOffIcon({ className }: IconProps) {
+  return (
+    <svg {...common} className={className}>
+      <path d="M4 9v6h4l5 4V5L8 9H4z" />
+      <path d="M17 9l5 6M22 9l-5 6" />
+    </svg>
+  )
+}
+
+export function SendIcon({ className }: IconProps) {
+  return (
+    <svg {...common} className={className}>
+      <path d="M3 11.5L21 3l-6.5 18-3-7.5L3 11.5z" />
+      <path d="M11.5 13.5L21 3" />
+    </svg>
+  )
+}
+
 export function SlowIcon({ className }: IconProps) {
   return (
     <svg {...common} className={className}>
