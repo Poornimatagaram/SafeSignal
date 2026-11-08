@@ -11,6 +11,8 @@
 
 Structure inside this folder is up to its owner.
 
+**Demo day:** start commands, ports, settings and the morning checklist are in [`DEMO.md`](DEMO.md).
+
 ## Setup (once, needs the network; check-ins never do)
 ```bash
 cd apps/patient-runtime && uv sync                     # includes the spaCy model used by the filter
