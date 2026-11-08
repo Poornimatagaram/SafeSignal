@@ -19,7 +19,10 @@ import {
   type SetupFlow,
   type SetupState,
 } from './setupFlow.ts'
+import { S } from './strings.ts'
 import { AlertIcon, CheckIcon, HourglassIcon } from './Icons.tsx'
+
+const W = S.setup
 
 /** The flow's taps, as the view uses them. */
 export type SetupActions = Pick<
@@ -47,12 +50,7 @@ export interface SetupViewProps {
   headingRef?: RefObject<HTMLHeadingElement | null>
 }
 
-const STEP_TITLES = {
-  care: 'My care team',
-  caregiver: 'My caregiver',
-  emergency: 'Emergencies',
-  review: 'Check and send',
-} as const
+const STEP_TITLES = W.stepTitles
 
 export function SetupScreen({ flow, onClose }: { flow: SetupFlow; onClose: () => void }) {
   const state = useSyncExternalStore(flow.subscribe, flow.getState)
@@ -76,24 +74,24 @@ export function SetupView({ state, actions, onClose, headingRef }: SetupViewProp
     return (
       <main className="screen">
         <h1 className="title" tabIndex={-1} ref={headingRef}>
-          Set up who I share with
+          {W.title}
         </h1>
         {state.phase === 'loading' ? (
           <p className="status" role="status" aria-live="polite">
             <HourglassIcon className="icon" />
-            <span>Getting your choices…</span>
+            <span>{W.loading}</span>
           </p>
         ) : (
           <div className="alert" role="alert">
             <AlertIcon className="icon" />
             <p>{consentLoadMessage(state.failure?.error)}</p>
             <button type="button" className="button button--primary" onClick={() => void actions.load()}>
-              Try again
+              {W.tryAgain}
             </button>
           </div>
         )}
         <button type="button" className="button button--secondary button--huge" onClick={onClose}>
-          Back
+          {W.back}
         </button>
       </main>
     )
@@ -112,12 +110,12 @@ export function SetupView({ state, actions, onClose, headingRef }: SetupViewProp
             <CheckIcon className="icon icon--large" />
           )}
           <h1 className="title receipt-head__title" tabIndex={-1} ref={headingRef}>
-            Your choices are saved
+            {W.saved}
           </h1>
         </div>
         <p className="lead">{consentReceiptText(state.receipt)}</p>
         <button type="button" className="button button--primary button--huge" onClick={onClose}>
-          Back to who I share with
+          {W.backToConsent}
         </button>
       </main>
     )
@@ -129,9 +127,7 @@ export function SetupView({ state, actions, onClose, headingRef }: SetupViewProp
 
   return (
     <main className="screen">
-      <p className="progress">
-        Step {stepNumber} of {SETUP_STEPS.length}
-      </p>
+      <p className="progress">{W.step(stepNumber, SETUP_STEPS.length)}</p>
       <h1 className="title" tabIndex={-1} ref={headingRef}>
         {STEP_TITLES[step]}
       </h1>
@@ -162,7 +158,7 @@ export function SetupView({ state, actions, onClose, headingRef }: SetupViewProp
         {saving && (
           <>
             <HourglassIcon className="icon" />
-            <span>Saving and sending…</span>
+            <span>{W.savingStatus}</span>
           </>
         )}
       </p>
@@ -174,11 +170,11 @@ export function SetupView({ state, actions, onClose, headingRef }: SetupViewProp
           aria-disabled={saving}
           onClick={() => !saving && void actions.save()}
         >
-          {saving ? 'Sending…' : 'Save and send'}
+          {saving ? W.sending : W.saveAndSend}
         </button>
       ) : (
         <button type="button" className="button button--primary button--huge" onClick={actions.next}>
-          Next
+          {W.next}
         </button>
       )}
       <button
@@ -187,7 +183,7 @@ export function SetupView({ state, actions, onClose, headingRef }: SetupViewProp
         aria-disabled={saving}
         onClick={() => !saving && (stepNumber === 1 ? onClose() : actions.back())}
       >
-        {stepNumber === 1 ? 'Cancel' : 'Back'}
+        {stepNumber === 1 ? W.cancel : W.back}
       </button>
     </main>
   )
@@ -231,7 +227,7 @@ function Choices<T extends string | null>(props: {
           )
         })}
       </div>
-      <p className="choice__picked">{picked.length > 0 ? `You chose: ${picked.join(', ')}` : 'Not chosen yet'}</p>
+      <p className="choice__picked">{picked.length > 0 ? W.youChose(picked.join(', ')) : W.notChosen}</p>
     </fieldset>
   )
 }
@@ -253,7 +249,7 @@ function Switch(props: { label: string; on: boolean; means: string; id: string; 
           <span className="switch__track">
             <span className="switch__thumb" />
           </span>
-          <span className="switch__word">{props.on ? 'On' : 'Off'}</span>
+          <span className="switch__word">{props.on ? S.consent.on : S.consent.off}</span>
         </span>
       </button>
       <p id={`${props.id}-means`} className="switch__means">
@@ -267,12 +263,12 @@ function CareStep({ draft, options, actions }: StepProps) {
   const words = SWITCH_WORDS.share_care_team
   return (
     <>
-      <p className="lead">Your care team is the hospital or clinic that looks after you.</p>
+      <p className="lead">{W.care.lead}</p>
       <Choices
-        question="Which hospital or clinic looks after you?"
+        question={W.care.question}
         choices={[
           ...options.organizations.map((org) => ({ value: org.org_id as string | null, label: org.display_name })),
-          { value: null, label: 'None' },
+          { value: null, label: W.none },
         ]}
         chosen={draft.care_org_id}
         onChoose={actions.chooseCareTeam}
@@ -294,12 +290,12 @@ function CaregiverStep({ draft, options, actions }: StepProps) {
   const words = SWITCH_WORDS.share_caregiver
   return (
     <>
-      <p className="lead">A caregiver is someone who helps look after you, like a family member.</p>
+      <p className="lead">{W.caregiver.lead}</p>
       <Choices
-        question="Who is your caregiver?"
+        question={W.caregiver.question}
         choices={[
           ...options.caregivers.map((c) => ({ value: c.caregiver_id as string | null, label: c.display_name })),
-          { value: null, label: 'None' },
+          { value: null, label: W.none },
         ]}
         chosen={draft.caregiver_id}
         onChoose={actions.chooseCaregiver}
@@ -315,7 +311,7 @@ function CaregiverStep({ draft, options, actions }: StepProps) {
       )}
       {draft.caregiver_id !== null && draft.share_caregiver && (
         // For now a caregiver gets alerts only; the "summary" detail level is not offered.
-        <p className="switch__means">{CAREGIVER_DETAIL_WORDS.alerts_only}: your caregiver is told when you report a severe problem.</p>
+        <p className="switch__means">{W.caregiver.alertsOnly(CAREGIVER_DETAIL_WORDS.alerts_only)}</p>
       )}
     </>
   )
@@ -327,24 +323,19 @@ function EmergencyStep({ draft, options, actions }: StepProps) {
   return (
     <>
       <Choices
-        question="Let an emergency hospital see my history in an emergency?"
+        question={W.emergency.question}
         choices={[
-          { value: 'yes', label: 'Yes' },
-          { value: 'no', label: 'No' },
+          { value: 'yes', label: W.emergency.yes },
+          { value: 'no', label: W.emergency.no },
         ]}
         chosen={draft.emergency_consent ? 'yes' : 'no'}
         onChoose={(value) => actions.change({ emergency_consent: value === 'yes' })}
-        hint={
-          <p>
-            If yes, they can open it only in an emergency, and every time is logged. If no, nothing about emergencies
-            is kept or sent.
-          </p>
-        }
+        hint={<p>{W.emergency.hint}</p>}
       />
       {draft.emergency_consent && (
         <>
           <Choices
-            question={`Which hospitals? Choose up to ${MAX_EMERGENCY_HOSPITALS}.`}
+            question={W.emergency.hospitals(MAX_EMERGENCY_HOSPITALS)}
             choices={hospitals.map((org) => ({
               value: org.org_id,
               label: org.display_name,
@@ -352,13 +343,13 @@ function EmergencyStep({ draft, options, actions }: StepProps) {
             }))}
             chosen={draft.emergency_org_ids}
             onChoose={actions.toggleEmergencyHospital}
-            hint={draft.care_org_id !== null ? <p>Your care team is not in this list: it already has your check-ins.</p> : null}
+            hint={draft.care_org_id !== null ? <p>{W.emergency.careNotListed}</p> : null}
           />
           <section className="contacts" aria-labelledby="contacts-heading">
             <h2 id="contacts-heading" className="subtitle">
-              Who to call in an emergency
+              {W.emergency.contactsHeading}
             </h2>
-            <p>Up to {MAX_CONTACTS}. The first one is called first.</p>
+            <p>{W.emergency.contactsLead(MAX_CONTACTS)}</p>
             {draft.emergency_contacts.map((contact, i) => (
               <ContactEditor
                 key={i}
@@ -371,7 +362,7 @@ function EmergencyStep({ draft, options, actions }: StepProps) {
             ))}
             {draft.emergency_contacts.length < MAX_CONTACTS && (
               <button type="button" className="button button--secondary button--huge" onClick={actions.addContact}>
-                Add a contact
+                {W.emergency.addContact}
               </button>
             )}
           </section>
@@ -395,27 +386,27 @@ function ContactEditor(props: {
   return (
     <div className="contact" role="group" aria-labelledby={`${id}-title`}>
       <h3 id={`${id}-title`} className="subtitle subtitle--small">
-        Contact {index + 1}
+        {W.contact.title(index + 1)}
       </h3>
       <Choices
-        question="Who is it?"
+        question={W.contact.who}
         choices={CONTACT_TYPES.map((type) => ({ value: type, label: CONTACT_TYPE_WORDS[type] }))}
         chosen={contact.contact_type}
         onChoose={(contact_type) => set({ contact_type })}
       />
       {contact.contact_type === 'hospital' && hospitals.length > 0 && (
         <Choices
-          question="Which hospital? (you can skip this)"
+          question={W.contact.whichHospital}
           choices={[
             ...hospitals.map((org) => ({ value: org.org_id as string | null, label: org.display_name })),
-            { value: null, label: 'Not listed' },
+            { value: null, label: W.contact.notListed },
           ]}
           chosen={contact.org_id}
           onChoose={(org_id) => set({ org_id })}
         />
       )}
       <div className="field">
-        <label htmlFor={`${id}-phone`}>Phone number</label>
+        <label htmlFor={`${id}-phone`}>{W.contact.phone}</label>
         <input
           id={`${id}-phone`}
           className="input"
@@ -425,10 +416,10 @@ function ContactEditor(props: {
           value={contact.phone}
           onChange={(event) => set({ phone: event.target.value })}
         />
-        <p className="note">For example +1 555 010 0199, or 911.</p>
+        <p className="note">{W.contact.phoneHint}</p>
       </div>
       <div className="field">
-        <label htmlFor={`${id}-label`}>A name for it (you can skip this)</label>
+        <label htmlFor={`${id}-label`}>{W.contact.label}</label>
         <input
           id={`${id}-label`}
           className="input"
@@ -438,21 +429,21 @@ function ContactEditor(props: {
           value={contact.label}
           onChange={(event) => set({ label: event.target.value })}
         />
-        <p className="note">This name stays on this computer. It is never sent.</p>
+        <p className="note">{W.contact.labelHint}</p>
       </div>
       <div className="contact__actions">
         {index > 0 && (
           <button type="button" className="button button--secondary" onClick={() => actions.moveContact(index, -1)}>
-            Call earlier
+            {W.contact.earlier}
           </button>
         )}
         {index < count - 1 && (
           <button type="button" className="button button--secondary" onClick={() => actions.moveContact(index, 1)}>
-            Call later
+            {W.contact.later}
           </button>
         )}
         <button type="button" className="button button--secondary" onClick={() => actions.removeContact(index)}>
-          Remove contact {index + 1}
+          {W.contact.remove(index + 1)}
         </button>
       </div>
     </div>
@@ -462,7 +453,7 @@ function ContactEditor(props: {
 function ReviewStep({ draft, options, actions, saving }: StepProps & { saving: boolean }) {
   return (
     <>
-      <p className="lead">Please check your choices. Nothing is sent until you tap Save and send.</p>
+      <p className="lead">{W.review.lead}</p>
       {reviewSections(draft, options).map((section) => (
         <section key={section.step} className="review" aria-labelledby={`review-${section.step}`}>
           <h2 id={`review-${section.step}`} className="subtitle">
@@ -477,13 +468,13 @@ function ReviewStep({ draft, options, actions, saving }: StepProps & { saving: b
             aria-disabled={saving}
             onClick={() => !saving && actions.goTo(section.step)}
           >
-            Change {section.title.toLowerCase()}
+            {W.review.change(section.title)}
           </button>
         </section>
       ))}
       <section className="share-box" aria-labelledby="review-sent">
         <h2 id="review-sent" className="subtitle">
-          What will be sent
+          {W.review.whatSentHeading}
         </h2>
         {whatIsSentLines(draft).map((line) => (
           <p key={line}>{line}</p>

@@ -51,7 +51,12 @@ import {
   SEVERITY_WORDS,
   sharedPartsText,
 } from './summaryText.ts'
-import { AlertIcon, CheckIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
+import { S } from './strings.ts'
+import { AlertIcon, BackIcon, CheckIcon, HourglassIcon, MicIcon, ShareIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
+
+const W = S.summary
+const B = S.summary.box
+const R = S.receipt
 
 type HeadingRef = RefObject<HTMLHeadingElement | null>
 
@@ -195,9 +200,11 @@ export function ShareView(props: ShareViewProps) {
     case 'load-failed':
       return <LoadingPage {...props} />
     case 'receipt':
-      return state.receipt ? <ReceiptPage receipt={state.receipt} headingRef={headingRef} /> : null
+      return state.receipt ? (
+        <ReceiptPage receipt={state.receipt} headingRef={headingRef} onHome={props.onRestart} />
+      ) : null
     case 'not-shared':
-      return <NotSharedPage onBack={props.onBack} headingRef={headingRef} />
+      return <NotSharedPage onBack={props.onBack} onHome={props.onRestart} headingRef={headingRef} />
     default:
       return state.summary ? <SummaryPage {...props} summary={state.summary} /> : null
   }
@@ -208,15 +215,15 @@ function LoadingPage({ state, headingRef, onRetryLoad, onRestart, onNotNow }: Sh
   const failed = state.phase === 'load-failed'
   return (
     <main className="screen">
-      <p className="progress">End of check-in</p>
+      <p className="progress">{W.progress}</p>
       <h1 className="title" tabIndex={-1} ref={headingRef}>
-        Your summary
+        {W.loadingTitle}
       </h1>
       <p className="status" role="status" aria-live="polite">
         {!failed && (
           <>
             <HourglassIcon className="icon" />
-            <span>Putting your summary together…</span>
+            <span>{W.putting}</span>
           </>
         )}
       </p>
@@ -227,16 +234,16 @@ function LoadingPage({ state, headingRef, onRetryLoad, onRestart, onNotNow }: Sh
             <p>{summaryErrorMessage(error)}</p>
             {needsRestart(error) ? (
               <button type="button" className="button button--primary" onClick={onRestart}>
-                Start again
+                {W.startAgain}
               </button>
             ) : (
               <button type="button" className="button button--primary" onClick={onRetryLoad}>
-                Try again
+                {W.tryAgain}
               </button>
             )}
           </div>
           <button type="button" className="button button--secondary not-now" onClick={onNotNow}>
-            Not now
+            {W.notNow}
           </button>
         </>
       )}
@@ -256,11 +263,11 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
 
   return (
     <main className="screen">
-      <p className="progress">End of check-in</p>
+      <p className="progress">{W.progress}</p>
       <h1 className="title" tabIndex={-1} ref={headingRef}>
-        Your summary
+        {W.title}
       </h1>
-      {summary.shared && <p className="note">You have already shared this check-in.</p>}
+      {summary.shared && <p className="note">{W.alreadyShared}</p>}
 
       {summary.spoken && (
         <div className="voice-controls">
@@ -270,7 +277,7 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
             aria-disabled={sending}
             onClick={() => !sending && (props.onHear ?? noop)(false)}
           >
-            <SpeakerIcon className="icon" /> Hear it again
+            <SpeakerIcon className="icon" /> {W.hearAgain}
           </button>
           <button
             type="button"
@@ -278,15 +285,15 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
             aria-disabled={sending}
             onClick={() => !sending && (props.onHear ?? noop)(true)}
           >
-            <SlowIcon className="icon" /> Slower
+            <SlowIcon className="icon" /> {W.slower}
           </button>
         </div>
       )}
       {state.voiceFailure && <p className="note">{summaryVoiceMessage(state.voiceFailure.error)}</p>}
 
-      <section className="summary" aria-labelledby="told-heading">
+      <section className="summary card" aria-labelledby="told-heading">
         <h2 id="told-heading" className="subtitle">
-          What you told me
+          {W.toldHeading}
         </h2>
         {summary.items.length === 0 ? (
           <p className="lead">{NOTHING_TO_REPORT}</p>
@@ -315,11 +322,7 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
           />
         ))}
         {summary.unanswered_questions > 0 && (
-          <p>
-            {summary.unanswered_questions === 1
-              ? '1 question had no answer. That is fine.'
-              : `${summary.unanswered_questions} questions had no answer. That is fine.`}
-          </p>
+          <p>{W.unanswered(summary.unanswered_questions)}</p>
         )}
       </section>
 
@@ -330,7 +333,7 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
           aria-disabled={sending}
           onClick={() => !sending && (props.onOpenCorrection ?? noop)()}
         >
-          Change one answer
+          {W.changeOne}
         </button>
       )}
       {canCorrect(state) && correcting && <CorrectionPanel {...props} summary={summary} />}
@@ -349,7 +352,7 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
           <p>{shareErrorMessage(error)}</p>
           {needsRestart(error) && (
             <button type="button" className="button button--primary" onClick={onRestart}>
-              Start again
+              {W.startAgain}
             </button>
           )}
         </div>
@@ -359,10 +362,10 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
         {sending ? (
           <>
             <HourglassIcon className="icon" />
-            <span>Sharing…</span>
+            <span>{W.sharing}</span>
           </>
         ) : missing.length > 0 ? (
-          <span>Choose how bad each problem is, then tap Share this.</span>
+          <span>{W.chooseHint}</span>
         ) : null}
       </p>
 
@@ -374,7 +377,8 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
         aria-describedby="share-hint"
         onClick={() => enabled && !state.correction.sending && onShare()}
       >
-        {sending ? 'Sharing…' : 'Share this'}
+        <ShareIcon className="icon" />
+        <span>{sending ? W.sharing : W.share}</span>
       </button>
       <button
         type="button"
@@ -382,7 +386,7 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
         aria-disabled={sending}
         onClick={() => !sending && onNotNow()}
       >
-        Not now
+        {W.notNow}
       </button>
     </main>
   )
@@ -403,16 +407,16 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
       aria-disabled={sending || sayTalk !== 'idle'}
       onClick={() => !sending && sayTalk === 'idle' && (props.onCloseCorrection ?? noop)()}
     >
-      Keep it as it is
+      {W.keep}
     </button>
   )
 
   return (
     <section className="correction" aria-labelledby="change-heading">
       <h2 id="change-heading" className="subtitle">
-        Change one answer
+        {W.changeOne}
       </h2>
-      <p>You can change one thing before sharing.</p>
+      <p>{W.canChangeOne}</p>
 
       {step === 'menu' && (
         <div className="correction__choices">
@@ -421,7 +425,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
             className="button button--primary button--huge"
             onClick={() => (props.onCorrectionMode ?? noop)('say')}
           >
-            <MicIcon className="icon" /> Say the change
+            <MicIcon className="icon" /> {W.sayChange}
           </button>
           {summary.items.length > 0 && (
             <button
@@ -429,7 +433,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
               className="button button--secondary button--huge"
               onClick={() => (props.onCorrectionMode ?? noop)('tap')}
             >
-              Tap to change
+              {W.tapChange}
             </button>
           )}
         </div>
@@ -437,7 +441,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
 
       {step === 'say' && (
         <>
-          <p>For example: “The rash is mild”, or “I don't have a headache”.</p>
+          <p>{W.sayExample}</p>
           <button
             type="button"
             className={`button talk talk--${sending ? 'sending' : sayTalk}`}
@@ -447,22 +451,22 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
             {sending ? (
               <>
                 <HourglassIcon className="icon icon--large" />
-                <span>Changing it…</span>
+                <span>{W.changing}</span>
               </>
             ) : sayTalk === 'listening' ? (
               <>
                 <StopIcon className="icon icon--large" />
-                <span>Listening… tap when you're done</span>
+                <span>{S.checkin.talk.listening}</span>
               </>
             ) : sayTalk === 'starting' ? (
               <>
                 <MicIcon className="icon icon--large" />
-                <span>Getting ready…</span>
+                <span>{S.checkin.talk.starting}</span>
               </>
             ) : (
               <>
                 <MicIcon className="icon icon--large" />
-                <span>Tap and say the change</span>
+                <span>{W.tapAndSay}</span>
               </>
             )}
           </button>
@@ -473,7 +477,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
               aria-disabled={sending || sayTalk !== 'idle'}
               onClick={() => !sending && sayTalk === 'idle' && (props.onCorrectionMode ?? noop)('tap')}
             >
-              Tap to change instead
+              {W.tapInstead}
             </button>
           )}
         </>
@@ -481,7 +485,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
 
       {step === 'pick' && (
         <fieldset className="choice">
-          <legend className="choice__question">Which one do you want to change?</legend>
+          <legend className="choice__question">{W.whichOne}</legend>
           <div className="choice__buttons choice__buttons--column">
             {summary.items.map((it, i) => (
               <button
@@ -516,7 +520,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
             </div>
           </fieldset>
           <fieldset className="choice">
-            <legend className="choice__question">When did it start?</legend>
+            <legend className="choice__question">{W.whenStart}</legend>
             <div className="choice__buttons choice__buttons--column">
               {ONSETS.map((onset) => (
                 <button
@@ -537,7 +541,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
             aria-disabled={sending}
             onClick={() => !sending && correct({ term_code: item.term_code, remove: true })}
           >
-            I don't have this
+            {W.dontHave}
           </button>
         </>
       )}
@@ -546,7 +550,7 @@ function CorrectionPanel(props: ShareViewProps & { summary: CheckinSummary }) {
         {sending && (
           <>
             <HourglassIcon className="icon" />
-            <span>Changing your summary…</span>
+            <span>{W.changingSummary}</span>
           </>
         )}
       </p>
@@ -572,7 +576,7 @@ function Item(props: {
   return (
     <li className="item">
       <p className="item__name">
-        <strong>{item.label}</strong> <span className="tag">For review</span>
+        <strong>{item.label}</strong> <span className="tag">{W.forReview}</span>
       </p>
       {needsSeverity ? (
         <SeverityChoice
@@ -583,7 +587,7 @@ function Item(props: {
           onChoose={props.onChoose}
         />
       ) : (
-        <p>How bad: {severityText(item.severity)}</p>
+        <p>{W.howBad(severityText(item.severity))}</p>
       )}
       <p>{onsetSentence(item.onset)}</p>
       {item.possible_link && <p className="item__flag">{POSSIBLE_LINK_TEXT}</p>}
@@ -621,7 +625,7 @@ function SeverityChoice(props: {
           )
         })}
       </div>
-      <p className="choice__picked">{chosen ? `You chose: ${SEVERITY_WORDS[chosen]}` : 'Not chosen yet'}</p>
+      <p className="choice__picked">{chosen ? W.youChose(SEVERITY_WORDS[chosen]) : W.notChosen}</p>
     </fieldset>
   )
 }
@@ -630,17 +634,17 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
   const [showExact, setShowExact] = useState(false)
   const { share } = summary
   return (
-    <section className="share-box" aria-labelledby="share-heading">
+    <section className="share-box card" aria-labelledby="share-heading">
       <h2 id="share-heading" className="subtitle">
-        What will be shared
+        {B.heading}
       </h2>
       <p>
-        <strong>Who gets it:</strong> {share.destination}
+        <strong>{B.whoGetsIt}</strong> {share.destination}
       </p>
       <p>
-        <strong>Only coded answers:</strong> no name, no words you said, no recording.
+        <strong>{B.onlyCoded}</strong> {B.onlyCodedRest}
       </p>
-      {summary.items.length === 0 && <p>It tells them you had no new problems.</p>}
+      {summary.items.length === 0 && <p>{B.noProblems}</p>}
       <ul className="parts">
         {sharedPartsText(share.fields).map((text) => (
           <li key={text}>{text}</li>
@@ -648,14 +652,14 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
       </ul>
       <section className="care-box" aria-labelledby="care-heading">
         <h3 id="care-heading" className="subtitle subtitle--small">
-          Your doctor
+          {B.yourDoctor}
         </h3>
         {share.care ? (
           <>
             <p>
               <strong>{CARE_TEAM_SEALED}</strong>
             </p>
-            <p>Inside the sealed copy:</p>
+            <p>{B.insideSealed}</p>
             <ul className="parts">
               {careTeamPartsText(share.care.fields).map((text) => (
                 <li key={text}>{text}</li>
@@ -674,38 +678,35 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
         aria-controls="exact-record"
         onClick={() => setShowExact((shown) => !shown)}
       >
-        {showExact ? 'Hide exactly what is sent' : 'Show exactly what is sent'}
+        {showExact ? B.hideExact : B.showExact}
       </button>
       {showExact && (
         <div className="exact" id="exact-record">
           <p>
-            <strong>Sent with:</strong> <span className="mono">{`${share.method} ${share.url}`}</span>
+            <strong>{B.sentWith}</strong> <span className="mono">{`${share.method} ${share.url}`}</span>
           </p>
-          <h3 className="subtitle subtitle--small">Field names ({share.fields.length})</h3>
+          <h3 className="subtitle subtitle--small">{B.fieldNames(share.fields.length)}</h3>
           <ul className="mono fields">
             {share.fields.map((field) => (
               <li key={field}>{field}</li>
             ))}
           </ul>
-          <h3 className="subtitle subtitle--small">The record</h3>
+          <h3 className="subtitle subtitle--small">{B.theRecord}</h3>
           {share.record ? (
             <pre className="mono record">{JSON.stringify(share.record, null, 2)}</pre>
           ) : (
-            <p>
-              The record is completed with your answers to “How bad” when you tap Share this. The receipt then shows
-              its fingerprint.
-            </p>
+            <p>{B.recordLater}</p>
           )}
           {share.care && (
             <>
-              <h3 className="subtitle subtitle--small">Sealed copy for your care team</h3>
+              <h3 className="subtitle subtitle--small">{B.sealedForCare}</h3>
               <p>
-                <strong>Sent with:</strong> <span className="mono">{`${share.care.method} ${share.care.url}`}</span>
+                <strong>{B.sentWith}</strong> <span className="mono">{`${share.care.method} ${share.care.url}`}</span>
               </p>
               <p>
-                <strong>Locked for:</strong> <span className="mono">{share.care.org_id}</span>
+                <strong>{B.lockedFor}</strong> <span className="mono">{share.care.org_id}</span>
               </p>
-              <h3 className="subtitle subtitle--small">Inside the sealed copy ({share.care.fields.length})</h3>
+              <h3 className="subtitle subtitle--small">{B.insideSealedCount(share.care.fields.length)}</h3>
               <ul className="mono fields">
                 {share.care.fields.map((field) => (
                   <li key={field}>{field}</li>
@@ -719,17 +720,27 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
   )
 }
 
-function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingRef?: HeadingRef }) {
+function ReceiptPage({
+  receipt,
+  headingRef,
+  onHome,
+}: {
+  receipt: EgressReceipt
+  headingRef?: HeadingRef
+  onHome: () => void
+}) {
   const { status } = receipt
-  const time =
-    status === 'queued'
-      ? { label: 'Sent at', value: 'Not yet: it is waiting for the internet' }
-      : receipt.sent_at
-        ? { label: status === 'failed' ? 'Tried at' : 'Sent at', value: formatLocalTime(receipt.sent_at) }
-        : null
+  const queued = status === 'queued'
+  const time = queued
+    ? { label: R.sentAt, value: R.notYet }
+    : receipt.sent_at
+      ? { label: status === 'failed' ? R.triedAt : R.sentAt, value: formatLocalTime(receipt.sent_at) }
+      : null
+  // The fields in plain words (the same wording as the summary); the exact field names follow below.
+  const plainParts = status === 'failed' ? [] : sharedPartsText(receipt.fields_sent)
   return (
     <main className="screen">
-      <p className="progress">Receipt</p>
+      <p className="progress">{R.progress}</p>
       {/* Updated in place when a queued record is sent: announced, with no page change. */}
       <div className={`receipt-head receipt-head--${status}`} aria-live="polite">
         {status === 'sent' ? (
@@ -744,9 +755,7 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
         </h1>
       </div>
       {status === 'queued' && <p className="lead">{QUEUED_EXPLANATION}</p>}
-      {status === 'failed' && (
-        <p className="lead">The safety team's service did not accept this record. Please tell your helper.</p>
-      )}
+      {status === 'failed' && <p className="lead">{R.failedLead}</p>}
       {receipt.alert && (
         <p className="lead alert-line" aria-live="polite">
           {alertText(receipt.alert)}
@@ -758,9 +767,25 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
         </p>
       ))}
 
+      {plainParts.length > 0 && (
+        <section className="card receipt-card" aria-labelledby="receipt-plain">
+          <h2 id="receipt-plain" className="subtitle subtitle--small">
+            {R.plainHeading(queued)}
+          </h2>
+          <ul className="parts parts--checked">
+            {plainParts.map((text) => (
+              <li key={text}>
+                <CheckIcon className="icon" />
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <dl className="receipt">
         <div>
-          <dt>{status === 'queued' ? 'Will be sent to' : 'Sent to'}</dt>
+          <dt>{queued ? R.willBeSentTo : R.sentTo}</dt>
           <dd>{receipt.destination}</dd>
         </div>
         {time && (
@@ -770,17 +795,17 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
           </div>
         )}
         <div>
-          <dt>Record number</dt>
+          <dt>{R.recordNumber}</dt>
           <dd className="mono">{receipt.record_id}</dd>
         </div>
         {status === 'failed' && receipt.response_code !== null && (
           <div>
-            <dt>Answer from the service</dt>
-            <dd>Code {receipt.response_code}</dd>
+            <dt>{R.serviceAnswer}</dt>
+            <dd>{R.code(receipt.response_code)}</dd>
           </div>
         )}
         <div>
-          <dt>{status === 'queued' ? 'What will be sent' : 'What was sent'}: coded answers only</dt>
+          <dt>{R.whatSent(queued)}</dt>
           <dd>
             <ul className="mono fields">
               {receipt.fields_sent.map((field) => (
@@ -790,13 +815,10 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
           </dd>
         </div>
         <div>
-          <dt>Fingerprint</dt>
+          <dt>{R.fingerprint}</dt>
           <dd>
             <p className="mono fingerprint">{receipt.payload_sha256}</p>
-            <p className="note">
-              This code is a fingerprint of exactly what {status === 'queued' ? 'will be' : 'was'} sent. It matches the
-              entry in this computer's network log.
-            </p>
+            <p className="note">{R.fingerprintNote(queued)}</p>
           </dd>
         </div>
       </dl>
@@ -807,8 +829,12 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
 
       <div className="closing">
         <CheckIcon className="icon icon--large" />
-        <p className="closing__text">Thank you, that's all for today.</p>
+        <p className="closing__text">{R.thanks}</p>
       </div>
+      <button type="button" className="button button--primary button--huge" onClick={onHome}>
+        <BackIcon className="icon" />
+        <span>{R.home}</span>
+      </button>
     </main>
   )
 }
@@ -825,22 +851,20 @@ function SealedCopyReceipt({ copy, index }: { copy: CareEnvelope; index: number 
       </h2>
       <dl className="receipt">
         <div>
-          <dt>Sent to</dt>
+          <dt>{R.sentTo}</dt>
           <dd>{sealedCopyDestination(copy)}</dd>
         </div>
         {receipt.sent_at && (
           <div>
-            <dt>Sent at</dt>
+            <dt>{R.sentAt}</dt>
             <dd>{formatLocalTime(receipt.sent_at)}</dd>
           </div>
         )}
         <div>
-          <dt>Fingerprint</dt>
+          <dt>{R.fingerprint}</dt>
           <dd>
             <p className="mono fingerprint">{receipt.payload_sha256}</p>
-            <p className="note">
-              This code is a fingerprint of the sealed copy. It matches the entry in this computer's network log.
-            </p>
+            <p className="note">{R.sealedFingerprintNote}</p>
           </dd>
         </div>
       </dl>
@@ -848,15 +872,27 @@ function SealedCopyReceipt({ copy, index }: { copy: CareEnvelope; index: number 
   )
 }
 
-function NotSharedPage({ onBack, headingRef }: { onBack: () => void; headingRef?: HeadingRef }) {
+function NotSharedPage({
+  onBack,
+  onHome,
+  headingRef,
+}: {
+  onBack: () => void
+  onHome: () => void
+  headingRef?: HeadingRef
+}) {
   return (
     <main className="screen screen--done">
       <h1 className="title" tabIndex={-1} ref={headingRef}>
-        Nothing was shared.
+        {R.nothingShared}
       </h1>
-      <p className="lead">Thank you, that's all for today.</p>
-      <button type="button" className="button button--secondary" onClick={onBack}>
-        Go back to my summary
+      <p className="lead">{R.thanks}</p>
+      <button type="button" className="button button--secondary button--huge" onClick={onBack}>
+        {R.backToSummary}
+      </button>
+      <button type="button" className="button button--primary button--huge" onClick={onHome}>
+        <BackIcon className="icon" />
+        <span>{R.home}</span>
       </button>
     </main>
   )

@@ -73,8 +73,11 @@ describe('possible link (SE-04)', () => {
     )
     expect(POSSIBLE_LINK_TEXT).not.toMatch(CAUSE_WORDS)
     expect(textOf(render(FLAGGED))).not.toMatch(CAUSE_WORDS)
-    const source = readFileSync(fileURLToPath(new URL('../src/summaryText.ts', import.meta.url)), 'utf8')
-    expect(source.match(/'[^']*review[^']*'/g)?.join(' ')).not.toMatch(CAUSE_WORDS)
+    // The words live in src/strings.ts: no line there that mentions review may state a cause.
+    const source = readFileSync(fileURLToPath(new URL('../src/strings.ts', import.meta.url)), 'utf8')
+    const reviewLines = source.split('\n').filter((line) => /review/i.test(line) && !line.trim().startsWith('//'))
+    expect(reviewLines.length).toBeGreaterThan(3)
+    expect(reviewLines.join(' ')).not.toMatch(CAUSE_WORDS)
   })
 
   it('the plain field list says the symptom flag is whether it is marked for review', () => {

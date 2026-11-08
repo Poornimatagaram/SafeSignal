@@ -2,6 +2,22 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Mobile-first redesign
+- Changed: the whole screen is now phone-sized and chat-style.
+  - At most 430px wide and centred, drawn inside a phone frame on wide screens for the demo.
+  - Warm colours of our own (burnt orange, deep teal, cream) at WCAG AA contrast.
+  - Our own inline illustrations and icons, always with words. No external fonts or images.
+- Home: "Good morning/afternoon/evening, Walter" and one giant "Start today's check-in". "Who I share with" and "What this computer sent" are labelled buttons lower down; there are no hidden menus. The name comes from `VITE_PATIENT_DISPLAY_NAME` (default Walter) and is shown on screen only.
+- Check-in as a chat:
+  - Each question is a helper bubble (36px), spoken as before. Walter's words are his own bubble.
+  - "Let me ask that more simply", "That's okay, let's move on", "Saying it again" and "Saying it more slowly" are bubbles too.
+  - One talk button is pinned at the bottom, with "Hear it again" and "Slower". The chat holds only the current question.
+- Summary card "Here's what you're sharing", then a receipt with "Shared ✓" and the fields in plain words. "Back to the start" is new on the receipt and on "Nothing was shared".
+- Language-ready: every screen string is in `src/strings.ts` (`STRINGS.en`). To add Spanish, add a second table with the same keys. A test fails on any text written straight into a component.
+- Installable: `manifest.webmanifest`, icons (SVG, 192 and 512 PNG), and a small offline-shell service worker (built pages only). The worker caches only this page's own static files and never touches the runtime, non-GET requests or anything with answers. The security policy adds `manifest-src 'self'` and `worker-src 'self'`.
+- All earlier behaviour is kept.
+- Tests: `tests/strings.test.ts`, `tests/mobileUi.test.tsx`; 294 in total.
+
 ## 2026-11-08: Possible link "for review" (SE-04)
 - Added: under a flagged summary item, "Marked for review: this started within a week of something new you began. That does not mean one caused the other." The line is in a dashed box, so it doesn't rely on colour. A test checks that no wording for it names a cause.
 - Tests: `tests/possibleLink.test.tsx`; 251 in total.

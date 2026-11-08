@@ -14,6 +14,9 @@ function contentSecurityPolicy(runtimeOrigin: string): Plugin {
     "img-src 'self' data:",
     'media-src blob:',
     `connect-src 'self' ${runtimeOrigin}`,
+    // The install manifest and the offline-shell worker (public/sw.js) come from this page's own origin only.
+    "manifest-src 'self'",
+    "worker-src 'self'",
     "base-uri 'none'",
     "form-action 'none'",
     "object-src 'none'",

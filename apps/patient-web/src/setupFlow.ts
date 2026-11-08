@@ -1,6 +1,7 @@
 // "Set up who I share with" (Contract 2.0 consent setup): care team, caregiver and emergencies, then a review and
 // ONE "Save and send". A small state machine with no React in it; the runtime sends the update through its egress
 // gate. Contact names typed here go to the local runtime as `label`, which keeps them on this device only.
+import { S } from './strings.ts'
 import {
   type CaregiverDetail,
   type ConsentOptions,
@@ -14,6 +15,9 @@ import {
 export const MAX_EMERGENCY_HOSPITALS = 3
 export const MAX_CONTACTS = 3
 export const MAX_LABEL = 40
+
+const PR = S.setup.problems
+const RV = S.setup.review
 
 export type SetupStep = 'care' | 'caregiver' | 'emergency' | 'review'
 export const SETUP_STEPS: readonly SetupStep[] = ['care', 'caregiver', 'emergency', 'review']
@@ -114,33 +118,31 @@ export function stepProblems(draft: SetupDraft, step: SetupStep, options: Consen
   const orgIds = new Set(options.organizations.map((o) => o.org_id))
   if (step === 'care' || step === 'review') {
     if (draft.share_care_team && draft.care_org_id === null) {
-      problems.push('Choose your hospital or clinic, or turn off sharing with your doctor.')
+      problems.push(PR.chooseCare)
     }
   }
   if (step === 'caregiver' || step === 'review') {
     if (draft.share_caregiver && draft.caregiver_id === null) {
-      problems.push('Choose your caregiver, or turn off sharing with your caregiver.')
+      problems.push(PR.chooseCaregiver)
     }
   }
   if ((step === 'emergency' || step === 'review') && draft.emergency_consent) {
     if (draft.care_org_id !== null && draft.emergency_org_ids.includes(draft.care_org_id)) {
-      problems.push('Your care team cannot also be your emergency hospital. Please choose another hospital.')
+      problems.push(PR.careIsEmergency)
     }
     if (draft.emergency_org_ids.length > MAX_EMERGENCY_HOSPITALS) {
-      problems.push(`Choose at most ${MAX_EMERGENCY_HOSPITALS} emergency hospitals.`)
+      problems.push(PR.tooManyHospitals(MAX_EMERGENCY_HOSPITALS))
     }
-    if (draft.emergency_contacts.length > MAX_CONTACTS) problems.push(`You can have at most ${MAX_CONTACTS} contacts.`)
+    if (draft.emergency_contacts.length > MAX_CONTACTS) problems.push(PR.tooManyContacts(MAX_CONTACTS))
     draft.emergency_contacts.forEach((contact, i) => {
-      const which = `Contact ${i + 1}`
+      const which = PR.contact(i + 1)
       if (normalizePhone(contact.phone) === '') {
-        problems.push(`${which}: please type a phone number.`)
+        problems.push(PR.noPhone(which))
       } else if (!isValidPhone(contact.phone)) {
-        problems.push(
-          `${which}: the phone number should start with + and the country code (for example +1 555 010 0199), or be an emergency number like 911.`,
-        )
+        problems.push(PR.badPhone(which))
       }
-      if (contact.label.trim().length > MAX_LABEL) problems.push(`${which}: the name can be at most ${MAX_LABEL} letters.`)
-      if (contact.org_id !== null && !orgIds.has(contact.org_id)) problems.push(`${which}: please choose the hospital again.`)
+      if (contact.label.trim().length > MAX_LABEL) problems.push(PR.labelTooLong(which, MAX_LABEL))
+      if (contact.org_id !== null && !orgIds.has(contact.org_id)) problems.push(PR.hospitalAgain(which))
     })
   }
   return problems
@@ -353,16 +355,9 @@ export function createSetupFlow(client: RuntimeClient): SetupFlow {
   }
 }
 
-export const CONTACT_TYPE_WORDS: Record<ContactType, string> = {
-  emergency_service: 'An emergency number (like 911)',
-  hospital: 'A hospital',
-  person: 'A person',
-}
+export const CONTACT_TYPE_WORDS: Record<ContactType, string> = S.setup.contact.types
 
-export const CAREGIVER_DETAIL_WORDS: Record<CaregiverDetail, string> = {
-  alerts_only: 'Only alerts',
-  summary: 'Alerts and a summary',
-}
+export const CAREGIVER_DETAIL_WORDS: Record<CaregiverDetail, string> = S.setup.caregiverDetail
 
 export interface ReviewSection {
   step: Exclude<SetupStep, 'review'>
@@ -371,7 +366,7 @@ export interface ReviewSection {
 }
 
 const nameOf = (list: ReadonlyArray<{ id: string; name: string }>, id: string | null) =>
-  list.find((item) => item.id === id)?.name ?? 'the one you chose'
+  list.find((item) => item.id === id)?.name ?? RV.chosenFallback
 
 /** The review page in plain words: what was chosen and exactly what will be sent. */
 export function reviewSections(draft: SetupDraft, options: ConsentOptions): ReviewSection[] {
@@ -381,41 +376,39 @@ export function reviewSections(draft: SetupDraft, options: ConsentOptions): Revi
 
   const care =
     request.care_org_id === null
-      ? ['No care team. Your doctor gets nothing.']
+      ? [RV.noCare]
       : request.share_care_team
-        ? [`${nameOf(orgs, request.care_org_id)}: your check-ins go to them sealed, so only they can read them.`]
-        : [`${nameOf(orgs, request.care_org_id)}: sharing is off, so they get nothing new.`]
+        ? [RV.careOn(nameOf(orgs, request.care_org_id))]
+        : [RV.sharingOff(nameOf(orgs, request.care_org_id))]
 
   const caregiver =
     request.caregiver_id === null
-      ? ['No caregiver. Nobody else is told anything.']
+      ? [RV.noCaregiver]
       : request.share_caregiver
-        ? [
-            `${nameOf(people, request.caregiver_id)}: only alerts about a severe problem.`,
-          ]
-        : [`${nameOf(people, request.caregiver_id)}: sharing is off, so they get nothing new.`]
+        ? [RV.caregiverOn(nameOf(people, request.caregiver_id))]
+        : [RV.sharingOff(nameOf(people, request.caregiver_id))]
 
   const emergency: string[] = []
   if (!request.emergency_consent) {
-    emergency.push('No. No emergency hospital or contact is kept or sent.')
+    emergency.push(RV.emergencyNo)
   } else {
-    emergency.push('Yes. An emergency hospital may open your history only in an emergency, and that is logged.')
+    emergency.push(RV.emergencyYes)
     emergency.push(
       request.emergency_org_ids.length === 0
-        ? 'No emergency hospital chosen.'
-        : `Hospitals: ${request.emergency_org_ids.map((id) => nameOf(orgs, id)).join(', ')}.`,
+        ? RV.noHospital
+        : RV.hospitals(request.emergency_org_ids.map((id) => nameOf(orgs, id)).join(', ')),
     )
-    if (request.emergency_contacts.length === 0) emergency.push('No contacts.')
+    if (request.emergency_contacts.length === 0) emergency.push(RV.noContacts)
     request.emergency_contacts.forEach((c) => {
       const where = c.contact_type === 'hospital' && c.org_id ? ` (${nameOf(orgs, c.org_id)})` : ''
-      emergency.push(`Contact ${c.priority}: ${CONTACT_TYPE_WORDS[c.contact_type]}${where}, ${c.phone}.`)
+      emergency.push(RV.contactLine(c.priority, CONTACT_TYPE_WORDS[c.contact_type], where, c.phone))
     })
   }
 
   return [
-    { step: 'care', title: 'My care team', lines: care },
-    { step: 'caregiver', title: 'My caregiver', lines: caregiver },
-    { step: 'emergency', title: 'Emergencies', lines: emergency },
+    { step: 'care', title: S.setup.stepTitles.care, lines: care },
+    { step: 'caregiver', title: S.setup.stepTitles.caregiver, lines: caregiver },
+    { step: 'emergency', title: S.setup.stepTitles.emergency, lines: emergency },
   ]
 }
 
@@ -424,10 +417,8 @@ export function whatIsSentLines(draft: SetupDraft): string[] {
   const request = setupRequest(draft)
   const phones = request.emergency_contacts.length > 0
   return [
-    'A coded update goes through the privacy check on this computer to the service.',
-    phones
-      ? 'It holds the codes of the places and the caregiver you chose, whether each one is on, and the phone numbers of your emergency contacts.'
-      : 'It holds the codes of the places and the caregiver you chose, and whether each one is on. No phone numbers.',
-    'No names are sent. The names you typed for your contacts stay on this computer.',
+    RV.sentLines.gate,
+    phones ? RV.sentLines.withPhones : RV.sentLines.noPhones,
+    RV.sentLines.noNames,
   ]
 }
