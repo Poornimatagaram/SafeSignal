@@ -166,7 +166,7 @@ class SqliteStore:
             kinds = {row[0] for row in r.execute("SELECT recipient_type FROM alert_delivery WHERE alert_id = ?",
                                                  (payload["alert_id"],))}
         body = {"alert_id": payload["alert_id"], "routed_care_team": "care_team" in kinds,
-                "routed_caregiver": "caregiver" in kinds}
+                "routed_caregiver": "caregiver" in kinds, "payload_sha256": payload_sha256(payload)}
         return (200 if existing else 201), body
 
     def put_consent(self, actor_id: str, patient_ref: str, payload: dict) -> dict:
@@ -228,6 +228,7 @@ class SqliteStore:
                                          "emergency_org_ids")}
         state["emergency_contact_count"] = len(payload["emergency_contacts"]) if payload["emergency_consent"] else 0
         state["updated_at"] = t
+        state["payload_sha256"] = payload_sha256(payload)
         return state
 
     def _activate_link(self, org_id: str, patient_ref: str, link_type: str, t: str) -> None:

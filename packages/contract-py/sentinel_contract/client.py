@@ -17,7 +17,7 @@ from __future__ import annotations
 import base64
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import httpx
 
@@ -69,8 +69,14 @@ def field_names(payload: Any, prefix: str = "") -> list[str]:
 
 class SentinelClient:
     def __init__(self, base_url: Optional[str] = None, patient_ref: Optional[str] = None,
-                 http: Optional[httpx.Client] = None, timeout: float = 10.0):
-        """`http` lets tests pass a pre-built client (e.g. FastAPI's TestClient)."""
+                 http: Optional[httpx.Client] = None, timeout: float = 10.0,
+                 on_fetch: Optional[Callable[["SendResult"], None]] = None):
+        """`http` lets tests pass a pre-built client (e.g. FastAPI's TestClient).
+
+        `on_fetch` is called with a SendResult for every configuration fetch that reached the service (any status),
+        so the gate can write it to `egress_log` (PV-06). Its `payload_sha256` and `fields_sent` describe the
+        request parameters (the only thing the device sends in a GET); there is no outbox row for a fetch."""
+        self._on_fetch = on_fetch
         self.base_url = (base_url or os.environ["SENTINEL_BASE_URL"]).rstrip("/")
         self.patient_ref = patient_ref or os.environ["SENTINEL_ACTOR_ID"]
         self._http = http or httpx.Client(base_url=self.base_url, timeout=timeout)
@@ -86,6 +92,10 @@ class SentinelClient:
             r = self._http.get(path, params=params)
         except httpx.TransportError as e:
             raise SendRetryable(str(e)) from e
+        if self._on_fetch is not None:
+            sent = params or {}
+            self._on_fetch(SendResult("GET", str(r.request.url), r.status_code, payload_sha256(sent),
+                                      field_names(sent)))
         if r.status_code >= 500:
             raise SendRetryable(f"{r.status_code} from {path}")
         if r.status_code != 200:

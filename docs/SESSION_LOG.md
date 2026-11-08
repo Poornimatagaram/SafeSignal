@@ -472,3 +472,22 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Contract 2.3: alert and consent replies carry `payload_sha256`; config fetches logged in `egress_log` (PV-06).
 2. Patient brief: loopback wording for the local model; `data/README.md` row for `data/patient/`.
+
+---
+
+## Session 019 — 2026-11-08 (Sun) · Contract 2.3 receipts
+
+**Goal:** Give every patient send a receipt hash and put configuration fetches in the egress log (PV-05, PV-06).
+
+**Outputs**
+- Contract 2.3 (D-088): `payload_sha256` on alert and consent replies; `SentinelClient(on_fetch=...)`; `egress_log.kind` and nullable `outbox_id`; version, OpenAPI and TS types regenerated; patient-runtime brief updated.
+
+**Verification**
+- `apps/service` 53 passed; `packages/contract-py` 24 passed; `packages/contract-ts` tests pass; `apps/patient-runtime` 623 passed, 27 skipped (existing log inserts still work with the new column default).
+
+**Open items**
+- The runtime must use `on_fetch` and migrate its `egress_log` table (patient-owned).
+- #27 closed when #25's branch was deleted; reopened as a new PR from this branch against main.
+
+**Next**
+1. Merge this PR; then start the landing page and portal redesign in `apps/company-web` from `docs/design/company-web-ui.md`.

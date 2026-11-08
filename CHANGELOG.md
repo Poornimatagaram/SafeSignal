@@ -2,6 +2,15 @@
 
 All changes to the project, newest first. Schema-only history is also kept in `schema/CHANGELOG.md`. Decision IDs refer to `docs/DECISIONS.md`.
 
+## 2026-11-08 — Session 019: contract 2.3 receipts (branch `company/feat/contract-2-3-receipts`)
+
+### Added
+- Contract 2.3 (D-088): alert and consent replies carry `payload_sha256`; `SentinelClient(on_fetch=...)` reports configuration fetches; `egress_log` gets `kind` and a nullable `outbox_id`.
+- Service tests for the receipt hashes and `on_fetch`.
+
+### Changed
+- `CONTRACT_VERSION` 2.3 (Python, TypeScript), `schema/openapi.json` and `api.d.ts` regenerated.
+
 ## 2026-11-08 — Session 018: patient tests in CI (branch `company/ci/patient-tests`)
 
 ### Added

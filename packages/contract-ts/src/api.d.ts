@@ -478,6 +478,8 @@ export interface components {
             routed_care_team: boolean;
             /** Routed Caregiver */
             routed_caregiver: boolean;
+            /** Payload Sha256 */
+            payload_sha256: string;
         };
         /** CohortInfo */
         CohortInfo: {
@@ -570,6 +572,8 @@ export interface components {
             emergency_org_ids: string[];
             /** Emergency Contact Count */
             emergency_contact_count: number;
+            /** Payload Sha256 */
+            payload_sha256: string;
             /** Updated At */
             updated_at: string;
         };

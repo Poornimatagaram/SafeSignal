@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS outbox (
 
 CREATE TABLE IF NOT EXISTS egress_log (
   log_id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  outbox_id         TEXT NOT NULL REFERENCES outbox(outbox_id),
+  outbox_id         TEXT REFERENCES outbox(outbox_id),   -- NULL for a configuration fetch (2.3)
+  kind              TEXT NOT NULL DEFAULT 'send' CHECK (kind IN ('send','config_fetch')),
   method            TEXT NOT NULL,
   url               TEXT NOT NULL,
   fields_sent       TEXT NOT NULL,              -- JSON list of field names, shown on the receipt
