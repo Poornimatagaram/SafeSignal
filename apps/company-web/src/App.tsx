@@ -13,8 +13,7 @@ import Survey from './views/Survey'
 import Program from './views/Program'
 
 const TABS = [
-  { id: 'signals', label: 'Side effects', title: 'Side effects by cohort.',
-    blurb: 'The share of reporting patients with each side effect, against the week before.', role: 'Any company role' },
+  { id: 'signals', label: 'Side effects', title: 'Side effects by cohort.', blurb: '', role: 'Any company role' },
   { id: 'completion', label: 'Check-ins', title: 'Check-ins.',
     blurb: 'How many due check-ins patients completed, and how they answered.', role: 'Any company role' },
   { id: 'survey', label: 'Survey', title: 'Survey.',
@@ -110,12 +109,7 @@ export default function App() {
         <div className="wrap hero-inner">
           <h1 className="hero-title">{program?.drug_name ?? 'Company portal'}</h1>
           <p className="hero-tagline">Every side effect. By drug version. Week over week.</p>
-          <p className="hero-lede">
-            Patients check in by voice at home. Their device codes what they say into label terms, and you get counts by cohort.
-            You never see names, words or audio.
-          </p>
           <div className="hero-actions">
-            <a className="btn primary lg" href="#/signals">View side effects</a>
             <a className="more" href="#/program">Program and export<ChevronRight /></a>
           </div>
           {program && (
@@ -163,7 +157,7 @@ export default function App() {
           return (
             <div className="section-head">
               <h2>{t.title}</h2>
-              <p>{t.blurb}</p>
+              {t.blurb && <p>{t.blurb}</p>}
               <p className="role">{t.role}</p>
             </div>
           )

@@ -7,6 +7,7 @@ All changes to the project, newest first. Schema-only history is also kept in `s
 ### Changed
 - `apps/company-web`: centered product-page layout (D-092): thin frosted top bar, centered hero with drug name and one blue action, this week's three figures, sticky centered section switcher, centered section headings over borderless rounded tiles, centered privacy close. System SF face with Inter fallback; light, dark and system. Section links scroll to their section. Data, endpoints and roles unchanged.
 - `apps/company-web/PRODUCT.md`: product context for design work.
+- `apps/company-web`: hero drops the explanation line and the "View side effects" button; the side-effects section drops its subtitle. The cohort chart's tooltip shows each cohort's change from the week before; the "All side effects" table shows a cell's change only while that cell is hovered.
 
 ## 2026-11-08 — Session 021: company portal in the SafeSignal look
 

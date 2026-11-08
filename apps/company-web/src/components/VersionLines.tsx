@@ -13,6 +13,7 @@ interface Props {
   label: (v: Version) => string
   yDomain?: [number | 'auto', number | 'auto']
   height?: number
+  showChange?: boolean // tooltip adds each cohort's change from the week before, in percentage points
 }
 
 interface TipProps {
@@ -21,13 +22,25 @@ interface TipProps {
   payload?: { dataKey: string; value: number | null }[]
   versions: Version[]
   labelOf: (v: Version) => string
+  data?: WeekPoint[]
 }
 
-function Tip({ active, label, payload, versions, labelOf }: TipProps) {
+// Change in percentage points; under 0.5 pp reads as no change.
+export function Change({ now, prev }: { now: number | null | undefined; prev: number | null | undefined }) {
+  if (now == null || prev == null) return null
+  const d = (now - prev) * 100
+  if (Math.abs(d) < 0.5) return <span className="chg flat">±0 pp</span>
+  return <span className={`chg ${d > 0 ? 'up' : 'down'}`}>{d > 0 ? '▲' : '▼'} {Math.abs(d).toFixed(1)} pp</span>
+}
+
+function Tip({ active, label, payload, versions, labelOf, data }: TipProps) {
   if (!active || !payload?.length) return null
+  const i = data ? data.findIndex((p) => p.iso_week === label) : -1
+  const prev = data && i > 0 ? data[i - 1] : null
   return (
     <div className="tooltip" role="status">
       <div className="t">{label}</div>
+      {data && <div className="tip-sub">{prev ? `Change from ${prev.iso_week}` : 'First week: no change to show'}</div>}
       {versions.map((v, i) => {
         const p = payload.find((x) => x.dataKey === v.cohort_id)
         return (
@@ -36,7 +49,10 @@ function Tip({ active, label, payload, versions, labelOf }: TipProps) {
               <span className="key" style={{ background: seriesColor(i) }} />
               {labelOf(v)}
             </span>
-            <strong>{pct(p?.value ?? null)}</strong>
+            <span className="tip-val">
+              <strong>{pct(p?.value ?? null)}</strong>
+              {data && <Change now={p?.value} prev={prev ? (prev[v.cohort_id] as number | null) : null} />}
+            </span>
           </div>
         )
       })}
@@ -69,7 +85,7 @@ function placeLabel(placed: Map<string, number>, id: string, y: number) {
   return out
 }
 
-export function VersionLines({ data, versions, label, yDomain = [0, 'auto'], height = 260 }: Props) {
+export function VersionLines({ data, versions, label, yDomain = [0, 'auto'], height = 260, showChange = false }: Props) {
   const last = data.length - 1
   const placed = new Map<string, number>()
   return (
@@ -83,7 +99,7 @@ export function VersionLines({ data, versions, label, yDomain = [0, 'auto'], hei
           <YAxis domain={yDomain} tickFormatter={(x: number) => pct(x, 0)} width={44}
             tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} tickLine={false} axisLine={false} />
           <Tooltip cursor={{ stroke: 'var(--text-muted)', strokeWidth: 1 }}
-            content={<Tip versions={versions} labelOf={label} />} />
+            content={<Tip versions={versions} labelOf={label} data={showChange ? data : undefined} />} />
           {versions.map((v, i) => (
             <Line key={v.cohort_id} dataKey={v.cohort_id} name={label(v)} stroke={seriesColor(i)} strokeWidth={2}
               dot={{ r: 4, fill: seriesColor(i), stroke: 'var(--surface-1)', strokeWidth: 2 }}

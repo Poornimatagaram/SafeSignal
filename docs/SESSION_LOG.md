@@ -536,6 +536,8 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 - Previous look committed on `company/feat/company-web-professional-look` (724590d), so it can be restored.
 - `apps/company-web` redesigned on `company/feat/company-web-centered-redesign` (D-092): `src/App.tsx`, `src/styles.css`, `src/components/Nav.tsx`, `src/components/icons.tsx`, `src/views/Signals.tsx`, `src/views/Survey.tsx`; `apps/company-web/PRODUCT.md`; design brief in `.impeccable/surfaces/` (local only, gitignored).
 
+- Follow-up from the product owner: removed the hero explanation, the "View side effects" button and the side-effects subtitle; week-over-week changes now appear on hover only (chart tooltip, and per cell in the "All side effects" table).
+
 **Verification**
 - `tsc -b` and `eslint` pass; Impeccable design detector reports no findings.
 - Checked in Chrome against the seeded local service: desktop light and dark, all sections, section links scroll to content; 390 px frames have no horizontal scroll.

@@ -3,18 +3,7 @@
 import { useMemo, useState } from 'react'
 import type { CohortWeeklyRow, TermsResponse } from '../lib/api'
 import { pct, rate, seriesColor, termSeries, termsByVolume, versionLabel, weeksOf, type Version } from '../lib/data'
-import { ChartOrTable, VersionLines } from '../components/VersionLines'
-
-function Delta({ now, prev }: { now: number | null; prev: number | null }) {
-  if (now === null || prev === null) return null
-  const d = (now - prev) * 100
-  if (Math.abs(d) < 0.5) return <span className="muted small"> ±0</span>
-  return (
-    <span className={`small ${d > 0 ? 'up' : 'down'}`}>
-      {' '}{d > 0 ? '▲' : '▼'} {Math.abs(d).toFixed(1)} pp
-    </span>
-  )
-}
+import { Change, ChartOrTable, VersionLines } from '../components/VersionLines'
 
 interface Props {
   rows: CohortWeeklyRow[]
@@ -78,8 +67,8 @@ export default function Signals({ rows, versions, terms }: Props) {
       <div className="card">
         <ChartOrTable
           title={`${label(term)}: share of reporting patients, by cohort`}
-          note="Distinct patients who reported it that week ÷ patients in the cohort who reported that week. Pick a side effect in the table below."
-          chart={<VersionLines data={series} versions={versions} label={versionLabel} />}
+          note="Distinct patients who reported it that week ÷ patients in the cohort who reported that week. Hover a week for the change from the week before; pick a side effect in the table below."
+          chart={<VersionLines data={series} versions={versions} label={versionLabel} showChange />}
           table={
             <table>
               <thead><tr><th>Week</th>{versions.map((v) => <th key={v.cohort_id}>{versionLabel(v)}</th>)}</tr></thead>
@@ -96,7 +85,7 @@ export default function Signals({ rows, versions, terms }: Props) {
 
       <div className="card">
         <h2>All side effects, {week}</h2>
-        <p className="note">Share of reporting patients, with the change from {prevWeek ?? 'the previous week'} in percentage points. “Not on label” = not in this drug's FDA label. Severe counts of 1–4 show as “&lt;5”.</p>
+        <p className="note">Share of reporting patients. Hover a cell for the change from {prevWeek ?? 'the previous week'}. “Not on label” = not in this drug's FDA label. Severe counts of 1–4 show as “&lt;5”.</p>
         <div className="scroll-x">
           <table>
             <thead>
@@ -122,9 +111,9 @@ export default function Signals({ rows, versions, terms }: Props) {
                       const a = cell(week, v.cohort_id, t)
                       const b = cell(prevWeek, v.cohort_id, t)
                       return (
-                        <td key={v.cohort_id}>
+                        <td key={v.cohort_id} className={a && b ? 'has-chg' : undefined}>
                           {a ? pct(rate(a)) : <span className="muted" title="Fewer than 5 patients">&lt;5</span>}
-                          <Delta now={a ? rate(a) : null} prev={b ? rate(b) : null} />
+                          {a && b && <span className="cell-chg" role="tooltip"><Change now={rate(a)} prev={rate(b)} /></span>}
                         </td>
                       )
                     })}
