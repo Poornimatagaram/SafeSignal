@@ -3,6 +3,26 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08, A7 addition after teammate review: envelopes per organization and consent setup** (same branch, PR #26). The same two agents extended the gate and the screen; I added `consent.setup`, `PUT /consent/setup` and the per-organization wiring in `checkin.py`.
+  - **Tests:** 725 runtime, 54 eval and 232 patient-web, with a clean build and `npm audit`. Evals unchanged: leakage PASS, re-ask 17 of 20.
+  - **Live check** (fresh scratch runtime on port 8011, local service):
+    - Doctor-web's key steps, as in `scripts/e2e_check.py`: Dr. Patel registered a personal key, Northgate's key and a self key grant (200, 200, 201), and Dr. Okafor did the same for Lakeside.
+    - One spoken check-in sent the record (201) and two envelopes with different ids (201 each) and the same plaintext hash.
+    - Patel unwrapped Northgate's key from his grant and decrypted Northgate's envelope from the routine inbox; the hash matched. Lakeside's envelope wasn't in that inbox.
+    - Lakeside's routine inbox didn't show Walter. Emergency access (200, logged by the service) returned his envelope, and Okafor decrypted it with his grant to the same plaintext. Northgate's key can't open it.
+    - Both `care_inbox` rows hold only ids, ciphertext, the plaintext hash and timestamps.
+    - The setup screen's choice was saved and sent (PUT, 200), the seeded choice was put back (200), and "care team as emergency hospital" was refused on the device (422).
+- **2026-11-08, A7: care envelope (NF-05) and consent switches (CN-01, CN-03)** (branch `patient/feat/care-envelope`, PR #26). Built by two parallel agents (egress gate with `care_payload.py`; patient screen). I wired `checkin.py`, `main.py` and the new `consent.py`, and their API tests.
+  - **Tests:** 711 runtime, 54 eval and 211 patient-web, with a clean build and `npm audit`.
+  - **Evals:** leakage PASS (0 of 59; term F1 0.882, which is informational and varies with the live model); re-ask PASS (17 of 20).
+  - **Live check** (runtime on port 8011 with a scratch database, the real local service, six synthetic spoken answers):
+    - I registered a throwaway Northgate key as Dr. Patel, the way doctor-web does.
+    - Approval sent the record (201), then the envelope (201).
+    - Opened with the org key, the envelope held the 11 doctor-payload fields. The plaintext hash equalled the receipt's and the service's.
+    - The service's `care_inbox` row holds only ids, the ciphertext, the plaintext hash and its own timestamps. No name, drug, date or term code appears in it, raw or base64-decoded.
+    - With "Share with my doctor" off, the consent update got 200, and Walter left Northgate's patient list. The next check-in had no care preview and no envelope, and its record still got 201.
+    - Turning it back on got 200 and Walter was listed again. The check-in approved while sharing was off stayed unsealed.
+    - The runtime's `egress_log` showed only records, the envelope and consent PUTs, and its log had no patient words.
 - **2026-11-08, A6: spoken summary with one correction (VC-08), voice commands (VC-07), network-off queue (PV-07), severe alerts (AL-02, SE-03)** (branch `patient/feat/summary-offline`). Built by three parallel agents (egress gate, summary and commands, patient screen); I wired `checkin.py` and `main.py`.
   - **Tests:** 650 runtime, 54 eval and 182 patient-web, with a clean build and `npm audit`.
   - **Evals:** re-ask PASS (17 of 20); leakage PASS (0 of 59, F1 0.909).
@@ -53,6 +73,15 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **An envelope that can't be sealed yet is not stored as plaintext.** When the org key is missing (404) or the network is off, nothing is queued. The session counts as pending (approved while sharing, no envelope yet), and the retry worker rebuilds the payload from the stored coded rows, which gives the same payload every time, then seals it. The outbox only ever holds the sealed envelope.
+- **Turning the care team off stops future sharing on the device at once (CN-03)**, even before the service hears about it. A check-in approved while sharing was off is never sealed later, even if sharing is turned back on.
+- **Each consent update carries the full state, so an older queued one is marked `failed` (superseded, never sent)** when a newer one is queued; an older update landing after a newer one would undo it. Consent goes first in the retry order, so a withdrawal reaches the service before later sends.
+- **The trend is computed on this device** from its own approved check-ins (up to 7 including today). The device doesn't hold the seeded service history, so Walter's first check-in here reads "unknown".
+- **The envelope receipt shows the plaintext hash** (brief 26.13, `send_envelope`). The org key is fetched fresh for every envelope and never taken from the cache, because an organization may register a new key.
+- **One envelope per organization** (D-064, D-065): the care team, plus each emergency hospital when emergency consent is on both now and when the check-in was approved. The latter is the consent row with the highest id whose `updated_at` is no later than the approval, compared to the second. Each organization waits for its own key, so a missing Lakeside key never holds up Northgate.
+- **The setup screen's choices come from `schema/demo_fixtures.json`** (organizations, and this patient's caregivers): the service has no organization directory a patient device can read. Ask the company owner for one before real use.
+- **Setup replaces the whole choice,** like the service (D-067). Contacts get new `ec_` ids on every save, labels stay in `emergency_contact.display_label`, and without emergency consent no hospitals or contacts are kept or sent. A new care team clears the cached key.
+- **The consent switches are a second send path,** approved by the user for A7. They only send the consent update, through `egress_gate.send_queued`, with a receipt.
 - **"Network off" in the live check means the local service was stopped**: connection refused, the same as no network for the egress gate. I can't switch off the laptop's network from here; speech, filter and model run locally either way.
 - **Severe alerts are queued at approval, in the same transaction as the record, and sent first.** They go only with consent to share with the care team or the caregiver; the service decides who receives them. The payload is minimal (AL-03): no symptom details.
 - **The alert reply has no `payload_sha256`**, so alert receipts are checked by the canonical hash and the service's 200 on a resend. The company side could add the hash to the reply.
@@ -116,6 +145,8 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **Two A7 commit subjects and the PR title were over 72 characters,** and CI's ownership and commit-message check failed on the title. I rebuilt the two unpushed commits with shorter subjects, using a backup branch, cherry-pick and no force-push, and shortened the PR title. A rerun of the failed job reuses the old event, so it still saw the old title. Closing and reopening the PR started a fresh run, which passed. Lesson: count subjects and PR titles before committing (`scripts/check_commits.sh`), and keep PR titles to 72 characters too.
+- **My first A7 live-check script crashed after the envelope part.** It read the preview record of a check-in that was still waiting for a severity choice, where the record is null by design. I reran the consent part on its own; the runtime was fine.
 - **The rebase onto contract 2.2 broke an egress test.** `main` gained six term codes (D-079), so the term list grew from 12 to 18, and `test_egress_gate.py` had hard-coded 12. Fixed by deriving the count and the rash row from `schema/terms.json`. I restarted the local service on the 2.2 code and reseeded it with `seed --reset`, which leaves `var/patient` alone. All tests and the leakage eval pass on 2.2.
 - **The first live A4 run talked to an old runtime.** Port 8001 was held by an A2-era runtime (PID 15222, started 2026-11-07 20:04, not by me), so the new runtime failed to bind. Every request went to the old code: no `session_id`, and `SE_COUGH` from the old extractor. Fixed by running the new runtime on port 8011; I left the unknown process alone. Lesson: check the runtime log for "address already in use" before trusting a live run.
 - **The live run found invented symptoms.** "It started two days ago" and "I took my tablets" each became `SE_OTHER_REVIEW`, and the onset answer was copied onto fatigue from an earlier question. Fixed by allowing symptoms only from symptom questions and applying follow-up answers only to the symptoms they refer to, with a test for each.
@@ -149,9 +180,13 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
   - "Took" counts as an adherence answer even in "I took the dog out".
   - A long, detailed answer can be cut down to only the sentences containing symptom or time words.
 - **Grow the re-ask set** beyond 20 cases, and check the partial and off-topic labels with a second person.
-- **A6 PR:** get CI green, then the user merges it.
+- **A7 PR:** get CI green, then the user merges it.
+- **Caregiver detail level** (CN-01, `alerts_only` or `summary`) is not on the screen yet.
+- **Reseed before the demo:** the live tests replaced Northgate's and Lakeside's keys with throwaway ones and added key grants, synthetic envelopes, an emergency access (with its alert) and consent changes (Walter's contacts now have new `ec_` ids). Doctor-web must register fresh keys after reseeding.
+- **Ask the company owner** for an organization directory a patient device can read, for the setup screen.
+- **Caregiver "summary" detail:** the setup screen offers it, but the service only sends caregivers alerts today; confirm what the summary should contain.
 - **Persist the check-in draft** so a runtime restart mid check-in loses nothing; the retry state is in memory too.
-- **A7:** care envelopes per organization; `possible_link_flag` from exposures (SE-04).
+- **`possible_link_flag` from exposures** (SE-04).
 - **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
 - **Ask the company owner** for:
   - CI jobs for `apps/patient-runtime` pytest, `evals/patient` and `apps/patient-web` `npm test`; CI runs none of them today.
