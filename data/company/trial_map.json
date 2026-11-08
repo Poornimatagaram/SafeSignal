@@ -1,0 +1,66 @@
+{
+  "about": "How the fictional company's programs map onto real public trials (D-078, D-081). Each cohort samples its synthetic daily records from one real trial arm's adverse-event rates (ClinicalTrials.gov, data/company/ctgov/). Where a trial has fewer than 4 arms, several cohorts share an arm, roughly following the trial's randomization ratio. MedDRA preferred terms are matched case-insensitively; a term code's rate combines its MedDRA terms as 1 - prod(1 - p_i) across the serious and non-serious event tables.",
+  "programs": {
+    "prog_demo_01": {
+      "trial": "flaura",
+      "nct": "NCT02296125",
+      "acronym": "FLAURA",
+      "label": "tagrisso",
+      "survey": "schema/examples/survey_config.valid.json",
+      "reporter": {"self": 0.85, "caregiver": 0.15},
+      "cohorts": {
+        "cohort_A": "EG001",
+        "cohort_B": "EG000",
+        "cohort_C": "EG002",
+        "cohort_D": "EG003"
+      }
+    },
+    "prog_rybrevant_01": {
+      "trial": "mariposa",
+      "nct": "NCT04487080",
+      "acronym": "MARIPOSA",
+      "label": "rybrevant",
+      "survey": "schema/examples/survey_config.valid.json",
+      "reporter": {"self": 0.85, "caregiver": 0.15},
+      "cohorts": {
+        "cohort_ryb_A": "EG000",
+        "cohort_ryb_B": "EG000",
+        "cohort_ryb_C": "EG001",
+        "cohort_ryb_D": "EG002"
+      }
+    },
+    "prog_beyfortus_01": {
+      "trial": "melody",
+      "nct": "NCT03979313",
+      "acronym": "MELODY",
+      "label": "beyfortus",
+      "survey": "data/company/surveys/infant_v1.json",
+      "reporter": {"parent": 1.0},
+      "cohorts": {
+        "cohort_inf_A": "EG001",
+        "cohort_inf_B": "EG001",
+        "cohort_inf_C": "EG001",
+        "cohort_inf_D": "EG000"
+      }
+    }
+  },
+  "meddra_to_term_code": {
+    "SE_RASH": ["Rash", "Dermatitis acneiform", "Rash maculo-papular", "Rash papular", "Rash macular", "Rash erythematous", "Rash pruritic", "Rash pustular"],
+    "SE_DRY_SKIN": ["Dry skin", "Skin fissures", "Xerosis"],
+    "SE_PARONYCHIA": ["Paronychia", "Nail disorder", "Nail infection", "Onychoclasis", "Ingrowing nail"],
+    "SE_DIARRHEA": ["Diarrhoea"],
+    "SE_STOMATITIS": ["Stomatitis", "Mouth ulceration", "Mucosal inflammation", "Aphthous ulcer"],
+    "SE_FATIGUE": ["Fatigue", "Asthenia"],
+    "SE_DECREASED_APPETITE": ["Decreased appetite", "Poor feeding infant"],
+    "SE_INFUSION_REACTION": ["Infusion related reaction"],
+    "SE_DYSPNEA": ["Dyspnoea", "Dyspnoea exertional"],
+    "SE_COUGH": ["Cough", "Productive cough"],
+    "SE_EDEMA": ["Oedema peripheral", "Oedema", "Peripheral swelling", "Face oedema"],
+    "SE_NAUSEA": ["Nausea"],
+    "SE_VOMITING": ["Vomiting"],
+    "SE_FEVER": ["Pyrexia", "Fever neonatal"],
+    "SE_NASAL": ["Rhinorrhoea", "Nasal congestion", "Nasal obstruction", "Rhinitis"],
+    "SE_IRRITABILITY": ["Irritability", "Infant irritability", "Crying"],
+    "SE_INJECTION_SITE": ["Injection site pain", "Injection site swelling", "Injection site induration", "Injection site reaction", "Injection site erythema"]
+  }
+}
