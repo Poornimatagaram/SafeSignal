@@ -2,6 +2,40 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
+## 2026-11-08: Restart safety (branch `patient/feat/restart-safety`)
+
+### Added
+- `state_store.py`: small local JSON files beside `patient.db`. They are owner-only (0600), written atomically, never logged or sent; an unreadable file reads as empty.
+- A half-finished check-in survives a runtime restart. The draft (coded symptoms, exposures, the one correction, the record id shown) is saved after every change to `var/patient/drafts/<session_id>.json` and reloaded on demand. It is deleted once the check-in is approved.
+- The retry worker's attempt counts and due times survive a restart (`var/patient/retry_state.json`, wall-clock times). A restart resumes the backoff, and an overdue row is due at once.
+- Tests: restart tests in `test_checkin_api.py` and `test_egress_gate.py`; 762 runtime tests.
+
+## 2026-11-08: Possible link (SE-04; branch `patient/feat/possible-link`)
+
+### Added
+- `exposure.py`: a deterministic rule, never a model. A new symptom that started 0 to 7 days after a new exposure is flagged `possible_link`, which screens word as "for review", never as a cause.
+  - New symptom: not in the previous approved check-in.
+  - New exposure: one reported in this check-in's exposure answer, or stored in the last 30 days.
+  - Onsets are compared as day ranges. An unknown symptom onset is never linked.
+- `checkin.py`:
+  - An exposure answer that says something new is recorded in the draft; at approval it goes into `exposure_event`. The description stays on the device.
+  - Summary items carry `possible_link`. `possible_link_flag` reaches the symptom rows, the company record and the doctor payload.
+  - The plain and spoken summaries say "Marked for review … That does not mean one caused the other."
+- Tests: `test_exposure.py` and link tests in `test_checkin_api.py`; 757 runtime tests.
+
+### Changed
+- An answer to the exposure question no longer adds `SE_OTHER_REVIEW`. "I started a new hand cream" made the model invent a symptom in the live run; only symptoms the answer names are kept.
+
+## 2026-11-08: Network log and config fetches (PV-06, contract 2.3; branch `patient/feat/network-log`)
+
+### Added
+- `GET /network-log`: every request that reached the service, newest first. It covers sends and configuration fetches, with field names, hashes and status only, never payloads.
+- Configuration fetches (survey, terms, org keys) are logged in `egress_log` as `kind: "config_fetch"` with no outbox row. `make_client` passes `on_fetch` to `SentinelClient` (D-088); `egress_gate.log_fetch` writes the row and never blocks a fetch.
+- Tests: migration, fetch logging (parameters only, nothing logged offline) and the network-log listing; 731 runtime tests.
+
+### Changed
+- `db.py`: a 2.2 `egress_log` (no `kind`, `outbox_id` NOT NULL) is migrated to 2.3 on start. The table is renamed, recreated from `schema/patient.sql` and its rows copied back as sends. An interrupted migration is finished on the next start.
+
 ## 2026-11-08: Task A7, care envelopes per organization, consent switches and setup (branch `patient/feat/care-envelope`)
 
 ### Added

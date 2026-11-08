@@ -74,12 +74,35 @@ def _seed(conn: sqlite3.Connection, patient_ref: str) -> None:
          for e in fixtures.get("emergency_contacts", []) if e["patient_ref"] == patient_ref])
 
 
+def _egress_log_before_2_3(conn: sqlite3.Connection) -> bool:
+    """Contract 2.3 (D-088): egress_log gained `kind` and a nullable `outbox_id`. CREATE TABLE IF NOT EXISTS can't
+    change an existing table, so a 2.2 table is renamed here, recreated from schema/patient.sql, and its rows copied
+    back by `_finish_egress_log_migration` (every old row is a send). Returns True when a migration is under way."""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'egress_log_2_2'").fetchone():
+        return True  # a migration was interrupted (executescript commits): finish it
+    columns = {r["name"] for r in conn.execute("PRAGMA table_info(egress_log)")}
+    if not columns or "kind" in columns:
+        return False
+    conn.execute("ALTER TABLE egress_log RENAME TO egress_log_2_2")
+    return True
+
+
+def _finish_egress_log_migration(conn: sqlite3.Connection) -> None:
+    conn.execute("INSERT INTO egress_log (log_id, outbox_id, kind, method, url, fields_sent, payload_sha256, "
+                 "response_code, sent_at) SELECT log_id, outbox_id, 'send', method, url, fields_sent, payload_sha256, "
+                 "response_code, sent_at FROM egress_log_2_2")
+    conn.execute("DROP TABLE egress_log_2_2")
+
+
 def init_db(db_path: Path, patient_ref: str) -> None:
     """Apply the schema, then seed on first launch only, so later changes on the device are never overwritten."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with closing(connect(db_path)) as conn, conn:
         _check_version(conn, db_path)
+        old_log = _egress_log_before_2_3(conn)
         conn.executescript(PATIENT_SQL.read_text())
+        if old_log:
+            _finish_egress_log_migration(conn)
         conn.execute("INSERT OR IGNORE INTO schema_meta (id, schema_version, applied_at) VALUES (1, ?, ?)",
                      (SCHEMA_VERSION, utc_now()))
         if not conn.execute("SELECT 1 FROM patient_profile WHERE patient_ref = ?", (patient_ref,)).fetchone():

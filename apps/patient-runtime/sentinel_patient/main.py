@@ -70,7 +70,8 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
 
     # The worker closes the client it gets after each pass, so it gets its own, never the shared one.
     worker = egress_gate.RetryWorker(settings.db_path, lambda: sentinel_client or egress_gate.make_client(settings),
-                                     patient_ref=settings.patient_ref)
+                                     patient_ref=settings.patient_ref,
+                                     state_path=settings.db_path.parent / "retry_state.json")
     app = FastAPI(title="Sentinel patient runtime", version=SCHEMA_VERSION, lifespan=lifespan)
     app.state.retry_worker = worker
     app.state.settings = settings
@@ -260,6 +261,13 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
         if shared is None:
             raise HTTPException(404, "this check-in has not been shared")
         return _receipt(shared)
+
+    # ---------- network log (PV-06) ----------
+
+    @app.get("/network-log")
+    def network_log(limit: int = Query(200, ge=1, le=1000)) -> dict:
+        """Every request that reached the service, newest first: sends and configuration fetches (D-088)."""
+        return {"entries": egress_gate.network_log(settings.db_path, limit=limit)}
 
     # ---------- consent switches (CN-01, CN-03) ----------
 

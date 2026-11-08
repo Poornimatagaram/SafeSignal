@@ -153,3 +153,44 @@ def test_only_egress_gate_imports_network_code():
         if bad:
             offenders[path.name] = sorted(bad)
     assert offenders == {}
+
+
+OLD_EGRESS_LOG = """CREATE TABLE egress_log (
+  log_id INTEGER PRIMARY KEY AUTOINCREMENT, outbox_id TEXT NOT NULL REFERENCES outbox(outbox_id),
+  method TEXT NOT NULL, url TEXT NOT NULL, fields_sent TEXT NOT NULL, payload_sha256 TEXT NOT NULL,
+  response_code INTEGER, sent_at TEXT NOT NULL)"""
+
+
+def _old_database(db_path):
+    """A 2.2 database (egress_log without `kind`, outbox_id NOT NULL) holding one logged send."""
+    init_db(db_path, WALTER)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("DROP TABLE egress_log")
+        conn.execute(OLD_EGRESS_LOG)
+        conn.execute("INSERT INTO outbox (outbox_id, destination, payload, payload_sha256, status, created_at) "
+                     "VALUES ('rec_0a1b2c3d', 'company_record', '{}', 'ab', 'sent', '2026-11-07T10:00:00Z')")
+        conn.execute("INSERT INTO egress_log (outbox_id, method, url, fields_sent, payload_sha256, response_code, "
+                     "sent_at) VALUES ('rec_0a1b2c3d', 'POST', 'http://127.0.0.1:8000/v1/records', '[]', 'ab', 201, "
+                     "'2026-11-07T10:00:01Z')")
+
+
+def test_a_2_2_egress_log_is_migrated_to_2_3_keeping_every_row(db_path):
+    _old_database(db_path)
+    init_db(db_path, WALTER)
+    init_db(db_path, WALTER)  # safe to re-run
+    cols = {r["name"]: r for r in rows(db_path, "PRAGMA table_info(egress_log)")}
+    assert "kind" in cols and cols["outbox_id"]["notnull"] == 0
+    assert rows(db_path, "SELECT log_id, outbox_id, kind, response_code FROM egress_log") == \
+        [{"log_id": 1, "outbox_id": "rec_0a1b2c3d", "kind": "send", "response_code": 201}]
+    with closing(connect(db_path)) as conn, conn:  # a config fetch now fits: no outbox row
+        conn.execute("INSERT INTO egress_log (outbox_id, kind, method, url, fields_sent, payload_sha256, sent_at) "
+                     "VALUES (NULL, 'config_fetch', 'GET', 'u', '[]', 'cd', '2026-11-08T00:00:00Z')")
+    assert not rows(db_path, "SELECT name FROM sqlite_master WHERE name = 'egress_log_2_2'")
+
+
+def test_an_interrupted_egress_log_migration_is_finished_on_the_next_start(db_path):
+    _old_database(db_path)
+    with closing(connect(db_path)) as conn, conn:
+        conn.execute("ALTER TABLE egress_log RENAME TO egress_log_2_2")  # crashed right after the rename
+    init_db(db_path, WALTER)
+    assert [r["kind"] for r in rows(db_path, "SELECT kind FROM egress_log")] == ["send"]

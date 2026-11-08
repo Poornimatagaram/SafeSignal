@@ -56,7 +56,7 @@ const SHARE = {
 export const SUMMARY_READY: CheckinSummary = {
   session_id: SID,
   shared: false,
-  items: [{ term_code: 'SE_RASH', label: 'Rash', severity: 'moderate', onset: '1_3_days', known_side_effect: true }],
+  items: [{ term_code: 'SE_RASH', label: 'Rash', severity: 'moderate', onset: '1_3_days', known_side_effect: true, possible_link: false }],
   needs_severity: [],
   unanswered_questions: 0,
   text: 'You told me about: rash, moderate, started 1 to 3 days ago.',
@@ -69,8 +69,8 @@ export const SUMMARY_READY: CheckinSummary = {
 export const SUMMARY_NEEDS_SEVERITY: CheckinSummary = {
   ...SUMMARY_READY,
   items: [
-    { term_code: 'SE_RASH', label: 'Rash', severity: null, onset: '1_3_days', known_side_effect: true },
-    { term_code: 'SE_FATIGUE', label: 'Fatigue', severity: 'mild', onset: null, known_side_effect: true },
+    { term_code: 'SE_RASH', label: 'Rash', severity: null, onset: '1_3_days', known_side_effect: true, possible_link: false },
+    { term_code: 'SE_FATIGUE', label: 'Fatigue', severity: 'mild', onset: null, known_side_effect: true, possible_link: false },
   ],
   needs_severity: ['SE_RASH'],
   text: 'You told me about: rash, started 1 to 3 days ago; fatigue, mild.',

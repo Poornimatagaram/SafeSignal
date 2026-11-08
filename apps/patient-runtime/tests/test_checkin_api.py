@@ -783,3 +783,122 @@ def test_one_envelope_per_organization_care_team_and_emergency_hospital(tmp_path
     assert opened(northgate, by_org["org_5e1a2b3c"]) == opened(lakeside, by_org["org_8f4d6a2e"])
     assert by_org["org_5e1a2b3c"]["payload_sha256"] == by_org["org_8f4d6a2e"]["payload_sha256"]
     assert "emergency" in now["envelopes"][1]["label"]
+
+
+# ---------- possible link (SE-04) ----------
+
+LINK_ANSWERS = [("q2", "I have an itchy rash on my arms"), ("q3", "It's moderate"), ("q4", "It began two days ago"),
+                ("q6", "Yes, a new hand cream about five days ago")]
+
+
+def test_a_new_symptom_soon_after_a_new_exposure_is_flagged_for_review(tmp_path):
+    key = PrivateKey.generate()
+    c, _, sentinel = make_client(tmp_path, sentinel=FakeClient(org_key=key))
+    with c:
+        sid = check_in(c, LINK_ANSWERS)
+        summary = c.get(f"/checkin/sessions/{sid}/summary").json()
+        c.post(f"/checkin/sessions/{sid}/approve", json={})
+    rash = next(i for i in summary["items"] if i["term_code"] == "SE_RASH")
+    assert rash["possible_link"] is True and rash["onset"] == "1_3_days"
+    assert "Marked for review" in summary["text"] and "does not mean one caused the other" in summary["text"]
+    assert "caused by" not in summary["text"] and "for review" in summary["spoken"]
+    assert summary["share"]["record"]["symptoms"][0]["possible_link_flag"] is True
+    assert sentinel.sent[0]["symptoms"][0]["possible_link_flag"] is True
+    assert opened(key, sentinel.envelopes[0])["symptoms"][0]["possible_link_flag"] is True
+    assert rows(tmp_path, "SELECT possible_link_flag FROM symptom_event") == [{"possible_link_flag": 1}]
+    stored = rows(tmp_path, "SELECT description, started_on FROM exposure_event")
+    assert len(stored) == 1 and "hand cream" in stored[0]["description"]
+    everything_sent = json.dumps([sentinel.sent, sentinel.envelopes, sentinel.consents])
+    assert "cream" not in everything_sent  # the exposure itself never leaves the device
+
+
+def test_no_flag_without_a_new_exposure_or_for_a_symptom_seen_last_time(tmp_path):
+    c, _, sentinel = make_client(tmp_path)
+    with c:
+        no_exposure = check_in(c, LINK_ANSWERS[:3] + [("q6", "No, nothing new")])
+        first = c.get(f"/checkin/sessions/{no_exposure}/summary").json()
+        c.post(f"/checkin/sessions/{no_exposure}/approve", json={})
+        again = check_in(c, LINK_ANSWERS)  # the rash was already there last time
+        second = c.get(f"/checkin/sessions/{again}/summary").json()
+    assert [i["possible_link"] for i in first["items"]] == [False]
+    assert [i["possible_link"] for i in second["items"]] == [False]
+    assert "Marked for review" not in second["text"]
+
+
+def test_an_exposure_from_an_earlier_check_in_still_links_a_new_symptom(tmp_path):
+    c, _, _ = make_client(tmp_path)
+    with c:
+        first = check_in(c, [("q2", "I am tired"), ("q6", "Yes, a new soap since yesterday")])
+        c.post(f"/checkin/sessions/{first}/approve", json={})
+        later = check_in(c, LINK_ANSWERS[:3] + [("q6", "No, nothing new")])
+        summary = c.get(f"/checkin/sessions/{later}/summary").json()
+    flags = {i["term_code"]: i["possible_link"] for i in summary["items"]}
+    assert flags == {"SE_RASH": True}
+
+
+def test_an_exposure_answer_adds_no_invented_symptom(tmp_path):
+    c, _, _ = make_client(tmp_path)  # FakePipeline invents SE_OTHER_REVIEW for "started", like llama3.2 did live
+    with c:
+        sid = check_in(c, LINK_ANSWERS[:3] + [("q6", "Yes, I started a new hand cream")])
+        items = c.get(f"/checkin/sessions/{sid}/summary").json()["items"]
+    assert [(i["term_code"], i["possible_link"]) for i in items] == [("SE_RASH", True)]
+
+
+# ---------- restart safety ----------
+
+def restarted(tmp_path, sentinel):
+    """A new runtime on the same database, as after a restart: nothing carried over in memory."""
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    return c
+
+
+def test_a_half_finished_check_in_survives_a_runtime_restart(tmp_path):
+    sentinel = FakeClient()
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        sid = check_in(c, LINK_ANSWERS[:2] + [("q6", "Yes, a new hand cream about five days ago")])
+        c.post(f"/checkin/sessions/{sid}/correction", json={"term_code": "SE_RASH", "onset": "1_3_days"})
+        before = c.get(f"/checkin/sessions/{sid}/summary").json()
+    draft_file = tmp_path / "drafts" / f"{sid}.json"
+    assert draft_file.exists() and oct(draft_file.stat().st_mode & 0o777) == "0o600"
+
+    with restarted(tmp_path, sentinel) as c2:
+        after = c2.get(f"/checkin/sessions/{sid}/summary").json()
+        assert c2.post(f"/checkin/sessions/{sid}/correction",
+                       json={"term_code": "SE_RASH", "severity": "mild"}).status_code == 409  # still used
+        receipt = c2.post(f"/checkin/sessions/{sid}/approve", json={"severities": {"SE_RASH": "mild"}}).json()
+    assert after["items"] == before["items"] and after["correction_used"] is True
+    assert after["items"][0]["possible_link"] is True  # the exposure survived too
+    assert after["share"]["record"]["record_id"] == before["share"]["record"]["record_id"]
+    assert receipt["status"] == "sent" and sentinel.sent[0]["record_id"] == before["share"]["record"]["record_id"]
+    assert not draft_file.exists()  # approved: everything is in the database now
+
+
+def test_an_unreadable_draft_file_starts_the_draft_empty(tmp_path):
+    c, _, _ = make_client(tmp_path)
+    with c:
+        sid = check_in(c, LINK_ANSWERS[:2])
+    (tmp_path / "drafts" / f"{sid}.json").write_text("{broken")
+    with restarted(tmp_path, FakeClient()) as c2:
+        summary = c2.get(f"/checkin/sessions/{sid}/summary")
+    assert summary.status_code == 200 and summary.json()["items"] == []
+
+
+def test_queued_records_are_sent_after_a_restart(tmp_path):
+    sentinel = FakeClient(online=False)
+    c, _, _ = make_client(tmp_path, sentinel=FakeClient())
+    with c:
+        sid = start(c)
+    c, _, _ = make_client(tmp_path, sentinel=sentinel)
+    with c:
+        answer(c, sid, "q2", "I am tired")
+        assert c.post(f"/checkin/sessions/{sid}/approve", json={}).json()["status"] == "queued"
+        c.app.state.retry_worker.run_once()
+    assert (tmp_path / "retry_state.json").exists()
+    sentinel.online = True
+    with restarted(tmp_path, sentinel) as c2:
+        c2.app.state.retry_worker.run_once()
+        c2.app.state.retry_worker.clock = lambda: 1e12  # well past any backoff
+        c2.app.state.retry_worker.run_once()
+        now = c2.get(f"/checkin/sessions/{sid}/receipt").json()
+    assert now["status"] == "sent" and len(sentinel.sent) == 1

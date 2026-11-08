@@ -1291,3 +1291,105 @@ def test_live_consent_update(db_path, live, live_client):
     assert (receipt.status, receipt.response_code, receipt.method) == ("sent", 200, "PUT")
     assert receipt.url == gate.consent_url(live, WALTER)
     assert gate.latest_consent_receipt(db_path) == receipt
+
+
+# ---------- configuration fetches in the network log (PV-06, D-088) ----------
+
+def _service(handler):
+    return httpx.Client(transport=httpx.MockTransport(handler), base_url="http://127.0.0.1:8000")
+
+
+def test_make_client_logs_every_config_fetch(db_path):
+    client = gate.make_client(Settings(db_path=db_path, patient_ref=WALTER))
+    assert client._on_fetch is not None
+    client.close()
+
+
+def test_config_fetches_are_logged_with_their_parameters_only(db_path):
+    survey = json.loads((SCHEMA_DIR / "examples" / "survey_config.valid.json").read_text())
+
+    def handler(request):
+        if request.url.path == "/v1/survey":
+            return httpx.Response(200, json={"config_id": "cfg_b_v1", "cohort_id": "cohort_B", "version": 1,
+                                             "published_at": "2026-09-27T12:00:00Z", **survey})
+        return httpx.Response(503, json={"error": "down"})
+
+    client = SentinelClient("http://127.0.0.1:8000", WALTER, http=_service(handler),
+                            on_fetch=lambda r: gate.log_fetch(db_path, r))
+    gate.refresh_config(db_path, WALTER, client=client)
+    logged = rows(db_path, "SELECT outbox_id, kind, method, url, fields_sent, payload_sha256, response_code "
+                           "FROM egress_log ORDER BY log_id")
+    assert [(r["kind"], r["method"], r["response_code"]) for r in logged] == \
+        [("config_fetch", "GET", 200), ("config_fetch", "GET", 503)]
+    assert all(r["outbox_id"] is None for r in logged)
+    assert logged[0]["url"].endswith("/v1/survey?cohort_id=cohort_B")
+    assert json.loads(logged[0]["fields_sent"]) == ["cohort_id"]
+    assert logged[0]["payload_sha256"] == payload_sha256({"cohort_id": "cohort_B"})
+    assert "Walter" not in json.dumps(logged)
+
+
+def test_no_network_logs_nothing_and_a_log_failure_never_blocks_a_fetch(db_path, tmp_path):
+    def offline(request):
+        raise httpx.ConnectError("no network")
+
+    client = SentinelClient("http://127.0.0.1:8000", WALTER, http=_service(offline),
+                            on_fetch=lambda r: gate.log_fetch(db_path, r))
+    assert gate.refresh_config(db_path, WALTER, client=client).survey == "offline"
+    assert rows(db_path, "SELECT * FROM egress_log") == []
+    result = type("R", (), {"method": "GET", "url": "u", "fields_sent": [], "payload_sha256": "x",
+                            "status_code": 200})()
+    gate.log_fetch(tmp_path / "missing" / "nowhere.db", result)  # logs an error, never raises
+
+
+def test_network_log_lists_sends_and_fetches_newest_first(db_path):
+    record = make_record(db_path)
+    queue(db_path, record)
+    gate.send_queued(db_path, record["record_id"], client=FakeService().client())
+    result = type("R", (), {"method": "GET", "url": "http://127.0.0.1:8000/v1/terms?program_id=prog_demo_01",
+                            "fields_sent": ["program_id"], "payload_sha256": "f" * 64, "status_code": 200})()
+    gate.log_fetch(db_path, result)
+    entries = gate.network_log(db_path)
+    assert [(e["kind"], e["destination"]) for e in entries] == [("config_fetch", None), ("send", "company_record")]
+    assert entries[1]["outbox_id"] == record["record_id"] and entries[1]["response_code"] == 201
+    assert set(entries[0]) == {"log_id", "kind", "outbox_id", "destination", "org_id", "method", "url",
+                               "fields_sent", "payload_sha256", "response_code", "sent_at"}
+    assert "SE_RASH" not in json.dumps(entries) and "\"payload\"" not in json.dumps(entries)  # no payload content
+
+
+# ---------- restart safety: retry timing survives a restart ----------
+
+def test_retry_state_survives_a_restart(db_path, tmp_path):
+    queue(db_path, make_record(db_path))
+    state = tmp_path / "retry_state.json"
+    service, wall = FakeService(down=True), [5_000.0]
+    first = gate.RetryWorker(db_path, service.client, clock=FakeClock(), state_path=state,
+                             wall_clock=lambda: wall[0])
+    for _ in range(3):  # three failures: next attempt in 8 s
+        first.run_once()
+        first.clock.now += 100
+    assert first.status("rec_0a1b2c3d")["attempts"] == 3
+    assert oct(state.stat().st_mode & 0o777) == "0o600"
+
+    wall[0] += 100 + 3  # the runtime was down for 3 s after the last pass... and the clock was reset
+    second = gate.RetryWorker(db_path, service.client, clock=FakeClock(), state_path=state,
+                              wall_clock=lambda: wall[0])
+    resumed = second.status("rec_0a1b2c3d")
+    assert resumed["attempts"] == 3 and resumed["next_attempt_in"] == 0.0  # overdue: due now, not back to 2 s
+    second.run_once()
+    assert second.status("rec_0a1b2c3d") == {"attempts": 4, "next_attempt_in": 16}
+
+    service.down = False
+    second.run_once()  # not due yet
+    second.clock.now += 16
+    [receipt] = second.run_once()
+    assert receipt.status == "sent" and gate.RetryWorker(
+        db_path, service.client, state_path=state).status("rec_0a1b2c3d") is None
+    assert json.loads(state.read_text()) == {}
+
+
+def test_an_unreadable_retry_state_file_starts_fresh(db_path, tmp_path):
+    state = tmp_path / "retry_state.json"
+    state.write_text("{not json")
+    queue(db_path, make_record(db_path))
+    worker = gate.RetryWorker(db_path, FakeService().client, clock=FakeClock(), state_path=state)
+    assert worker.status("rec_0a1b2c3d") == {"attempts": 0, "next_attempt_in": 0.0}

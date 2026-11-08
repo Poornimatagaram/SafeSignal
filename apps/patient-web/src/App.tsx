@@ -17,12 +17,14 @@ import { createConsentFlow, type ConsentFlow } from './consentFlow.ts'
 import { ConsentScreen } from './ConsentScreen.tsx'
 import { createSetupFlow, type SetupFlow } from './setupFlow.ts'
 import { SetupScreen } from './SetupScreen.tsx'
+import { createNetworkLogFlow, type NetworkLogFlow } from './networkLog.ts'
+import { NetworkLogScreen } from './NetworkLogScreen.tsx'
 import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
 
 const client = createRuntimeClient()
 
 /** start -> question (one per survey question) -> share (summary, approval, receipt); start <-> consent <-> setup. */
-type Screen = 'start' | 'question' | 'share' | 'consent' | 'setup'
+type Screen = 'start' | 'question' | 'share' | 'consent' | 'setup' | 'network-log'
 /** Push-to-talk is a toggle (tap to start, tap to stop): holding a button is hard with a hand tremor. */
 type Talk = 'idle' | 'starting' | 'listening' | 'sending'
 /**
@@ -52,6 +54,8 @@ export default function App() {
   const [consentFlow, setConsentFlow] = useState<ConsentFlow | null>(null)
   // "Set up who I share with": created when opened from "Who I share with".
   const [setupFlow, setSetupFlow] = useState<SetupFlow | null>(null)
+  // "What this computer sent" (PV-06): created when opened from the start screen.
+  const [networkLogFlow, setNetworkLogFlow] = useState<NetworkLogFlow | null>(null)
 
   const session = useRef<CheckinSession | null>(null) // today's check-in; every answer is sent with its id
   const player = useRef<Player | null>(null)
@@ -88,6 +92,18 @@ export default function App() {
   // Leaving "Who I share with" stops watching a queued change (the runtime still sends it by itself).
   useEffect(() => () => consentFlow?.dispose(), [consentFlow])
   useEffect(() => () => setupFlow?.dispose(), [setupFlow])
+
+  useEffect(() => () => networkLogFlow?.dispose(), [networkLogFlow])
+
+  const openNetworkLog = () => {
+    setNetworkLogFlow(createNetworkLogFlow(client))
+    setScreen('network-log')
+  }
+
+  const closeNetworkLog = () => {
+    setNetworkLogFlow(null)
+    setScreen('start')
+  }
 
   const openConsent = () => {
     setConsentFlow(createConsentFlow(client))
@@ -338,8 +354,15 @@ export default function App() {
         <button type="button" className="button button--secondary button--huge" onClick={openConsent}>
           Who I share with
         </button>
+        <button type="button" className="button button--secondary button--huge" onClick={openNetworkLog}>
+          What this computer sent
+        </button>
       </main>
     )
+  }
+
+  if (screen === 'network-log' && networkLogFlow) {
+    return <NetworkLogScreen flow={networkLogFlow} onBack={closeNetworkLog} />
   }
 
   if (screen === 'consent' && consentFlow) {

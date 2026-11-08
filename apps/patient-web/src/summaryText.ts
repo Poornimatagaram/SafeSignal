@@ -38,6 +38,10 @@ export function itemLabel(items: readonly SummaryItem[], termCode: string): stri
   return items.find((item) => item.term_code === termCode)?.label ?? 'problem'
 }
 
+/** SE-04: shown under an item marked for review. Timing only: never worded as a cause. */
+export const POSSIBLE_LINK_TEXT =
+  'Marked for review: this started within a week of something new you began. That does not mean one caused the other.'
+
 export const NOTHING_TO_REPORT = 'You did not report any new problems.'
 
 /** What each part of the outbound record means, in plain words. Every part is a code, a number or a random ID. */

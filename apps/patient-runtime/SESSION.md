@@ -3,6 +3,18 @@
 Running log for this app. Update it after every task (see `CLAUDE.md` owner notes). Newest entries go at the top of each section.
 
 ## Done
+- **2026-11-08 (overnight), restart safety** (branch `patient/feat/restart-safety`).
+  - **Tests:** 762 runtime, 54 eval and 251 web; both evals pass.
+  - **Live check:** I stopped the runtime mid check-in (rash, moderate) and restarted it. The summary showed the same items and the same record id. Approval sent that id (201), and the draft file was removed.
+- **2026-11-08 (overnight), SE-04 possible link merged as PR #33** (`5813610`).
+- **2026-11-08 (overnight), SE-04 possible link** (branch `patient/feat/possible-link`). I wrote the rule and its wiring; the screen agent added the "for review" line.
+  - **Tests:** 757 runtime, 54 eval and 251 web; both evals pass.
+  - **Live check:** a rash that "started two days ago" and "a new hand cream about five days ago" was flagged for review, and the record (201) carried `possible_link_flag: true`.
+- **2026-11-08 (overnight), network log (PV-06) merged as PR #32** (`e7d2051`).
+- **2026-11-08 (overnight), PV-06 network log and contract 2.3 config-fetch logging** (branch `patient/feat/network-log`). The screen agent built the view; I did the migration, `on_fetch`, `/network-log` and their tests.
+  - **Tests:** 731 runtime, 54 eval and 247 web; both evals pass.
+  - **Live check:** starting a check-in against the local service logged `GET /v1/survey?cohort_id=cohort_B` and `GET /v1/terms?program_id=prog_demo_01` (200 each, parameters only).
+- **2026-11-08 (overnight), caregiver alerts only, merged as PR #31** (`b4eaf0b`). A teammate (nkousik18) had already squash-merged PR #26 (`c4ebf68`) before the caregiver change, so the change went in its own PR.
 - **2026-11-08, A7 addition after teammate review: envelopes per organization and consent setup** (same branch, PR #26). The same two agents extended the gate and the screen; I added `consent.setup`, `PUT /consent/setup` and the per-organization wiring in `checkin.py`.
   - **Tests:** 725 runtime, 54 eval and 232 patient-web, with a clean build and `npm audit`. Evals unchanged: leakage PASS, re-ask 17 of 20.
   - **Live check** (fresh scratch runtime on port 8011, local service):
@@ -73,6 +85,9 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **2026-11-07, A1 runtime skeleton (contract 2.0).** FastAPI app on port 8001 with `GET /health`. On startup, `var/patient/patient.db` is created from `schema/patient.sql`. On first launch it is seeded with Walter's synthetic profile, consent, emergency organization and contacts. Docstring-only module placeholders.
 
 ## Decisions
+- **Restart state lives in JSON files beside the database, not in new tables**, because the schema is the contract. They are local-only like the database, 0600 and atomic. The drafts can hold an exposure description, so they are deleted at approval. Envelope "waiting" reasons are not saved: after a restart they read "no_key" until the next attempt.
+- **Possible link rule (SE-04):** a new symptom (not in the previous approved check-in) that started 0 to 7 days after a new exposure (this check-in, or stored in the last 30 days). Onset buckets are compared as day ranges. An exposure given without a time counts as within the last week. An unknown symptom onset is never linked. The exposure description stays on the device; only the flag leaves.
+- **The `egress_log` migration recreates the table** instead of `ALTER TABLE ADD COLUMN`, because 2.3 also makes `outbox_id` nullable, which SQLite can't change in place.
 - **An envelope that can't be sealed yet is not stored as plaintext.** When the org key is missing (404) or the network is off, nothing is queued. The session counts as pending (approved while sharing, no envelope yet), and the retry worker rebuilds the payload from the stored coded rows, which gives the same payload every time, then seals it. The outbox only ever holds the sealed envelope.
 - **Turning the care team off stops future sharing on the device at once (CN-03)**, even before the service hears about it. A check-in approved while sharing was off is never sealed later, even if sharing is turned back on.
 - **Each consent update carries the full state, so an older queued one is marked `failed` (superseded, never sent)** when a newer one is queued; an older update landing after a newer one would undo it. Consent goes first in the retry order, so a withdrawal reaches the service before later sends.
@@ -146,6 +161,7 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Patient web:** built pages carry a Content-Security-Policy that allows connections only to the page itself and the runtime, and vitest is pinned to 5.1 (see Errors and fixes).
 
 ## Errors and fixes
+- **Live SE-04 run: an exposure answer became a symptom.** "I started a new hand cream" came back from the model as a symptom, the guard coded it `SE_OTHER_REVIEW`, and it was flagged too. Fixed: exposure answers keep only symptoms they name, with a test.
 - **Two A7 commit subjects and the PR title were over 72 characters,** and CI's ownership and commit-message check failed on the title. I rebuilt the two unpushed commits with shorter subjects, using a backup branch, cherry-pick and no force-push, and shortened the PR title. A rerun of the failed job reuses the old event, so it still saw the old title. Closing and reopening the PR started a fresh run, which passed. Lesson: count subjects and PR titles before committing (`scripts/check_commits.sh`), and keep PR titles to 72 characters too.
 - **My first A7 live-check script crashed after the envelope part.** It read the preview record of a check-in that was still waiting for a severity choice, where the record is null by design. I reran the consent part on its own; the runtime was fine.
 - **The rebase onto contract 2.2 broke an egress test.** `main` gained six term codes (D-079), so the term list grew from 12 to 18, and `test_egress_gate.py` had hard-coded 12. Fixed by deriving the count and the rash row from `schema/terms.json`. I restarted the local service on the 2.2 code and reseeded it with `seed --reset`, which leaves `var/patient` alone. All tests and the leakage eval pass on 2.2.
@@ -186,8 +202,6 @@ Running log for this app. Update it after every task (see `CLAUDE.md` owner note
 - **Reseed before the demo:** the live tests replaced Northgate's and Lakeside's keys with throwaway ones and added key grants, synthetic envelopes, an emergency access (with its alert) and consent changes (Walter's contacts now have new `ec_` ids). Doctor-web must register fresh keys after reseeding.
 - **Ask the company owner** for an organization directory a patient device can read, for the setup screen.
 - **Caregiver "summary" detail:** hidden for now (alerts only). Turn it back on once the user decides what the summary contains and the service can deliver it.
-- **Persist the check-in draft** so a runtime restart mid check-in loses nothing; the retry state is in memory too.
-- **`possible_link_flag` from exposures** (SE-04).
 - **Contract 2.0 screen items:** show who is answering, typed input (`input_mode`), consent setup screens, the check-in schedule.
 - **Ask the company owner** for:
   - CI jobs for `apps/patient-runtime` pytest, `evals/patient` and `apps/patient-web` `npm test`; CI runs none of them today.

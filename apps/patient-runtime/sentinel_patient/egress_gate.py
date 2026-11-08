@@ -55,10 +55,11 @@ from sentinel_contract.client import (BACKOFF_SECONDS, ContractError, SendReject
 
 from . import care_payload
 from .db import connect, utc_now
+from .state_store import JsonFile
 
 log = logging.getLogger(__name__)
 
-__all__ = ["Receipt", "ConfigRefresh", "make_client", "field_names", "new_record_id", "records_url",
+__all__ = ["log_fetch", "network_log", "Receipt", "ConfigRefresh", "make_client", "field_names", "new_record_id", "records_url",
            "build_company_record", "queue_payload", "send_queued", "receipt_for", "refresh_config",
            "new_alert_id", "alerts_url", "build_alert", "RetryWorker", "BACKOFF_SECONDS",
            "new_envelope_id", "envelopes_url", "new_consent_id", "consent_url", "KeyUnavailable", "fetch_org_key",
@@ -103,7 +104,44 @@ class ConfigRefresh:
 
 
 def make_client(settings) -> SentinelClient:
-    return SentinelClient(base_url=settings.sentinel_base_url, patient_ref=settings.patient_ref)
+    """The service client. Every configuration fetch it makes (survey, terms, org key) is written to egress_log
+    as kind 'config_fetch' with no outbox row (PV-06, D-088)."""
+    db_path = settings.db_path
+    return SentinelClient(base_url=settings.sentinel_base_url, patient_ref=settings.patient_ref,
+                          on_fetch=lambda result: log_fetch(db_path, result))
+
+
+def log_fetch(db_path: Path, result) -> None:
+    """Log one configuration fetch that reached the service (any status). Its hash and field names describe the
+    request parameters, e.g. cohort_id: the only thing a GET sends. Never raises: a fetch is never blocked by it."""
+    try:
+        with closing(connect(db_path)) as conn, conn:
+            conn.execute("INSERT INTO egress_log (outbox_id, kind, method, url, fields_sent, payload_sha256, "
+                         "response_code, sent_at) VALUES (NULL, 'config_fetch', ?, ?, ?, ?, ?, ?)",
+                         (result.method, result.url, json.dumps(list(result.fields_sent)), result.payload_sha256,
+                          result.status_code, utc_now()))
+    except sqlite3.Error as e:
+        log.error("egress log of a config fetch failed with %s", type(e).__name__)
+
+
+def network_log(db_path: Path, *, limit: int = 200) -> list[dict]:
+    """Every request that reached the service, newest first (PV-06): sends and configuration fetches. Field names,
+    hashes and status only, never payloads."""
+    with closing(connect(db_path)) as conn:
+        rows = conn.execute(
+            "SELECT l.log_id, l.kind, l.outbox_id, o.destination, o.payload, l.method, l.url, l.fields_sent, "
+            "l.payload_sha256, l.response_code, l.sent_at FROM egress_log l LEFT JOIN outbox o USING (outbox_id) "
+            "ORDER BY l.log_id DESC LIMIT ?", (limit,)).fetchall()
+    out = []
+    for r in rows:
+        org_id = None
+        if r["destination"] == "care_envelope":
+            org_id = json.loads(r["payload"]).get("org_id")
+        out.append({"log_id": r["log_id"], "kind": r["kind"], "outbox_id": r["outbox_id"],
+                    "destination": r["destination"], "org_id": org_id, "method": r["method"], "url": r["url"],
+                    "fields_sent": json.loads(r["fields_sent"]), "payload_sha256": r["payload_sha256"],
+                    "response_code": r["response_code"], "sent_at": r["sent_at"]})
+    return out
 
 
 def new_record_id() -> str:
@@ -637,17 +675,44 @@ class RetryWorker:
     CARE = "care:"
 
     def __init__(self, db_path: Path, client_factory: Callable[[], Any], *, backoff: Sequence[int] = BACKOFF_SECONDS,
-                 clock: Callable[[], float] = time.monotonic, patient_ref: str | None = None):
+                 clock: Callable[[], float] = time.monotonic, patient_ref: str | None = None,
+                 state_path: Path | None = None, wall_clock: Callable[[], float] = time.time):
+        """`state_path` keeps attempt counts and due times in a local file (state_store), so a restart resumes the
+        backoff where it was instead of starting again at 2 s. Due times are stored as wall-clock times."""
         if not backoff:
             raise ValueError("backoff needs at least one delay")
         self.db_path, self.client_factory = Path(db_path), client_factory
-        self.backoff, self.clock = tuple(backoff), clock
+        self.backoff, self.clock, self.wall_clock = tuple(backoff), clock, wall_clock
         self.patient_ref = patient_ref
         self._state: dict[str, tuple[int, float]] = {}   # outbox_id or "care:<session_id>" -> (failures, due at)
+        self._file = JsonFile(state_path) if state_path else None
+        self._load_state()
         self._in_flight: set[str] = set()
         self._guard = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+
+    def _load_state(self) -> None:
+        saved = self._file.load() if self._file else None
+        if not isinstance(saved, dict):
+            return
+        now, wall = self.clock(), self.wall_clock()
+        for key, value in saved.items():
+            try:
+                attempts, due_wall = int(value[0]), float(value[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+            self._state[str(key)] = (attempts, now + max(0.0, due_wall - wall))
+
+    def _save_state(self) -> None:
+        """Called with `_guard` held."""
+        if self._file is None:
+            return
+        now, wall = self.clock(), self.wall_clock()
+        try:
+            self._file.save({k: [a, wall + (due - now)] for k, (a, due) in self._state.items()})
+        except OSError as e:
+            log.error("retry state not saved (%s); it is rebuilt after a restart", type(e).__name__)
 
     def _patient_ref(self) -> str | None:
         if self.patient_ref:
@@ -672,6 +737,7 @@ class RetryWorker:
             for gone in [k for k in self._state if k.startswith(self.CARE) == care
                          and k not in live and k not in self._in_flight]:
                 del self._state[gone]  # sent, refused or sealed elsewhere (e.g. the approve route)
+                self._save_state()
             due = [k for k in keys if k not in self._in_flight and self._state.get(k, (0, now))[1] <= now]
             self._in_flight.update(due)
         return due
@@ -687,11 +753,13 @@ class RetryWorker:
         with self._guard:
             self._in_flight.discard(key)
             if not still_queued:
-                self._state.pop(key, None)
+                if self._state.pop(key, None) is not None:
+                    self._save_state()
                 return
             attempts = self._state.get(key, (0, 0.0))[0] + 1
             delay = self.backoff[min(attempts - 1, len(self.backoff) - 1)]
             self._state[key] = (attempts, self.clock() + delay)
+            self._save_state()
 
     def run_once(self) -> list[Receipt]:
         """Seal due pending care envelopes, then send every queued row whose next attempt is due; returns the
