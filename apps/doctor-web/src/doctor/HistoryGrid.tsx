@@ -103,9 +103,10 @@ export function HistoryGrid({ entries, title = 'Last 21 days' }: { entries: DrTi
 export function Legend() {
   return (
     <div className="legend">
-      <span><i style={{ background: 'var(--mild)' }} />Mild</span>
-      <span><i style={{ background: 'var(--moderate)' }} />Moderate</span>
-      <span><i style={{ background: 'var(--severe)' }} />Severe</span>
+      {/* Key matches the cells: colour plus fill height (a third, two thirds, full) */}
+      <span><i className="sev-k" style={{ '--sev': 'var(--mild)', '--fill': '34%' } as React.CSSProperties} />Mild</span>
+      <span><i className="sev-k" style={{ '--sev': 'var(--moderate)', '--fill': '67%' } as React.CSSProperties} />Moderate</span>
+      <span><i className="sev-k" style={{ '--sev': 'var(--severe)', '--fill': '100%' } as React.CSSProperties} />Severe</span>
       <span><i style={{ background: 'var(--review)', borderRadius: '50%' }} />For review</span>
       <span><b style={{ color: 'var(--coral-ink)' }}>C</b> Caregiver answered</span>
     </div>

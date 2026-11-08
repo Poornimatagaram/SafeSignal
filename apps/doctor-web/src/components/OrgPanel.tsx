@@ -17,7 +17,7 @@ export function OrgPanel({ me, orgs, onChange }: { me: DrKey; orgs: OrgStatus[];
             setCopied(true)
             setTimeout(() => setCopied(false), 1500)
           }}
-          className="rounded border border-slate-300 px-2 py-0.5 text-xs hover:bg-slate-50"
+          className="rounded border border-slate-300 px-2.5 py-1.5 text-xs hover:bg-slate-50"
           title="Give this to your organization's admin so they can grant you access"
         >
           {copied ? 'Copied' : 'Copy my public key'}
