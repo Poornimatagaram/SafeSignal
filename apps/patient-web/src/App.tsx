@@ -8,13 +8,17 @@ import {
   needsRestart,
   questionErrorMessage,
   startErrorMessage,
+  typedAnswerErrorMessage,
   voiceErrorMessage,
 } from './messages.ts'
 import { S } from './strings.ts'
 import { Shell } from './Shell.tsx'
 import { HomeView } from './HomeScreen.tsx'
-import { bubblesAfterTurn, ChatThread, type Bubble } from './CheckinChat.tsx'
-import { afterTurn, createQuestionVoice } from './questionFlow.ts'
+import { ChatThread, turnOutcome, type Bubble } from './CheckinChat.tsx'
+import { createQuestionVoice } from './questionFlow.ts'
+import { readMuted, saveMuted } from './soundSetting.ts'
+import { SoundOffNote } from './SoundControls.tsx'
+import { TypeAnswer } from './TypeAnswer.tsx'
 import { createShareFlow, type ShareFlow } from './shareFlow.ts'
 import { ShareScreen } from './ShareScreen.tsx'
 import { createConsentFlow, type ConsentFlow } from './consentFlow.ts'
@@ -56,6 +60,13 @@ export default function App() {
   const [voiceLoading, setVoiceLoading] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [notice, setNotice] = useState<Notice>(null)
+  // Sound off: remembered for this browser session only (src/soundSetting.ts). Nothing plays by itself while it is off.
+  const [muted, setMuted] = useState(readMuted)
+  const mutedNow = useRef(muted)
+  // "Sound is off. Tap Unmute to hear it." after "Repeat" or "Slower" while muted.
+  const [soundOffNote, setSoundOffNote] = useState(false)
+  // "Or type your answer": the words live only here, in memory, until sent; cleared on every question change.
+  const [typed, setTyped] = useState('')
   // The conversation for the current question only (question, re-asks, Walter's words). Cleared on every question
   // change, like the transcript: Walter's words stay in memory no longer than one question.
   const [thread, setThread] = useState<Bubble[]>([])
@@ -71,7 +82,7 @@ export default function App() {
   const player = useRef<Player | null>(null)
   const recording = useRef<ActiveRecording | null>(null)
   const talkNow = useRef<Talk>('idle')
-  // Question audio at its current wording (ask 0, 1 or 2), cached for "Hear it again" and "Slower".
+  // Question audio at its current wording (ask 0, 1 or 2), cached for "Repeat" and "Slower".
   const voice = useRef(
     createQuestionVoice(client, (audio) => player.current?.play(audio) ?? Promise.resolve()),
   )
@@ -138,7 +149,8 @@ export default function App() {
   }
 
   const speak = useCallback(async (q: Question, slow: boolean) => {
-    if (!player.current) return
+    // Sound off: nothing plays by itself, and the audio is not even fetched.
+    if (!player.current || mutedNow.current) return
     const gen = generation.current
     setVoiceNote(null)
     try {
@@ -164,6 +176,8 @@ export default function App() {
     setVoiceNote(null)
     setVoiceLoading(false)
     setLoadError(null)
+    setTyped('')
+    setSoundOffNote(false)
     return generation.current
   }, [])
 
@@ -212,6 +226,7 @@ export default function App() {
     if (starting) return
     // This tap also unlocks audio playback for the rest of the check-in.
     if (!player.current) player.current = createPlayer(setSpeaking)
+    player.current.setMuted(mutedNow.current)
     player.current.unlock()
     setStartError(null)
     setStarting(true)
@@ -249,13 +264,93 @@ export default function App() {
     else void loadQuestion(question.index + 1)
   }
 
+  /** One answer's result, spoken or typed: the same handling for both. */
+  const handleTurn = (asked: Question, result: TurnResult) => {
+    const { step, bubbles } = turnOutcome(asked, result)
+    if (step.kind === 'reask') {
+      // Same question, simpler wording: shown and spoken right away (Start already unlocked audio; no tap).
+      generation.current += 1
+      player.current?.stop()
+      updateTalk('idle')
+      setReply(null)
+      setNotice('reask')
+      setQuestion(step.question)
+      void speak(step.question, false)
+    } else if (step.kind === 'command') {
+      // "Say that again" / "Slower": not an answer and not a re-ask. Same wording, same ask; wait for the answer.
+      player.current?.stop()
+      updateTalk('idle')
+      setReply(null)
+      setNotice(step.command)
+      if (mutedNow.current) setSoundOffNote(true)
+      else void speak(step.question, step.slow)
+    } else if (step.kind === 'move-on') {
+      setNotice('move-on')
+    } else {
+      setNotice(null)
+      setReply(result)
+    }
+    say(...bubbles)
+  }
+
+  /** Before a new answer (spoken or typed): stop the voice and clear the last answer's messages. */
+  const beginAnswer = () => {
+    player.current?.stop()
+    setAnswerError(null)
+    setReply(null)
+    setSoundOffNote(false)
+    setNotice((shown) => (shown === 'repeat' || shown === 'slower' ? null : shown))
+  }
+
+  /** "Send": the typed answer goes the same way as a spoken one. The box keeps the words if sending fails. */
+  const sendTyped = async () => {
+    if (!question || talkNow.current !== 'idle') return
+    const text = typed.trim()
+    if (!text) return
+    beginAnswer()
+    updateTalk('sending')
+    const gen = generation.current
+    try {
+      const sessionId = session.current?.session_id ?? ''
+      const result = await client.postTextTurn(sessionId, question.question_id, question.ask, text)
+      if (gen !== generation.current || !mounted.current) return
+      setTyped('')
+      handleTurn(question, result)
+    } catch (error) {
+      if (gen === generation.current && mounted.current) {
+        setAnswerError({ message: typedAnswerErrorMessage(error), restart: needsRestart(error) })
+      }
+    } finally {
+      if (mounted.current) updateTalk('idle')
+    }
+  }
+
+  /** "Repeat" (false) and "Slower" (true). With the sound off nothing plays: a short note says how to hear it. */
+  const hear = (q: Question, slow: boolean) => {
+    if (mutedNow.current) {
+      setSoundOffNote(true)
+      return
+    }
+    setSoundOffNote(false)
+    void speak(q, slow)
+  }
+
+  /** "Mute" stops any sound at once; "Unmute" never replays anything by itself. */
+  const toggleMute = () => {
+    const next = !mutedNow.current
+    mutedNow.current = next
+    setMuted(next)
+    saveMuted(next)
+    player.current?.setMuted(next)
+    if (!next) setSoundOffNote(false)
+  }
+
+  const stopSound = () => player.current?.stop()
+
   const toggleTalk = async () => {
     if (!question) return
     if (talkNow.current === 'idle') {
-      player.current?.stop()
-      setAnswerError(null)
-      setReply(null)
-      setNotice((shown) => (shown === 'repeat' || shown === 'slower' ? null : shown))
+      beginAnswer()
       updateTalk('starting')
       try {
         const active = await startRecording()
@@ -288,33 +383,7 @@ export default function App() {
         const sessionId = session.current?.session_id ?? ''
         const result = await client.postTurn(sessionId, question.question_id, question.ask, audio)
         if (gen !== generation.current || !mounted.current) return
-        const step = afterTurn(question, result)
-        if (step.kind === 'reask') {
-          // Same question, simpler wording: shown and spoken right away (Start already unlocked audio; no tap).
-          generation.current += 1
-          player.current?.stop()
-          updateTalk('idle')
-          setReply(null)
-          setNotice('reask')
-          setQuestion(step.question)
-          void speak(step.question, false)
-          say(...bubblesAfterTurn(result, step.kind, { text: step.question.text }))
-        } else if (step.kind === 'command') {
-          // "Say that again" / "Slower": not an answer and not a re-ask. Same wording, same ask; wait for the answer.
-          player.current?.stop()
-          updateTalk('idle')
-          setReply(null)
-          setNotice(step.command)
-          void speak(step.question, step.slow)
-          say(...bubblesAfterTurn(result, step.kind, { text: step.question.text, command: step.command }))
-        } else if (step.kind === 'move-on') {
-          setNotice('move-on')
-          say(...bubblesAfterTurn(result, step.kind))
-        } else {
-          setNotice(null)
-          setReply(result)
-          say(...bubblesAfterTurn(result, step.kind))
-        }
+        handleTurn(question, result)
       } catch (error) {
         if (gen === generation.current && mounted.current) {
           setAnswerError({ message: answerErrorMessage(error), restart: needsRestart(error) })
@@ -339,7 +408,7 @@ export default function App() {
     if (heard) nextButton.current?.focus({ preventScroll: true })
   }, [heard])
 
-  return <Shell>{renderScreen()}</Shell>
+  return <Shell sound={{ muted, onToggle: toggleMute, playing: speaking, onStop: stopSound }}>{renderScreen()}</Shell>
 
   function renderScreen() {
     if (screen === 'start') {
@@ -369,7 +438,9 @@ export default function App() {
     }
 
     if (screen === 'share' && shareFlow) {
-      return <ShareScreen flow={shareFlow} onRestart={restart} />
+      return (
+        <ShareScreen flow={shareFlow} onRestart={restart} muted={muted} />
+      )
     }
 
     const isLast = question !== null && question.index + 1 >= question.total
@@ -441,20 +512,24 @@ export default function App() {
                 type="button"
                 className="button button--secondary"
                 aria-disabled={busy}
-                onClick={() => !busy && void speak(question, false)}
+                onClick={() => !busy && hear(question, false)}
               >
-                <SpeakerIcon className="icon" /> {C.hearAgain}
+                <SpeakerIcon className="icon" />
+                <span className="button__label">{C.hearAgain}</span>
               </button>
               <button
                 type="button"
                 className="button button--secondary"
                 aria-disabled={busy}
-                onClick={() => !busy && void speak(question, true)}
+                onClick={() => !busy && hear(question, true)}
               >
-                <SlowIcon className="icon" /> {C.slowerButton}
+                <SlowIcon className="icon" />
+                <span className="button__label">{C.slowerButton}</span>
               </button>
             </div>
           )}
+
+          {question && soundOffNote && <SoundOffNote />}
 
           {question && !heard && (
             <button
@@ -466,6 +541,10 @@ export default function App() {
             >
               <TalkLabel talk={talk} />
             </button>
+          )}
+
+          {question && !heard && (
+            <TypeAnswer text={typed} onChange={setTyped} onSend={() => void sendTyped()} busy={busy} />
           )}
 
           {question && (reply || movingOn) && (

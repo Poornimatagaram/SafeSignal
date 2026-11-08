@@ -45,7 +45,7 @@ export function createQuestionVoice(
   client: Pick<RuntimeClient, 'getQuestionAudio'>,
   play: (audio: Blob) => Promise<void>,
 ): QuestionVoice {
-  const cache = new Map<string, Blob>() // question audio only, for "Hear it again"
+  const cache = new Map<string, Blob>() // question audio only, for "Repeat"
   const key = (question: Question, slow: boolean) => `${question.index}:${question.ask}:${slow}`
 
   return {

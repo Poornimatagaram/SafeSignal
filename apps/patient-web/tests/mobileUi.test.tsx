@@ -181,7 +181,7 @@ describe('check-in as a chat', () => {
     expect(reset).toContain('setReply(null)')
   })
 
-  it('the talk button is the one action, at the bottom, with "Hear it again" and "Slower" beside it', () => {
+  it('the talk button is the one action, at the bottom, with "Repeat" and "Slower" beside it', () => {
     const app = read('src/App.tsx')
     const dock = app.slice(app.indexOf('<div className="dock">'))
     expect(dock).toContain('className={`button talk talk--${talk}`}')
@@ -198,7 +198,7 @@ describe('phone-sized layout', () => {
     expect(renderToStaticMarkup(<Shell>x</Shell>)).toBe(
       '<div class="app-shell"><div class="app-shell__viewport">x</div></div>',
     )
-    expect(read('src/App.tsx')).toContain('return <Shell>{renderScreen()}</Shell>')
+    expect(read('src/App.tsx')).toContain('return <Shell sound={{ muted, onToggle: toggleMute, playing: speaking, onStop: stopSound }}>{renderScreen()}</Shell>')
   })
 
   it('the shell is at most 430 px wide and centred', () => {

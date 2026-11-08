@@ -51,6 +51,9 @@ export interface TurnResult {
   command: VoiceCommand | null
 }
 
+/** The longest typed answer the runtime takes (it answers 422 above this). */
+export const MAX_TYPED_ANSWER = 1000
+
 /** One check-in, opened by "Start check-in". Every answer and the approval belong to it. */
 export interface CheckinSession {
   session_id: string
@@ -279,6 +282,8 @@ export interface EgressReceipt {
 export type RuntimeErrorKind =
   | 'runtime-down' // fetch failed: the runtime is not running on this computer
   | 'empty-audio' // 400
+  | 'empty-text' // 400 on a typed answer: nothing was typed
+  | 'text-too-long' // 422 on a typed answer: longer than MAX_TYPED_ANSWER characters
   | 'forbidden' // 403
   | 'not-found' // 404
   | 'session-not-found' // 404 on a session call: unknown check-in (for example the runtime restarted)
@@ -348,6 +353,11 @@ export interface RuntimeClient {
   startSession(): Promise<CheckinSession>
   /** Send one recorded answer; returns the on-device transcript and any noted symptoms. */
   postTurn(sessionId: string, questionId: string, ask: number, audio: Blob): Promise<TurnResult>
+  /**
+   * Send one typed answer ("Or type your answer"). The answer comes back exactly like a spoken one (the transcript
+   * is the typed text); a typed "repeat" or "slower" comes back as a command. 400 = blank, 422 = too long.
+   */
+  postTextTurn(sessionId: string, questionId: string, ask: number, text: string): Promise<TurnResult>
   /** The end-of-check-in summary and exactly what sharing would send. Sends nothing. */
   getSummary(sessionId: string): Promise<CheckinSummary>
   /**
@@ -433,6 +443,17 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
     return new RuntimeError(kinds[res.status] ?? errorKindForStatus(res.status), res.status)
   }
 
+  /** One answer's result, spoken or typed: the same shape and the same reading for both. */
+  async function readTurn(res: Response, ask: number, kinds: StatusKinds): Promise<TurnResult> {
+    if (!res.ok) throw failure(res, kinds)
+    const body = await readJson(res)
+    if (!isTurnResult(body)) throw new RuntimeError('bad-response', res.status)
+    const command = readCommand(body.command, body.next)
+    // A command always replays the wording being asked now, whatever `next.ask` says.
+    const next: TurnNext = command ? { action: command, ask } : readNext(body.next)
+    return { ...body, rating: readRating(body.rating), next, command }
+  }
+
   const sessionPath = (sessionId: string) => `/checkin/sessions/${encodeURIComponent(sessionId)}`
 
   return {
@@ -471,13 +492,19 @@ export function createRuntimeClient(baseUrl: string = RUNTIME_URL, fetchImpl: Fe
         headers: { 'Content-Type': audio.type || 'application/octet-stream' },
         body: audio,
       })
-      if (!res.ok) throw failure(res, { 404: 'session-not-found', 409: 'already-shared' })
-      const body = await readJson(res)
-      if (!isTurnResult(body)) throw new RuntimeError('bad-response', res.status)
-      const command = readCommand(body.command, body.next)
-      // A command always replays the wording being asked now, whatever `next.ask` says.
-      const next: TurnNext = command ? { action: command, ask } : readNext(body.next)
-      return { ...body, rating: readRating(body.rating), next, command }
+      return readTurn(res, ask, { 404: 'session-not-found', 409: 'already-shared' })
+    },
+
+    async postTextTurn(sessionId, questionId, ask, text) {
+      if (text.trim() === '') throw new RuntimeError('empty-text')
+      if (text.length > MAX_TYPED_ANSWER) throw new RuntimeError('text-too-long')
+      const query = new URLSearchParams({ session_id: sessionId, question_id: questionId, ask: String(ask) })
+      const res = await send(`/checkin/turn/text?${query}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      return readTurn(res, ask, { 400: 'empty-text', 404: 'session-not-found', 409: 'already-shared', 422: 'text-too-long' })
     },
 
     async getSummary(sessionId) {

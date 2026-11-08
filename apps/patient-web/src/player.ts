@@ -5,19 +5,47 @@
 export interface Player {
   /** Call inside a tap handler: plays a moment of silence so later playback is allowed. */
   unlock(): void
-  /** Play one WAV blob, replacing whatever is playing. Rejects if the browser refuses to play. */
+  /**
+   * Play one WAV blob, replacing whatever is playing. Rejects if the browser refuses to play. While muted it plays
+   * nothing and resolves at once (nothing ever plays by itself while the sound is off).
+   */
   play(audio: Blob): Promise<void>
-  /** Stop playback (for example when the patient starts answering). */
+  /** Stop playback at once and go back to the start (the "Stop" button, or the patient starts answering). */
   stop(): void
+  /** Sound off (true) stops anything playing now; sound on never replays anything by itself. */
+  setMuted(muted: boolean): void
+  isMuted(): boolean
+  /** True while a question or the summary is being read out loud ("Stop" shows only then). */
+  isPlaying(): boolean
+  /** Called with true when playback starts and false when it stops, ends or fails. Returns an unsubscribe. */
+  subscribe(listener: (playing: boolean) => void): () => void
   /** Release the element and any object URL. */
   dispose(): void
 }
 
-export function createPlayer(onPlayingChange: (playing: boolean) => void): Player {
-  const element = new Audio()
+/** The parts of an HTMLAudioElement the player uses (tests pass a fake one). */
+export type AudioLike = Pick<
+  HTMLAudioElement,
+  'play' | 'pause' | 'load' | 'addEventListener' | 'removeAttribute' | 'src' | 'preload' | 'currentTime'
+>
+
+export function createPlayer(
+  onPlayingChange?: (playing: boolean) => void,
+  element: AudioLike = new Audio(),
+): Player {
   element.preload = 'auto'
   let objectUrl: string | null = null
   let silent = false
+  let muted = false
+  let playing = false
+  const listeners = new Set<(playing: boolean) => void>()
+  if (onPlayingChange) listeners.add(onPlayingChange)
+
+  const setPlaying = (next: boolean) => {
+    if (next === playing) return
+    playing = next
+    for (const listener of [...listeners]) listener(next)
+  }
 
   const setSource = (blob: Blob) => {
     if (objectUrl) URL.revokeObjectURL(objectUrl)
@@ -25,11 +53,21 @@ export function createPlayer(onPlayingChange: (playing: boolean) => void): Playe
     element.src = objectUrl
   }
 
+  const halt = () => {
+    element.pause()
+    try {
+      element.currentTime = 0
+    } catch {
+      // No media loaded yet: nothing to rewind.
+    }
+    setPlaying(false)
+  }
+
   element.addEventListener('playing', () => {
-    if (!silent) onPlayingChange(true)
+    if (!silent && !muted) setPlaying(true)
   })
   for (const event of ['pause', 'ended', 'error', 'emptied'] as const) {
-    element.addEventListener(event, () => onPlayingChange(false))
+    element.addEventListener(event, () => setPlaying(false))
   }
 
   return {
@@ -40,6 +78,7 @@ export function createPlayer(onPlayingChange: (playing: boolean) => void): Playe
     },
 
     async play(audio) {
+      if (muted) return
       silent = false
       element.pause()
       setSource(audio)
@@ -52,16 +91,29 @@ export function createPlayer(onPlayingChange: (playing: boolean) => void): Playe
       }
     },
 
-    stop() {
-      element.pause()
+    stop: halt,
+
+    setMuted(next) {
+      muted = next
+      if (muted) halt()
+    },
+
+    isMuted: () => muted,
+
+    isPlaying: () => playing,
+
+    subscribe(listener) {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
     },
 
     dispose() {
-      element.pause()
+      halt()
       element.removeAttribute('src')
       element.load()
       if (objectUrl) URL.revokeObjectURL(objectUrl)
       objectUrl = null
+      listeners.clear()
     },
   }
 }

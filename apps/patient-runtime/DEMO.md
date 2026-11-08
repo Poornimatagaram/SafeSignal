@@ -13,7 +13,7 @@ For the team on demo day. It covers how to start the patient side (runtime and s
 | Company portal | `apps/company-web` | 5175 | the safety team |
 | Ollama (local model) | installed app | 11434 (loopback only) | the patient runtime's `extract.py` only |
 
-Speech-to-text (faster-whisper `base.en`), text-to-speech (macOS `say`), the personal-data filter and the extraction model all run on this computer. The only network traffic leaving the patient side goes through the egress gate to port 8000. The screen's "What this computer sent" page lists every such request.
+Speech-to-text (faster-whisper `base.en`), text-to-speech (macOS `say`, gentle rate), the personal-data filter and the extraction model all run on this computer. The only network traffic leaving the patient side goes through the egress gate to port 8000. The screen's "What this computer sent" page lists every such request.
 
 ## Start commands
 
@@ -57,7 +57,7 @@ Defaults are what the demo uses; you normally set nothing.
 | `PATIENT_ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | which browser pages may call the runtime (CORS), comma-separated |
 | `PATIENT_WHISPER_MODEL` | `base.en` | speech-to-text model, from local files only |
 | `PATIENT_TTS_ENGINE` | `say` | `say` (macOS) or `piper` (with `PATIENT_PIPER_MODEL`, optionally `PATIENT_PIPER_BIN`) |
-| `PATIENT_TTS_VOICE` | system default | a `say` voice name |
+| `PATIENT_TTS_VOICE` | "Ava (Premium)", else "Samantha (Enhanced)", else the system default | a `say` voice name (`say -v '?'` lists them). Install Ava in System Settings → Accessibility → Spoken Content → Manage Voices |
 | `PATIENT_OLLAMA_HOST` | `http://127.0.0.1:11434` | must be loopback; the runtime refuses to start otherwise |
 | `PATIENT_OLLAMA_MODEL` | `llama3.2:3b` | extraction model |
 | `VITE_PATIENT_RUNTIME_URL` | `http://127.0.0.1:8001` | (patient screen) where the runtime is |
@@ -78,7 +78,7 @@ Do these in order, about 30 minutes before the demo.
 3. [ ] **Reset and seed the service.** This is the service owner's step; run it only if you are allowed to. Stop the service first, then run `scripts/reset_all.sh --seed`. This deletes `var/` (service and patient databases) and reseeds Walter's history up to yesterday. Live tests and rehearsals add synthetic records, envelopes, consent changes and throwaway org keys, so the morning reset is what makes the demo clean.
 4. [ ] **Start the service, Ollama, the runtime and the screen** (commands above), then run the three health checks.
 5. [ ] **Doctor side keys:** in doctor-web, Dr. Patel (Northgate admin) registers Northgate's care-team key and grants it to himself. Dr. Okafor does the same for Lakeside. Also clear doctor-web's site data after a reset, because the browser holds the keys. Until a key is registered, Walter's sealed copy shows "waiting for the hospital's lock" and is sent automatically later.
-6. [ ] **Browser:** open http://127.0.0.1:5173 in Chrome, allow the microphone, and turn the volume up (questions are spoken).
+6. [ ] **Browser:** open http://127.0.0.1:5173 in Chrome, allow the microphone, and turn the volume up (questions are spoken). Check that the top bar says **Mute** (not Unmute). Walter can also type an answer in the box under the talk button.
 7. [ ] **Rehearsal check-in** (one short check-in, then reset again if you want a clean list): say "I have an itchy rash on my arms", "moderate", "two days ago". Check the summary, tap **Share this**, and check that the receipt says Shared with a fingerprint. "What this computer sent" should list the record, the sealed copies and the two configuration downloads.
 8. [ ] **Network-off moment (optional):** stop the service (Ctrl-C on port 8000) and do a check-in. The receipt says it is saved and will be sent automatically. Start the service again, and within a few seconds the receipt turns to Shared.
 9. [ ] **Run the checks** if there's time: `cd apps/patient-runtime && uv run pytest -q` and `cd ../.. && uv run --project apps/patient-runtime python evals/patient/leakage_eval.py` (must say PASS).

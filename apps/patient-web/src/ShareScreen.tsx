@@ -52,6 +52,7 @@ import {
   sharedPartsText,
 } from './summaryText.ts'
 import { S } from './strings.ts'
+import { SoundOffNote } from './SoundControls.tsx'
 import { AlertIcon, BackIcon, CheckIcon, HourglassIcon, MicIcon, ShareIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
 
 const W = S.summary
@@ -72,7 +73,7 @@ export interface ShareViewProps {
   onRetryLoad: () => void
   onRestart: () => void
   headingRef?: HeadingRef
-  /** "Hear it again" (false) and "Slower" (true) for the spoken summary. */
+  /** "Repeat" (false) and "Slower" (true) for the spoken summary. */
   onHear?: (slow: boolean) => void
   onOpenCorrection?: () => void
   onCorrectionMode?: (mode: 'say' | 'tap') => void
@@ -84,6 +85,8 @@ export interface ShareViewProps {
   sayTalk?: SayTalk
   /** A microphone problem while recording the spoken change. */
   sayError?: unknown
+  /** "Repeat" or "Slower" was tapped with the sound off: "Sound is off. Tap Unmute to hear it." */
+  soundOff?: boolean
 }
 
 const noop = () => undefined
@@ -95,7 +98,14 @@ function pageOf(phase: SharePhase): string {
   return phase
 }
 
-export function ShareScreen({ flow, onRestart }: { flow: ShareFlow; onRestart: () => void }) {
+export interface ShareScreenProps {
+  flow: ShareFlow
+  onRestart: () => void
+  /** Sound off: "Repeat" and "Slower" play nothing and say so instead. */
+  muted?: boolean
+}
+
+export function ShareScreen({ flow, onRestart, muted = false }: ShareScreenProps) {
   const state = useSyncExternalStore(flow.subscribe, flow.getState)
   const heading = useRef<HTMLHeadingElement>(null)
   const page = pageOf(state.phase)
@@ -104,6 +114,11 @@ export function ShareScreen({ flow, onRestart }: { flow: ShareFlow; onRestart: (
   const [sayTalk, setSayTalk] = useState<SayTalk>('idle')
   const [sayError, setSayError] = useState<unknown>(null)
   const mounted = useRef(true)
+  const [soundOff, setSoundOff] = useState(false)
+  // Turning the sound back on hides the note (nothing replays by itself).
+  useEffect(() => {
+    if (!muted) setSoundOff(false)
+  }, [muted])
 
   const updateSay = useCallback((next: SayTalk) => {
     sayNow.current = next
@@ -180,7 +195,11 @@ export function ShareScreen({ flow, onRestart }: { flow: ShareFlow; onRestart: (
       onBack={flow.backToSummary}
       onRetryLoad={() => void flow.load()}
       onRestart={onRestart}
-      onHear={(slow) => void flow.speakSummary(slow)}
+      onHear={(slow) => {
+        if (muted) setSoundOff(true)
+        else void flow.speakSummary(slow)
+      }}
+      soundOff={soundOff}
       onOpenCorrection={flow.openCorrection}
       onCorrectionMode={flow.chooseCorrectionMode}
       onPickItem={flow.pickItem}
@@ -277,7 +296,8 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
             aria-disabled={sending}
             onClick={() => !sending && (props.onHear ?? noop)(false)}
           >
-            <SpeakerIcon className="icon" /> {W.hearAgain}
+            <SpeakerIcon className="icon" />
+            <span className="button__label">{W.hearAgain}</span>
           </button>
           <button
             type="button"
@@ -285,10 +305,12 @@ function SummaryPage(props: ShareViewProps & { summary: CheckinSummary }) {
             aria-disabled={sending}
             onClick={() => !sending && (props.onHear ?? noop)(true)}
           >
-            <SlowIcon className="icon" /> {W.slower}
+            <SlowIcon className="icon" />
+            <span className="button__label">{W.slower}</span>
           </button>
         </div>
       )}
+      {summary.spoken && props.soundOff && <SoundOffNote />}
       {state.voiceFailure && <p className="note">{summaryVoiceMessage(state.voiceFailure.error)}</p>}
 
       <section className="summary card" aria-labelledby="told-heading">

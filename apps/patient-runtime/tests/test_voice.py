@@ -347,10 +347,89 @@ def test_say_command_uses_voice_and_lower_rate_when_slow(monkeypatch):
     speaker.synthesize(QUESTION, slow=True)
     (normal, kw), (slow, _) = runner.calls
     out = normal[normal.index("-o") + 1]
-    assert normal == ["/usr/bin/say", "-o", out, "--file-format=WAVE", "--data-format=LEI16@22050", "-r", "170",
+    assert normal == ["/usr/bin/say", "-o", out, "--file-format=WAVE", "--data-format=LEI16@22050", "-r", "155",
                       "-v", "Samantha", "-f", "-"]
     assert int(slow[slow.index("-r") + 1]) < int(normal[normal.index("-r") + 1])
     assert kw["input"] == QUESTION.encode()
+
+
+LISTING_PLAIN = ("Albert              en_US    # Hello! My name is Albert.\n"
+                 "Samantha (English (US)) en_US    # Hello! My name is Samantha.\n")
+LISTING_SAMANTHA = LISTING_PLAIN + "Samantha (Enhanced) en_US    # Hello! My name is Samantha.\n"
+LISTING_AVA = LISTING_SAMANTHA + "Ava (Premium)       en_US    # Hello! My name is Ava.\n"
+
+
+class ListingRunner(FakeRunner):
+    """FakeRunner that also answers `say -v '?'` with a synthetic voice list (or fails)."""
+
+    def __init__(self, listing: str | None = LISTING_PLAIN, error: Exception | None = None):
+        super().__init__(output_flag="-o")
+        self.listing, self.error, self.listed = listing, error, []
+
+    def __call__(self, cmd, **kwargs):
+        if cmd[1:] == ["-v", "?"]:
+            self.listed.append((cmd, kwargs))
+            if self.error:
+                raise self.error
+            return subprocess.CompletedProcess(cmd, 0 if self.listing is not None else 1, stdout=self.listing or "")
+        return super().__call__(cmd, **kwargs)
+
+
+@pytest.fixture()
+def say_voices(monkeypatch):
+    monkeypatch.delenv("PATIENT_TTS_VOICE", raising=False)
+    monkeypatch.setattr(tts, "_installed_say_voices", {})
+
+
+@pytest.mark.parametrize("listing, expected", [
+    (LISTING_AVA, "Ava (Premium)"),
+    (LISTING_SAMANTHA, "Samantha (Enhanced)"),
+    (LISTING_PLAIN, None),  # "Samantha (English (US))" is not the enhanced voice
+    (None, None),           # `say -v '?'` exited non-zero
+])
+def test_say_picks_the_softest_installed_voice(say_voices, listing, expected):
+    runner = ListingRunner(listing)
+    speaker = SaySpeaker(binary="/usr/bin/say", runner=runner)
+    speaker.synthesize(QUESTION)
+    speaker.synthesize(QUESTION, slow=True)
+    for cmd, _ in runner.calls:
+        if expected:
+            assert cmd[cmd.index("-v") + 1] == expected
+        else:
+            assert "-v" not in cmd
+    (listed, kw), = runner.listed  # listed once, as an argument list with a timeout, no shell
+    assert listed == ["/usr/bin/say", "-v", "?"] and kw.get("timeout") and kw.get("shell") is not True
+
+
+def test_say_voice_listing_failure_falls_back_to_the_default(say_voices):
+    runner = ListingRunner(error=subprocess.TimeoutExpired(["say"], 10))
+    SaySpeaker(binary="/usr/bin/say", runner=runner).synthesize(QUESTION)
+    (cmd, _), = runner.calls
+    assert "-v" not in cmd
+
+
+def test_say_voice_env_wins_and_skips_the_listing(say_voices, monkeypatch):
+    monkeypatch.setenv("PATIENT_TTS_VOICE", "Daniel")
+    runner = ListingRunner(LISTING_AVA)
+    SaySpeaker(binary="/usr/bin/say", runner=runner).synthesize(QUESTION)
+    (cmd, _), = runner.calls
+    assert cmd[cmd.index("-v") + 1] == "Daniel" and runner.listed == []
+
+
+def test_say_voice_listing_is_cached_per_process(say_voices):
+    runner = ListingRunner(LISTING_AVA)
+    SaySpeaker(binary="/usr/bin/say", runner=runner).synthesize(QUESTION)
+    SaySpeaker(binary="/usr/bin/say", runner=runner).synthesize(QUESTION)
+    assert len(runner.listed) == 1
+
+
+def test_say_rate_is_gentle_and_slow_stays_60(say_voices):
+    runner = ListingRunner()
+    speaker = SaySpeaker(binary="/usr/bin/say", runner=runner)
+    speaker.synthesize(QUESTION)
+    speaker.synthesize(QUESTION, slow=True)
+    (normal, _), (slow, _) = runner.calls
+    assert normal[normal.index("-r") + 1] == "155" and slow[slow.index("-r") + 1] == "60"
 
 
 def test_engine_failure_raises_and_cleans_up(piper_model, tmp_path, monkeypatch):

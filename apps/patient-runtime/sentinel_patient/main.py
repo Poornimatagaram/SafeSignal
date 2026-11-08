@@ -9,6 +9,8 @@ Check-in: start (refreshes the survey and term list through the egress gate) -> 
 only) -> stt -> transcript -> filter (identifiers removed) -> extract (local model, coded fields only) -> summary in
 plain words with the exact record -> nothing leaves until the patient approves -> egress gate sends the record,
 then the care envelope sealed on this device (NF-05) -> receipts.
+A typed answer (POST /checkin/turn/text, JSON {"text"}) joins the same steps at the transcript; the session's
+input_mode becomes voice, text or mixed (D-066).
 
 Consent (CN-01, CN-03): GET/PUT /consent are the two switches. A change is saved on the device at once and sent as
 a consent update through the egress gate; it is the only other thing the patient can send.
@@ -23,6 +25,7 @@ from fastapi import Body, FastAPI, HTTPException, Path, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel, Field
 
 from sentinel_contract import SCHEMA_VERSION, ContractError
 
@@ -37,6 +40,13 @@ from .survey import NoSurvey, latest_survey, term_labels
 LOOPBACK_CLIENTS = {"127.0.0.1", "::1", "localhost"}
 QUESTION_ID = r"^[a-z0-9_]{1,32}$"
 SESSION_ID = r"^ses_[a-f0-9]{8}$"
+MAX_TYPED_CHARS = 1000
+
+
+class TypedAnswer(BaseModel):
+    """A typed answer ("Type instead"). Longer than MAX_TYPED_CHARS -> 422."""
+
+    text: str = Field(..., max_length=MAX_TYPED_CHARS)
 
 
 def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber | None = None,
@@ -172,6 +182,26 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
         finally:
             audio.clear()  # PV-03: the recording is never written to disk and is dropped here
 
+        return await answer_turn(session_id, question_id, ask, question, transcript, "voice")
+
+    @app.post("/checkin/turn/text")
+    async def checkin_turn_text(request: Request, answer: TypedAnswer, session_id: str = Query(..., pattern=SESSION_ID),
+                                question_id: str = Query(..., pattern=QUESTION_ID),
+                                ask: int = Query(0, ge=0, le=2)) -> dict:
+        """One typed answer ("Type instead"): JSON {"text": ...} from the local screen, then the same steps as a
+        spoken answer after transcription. Typed "repeat" / "slower" are commands too."""
+        if not request.client or request.client.host not in LOOPBACK_CLIENTS:
+            raise HTTPException(403, "answers are accepted from this device only")
+        if not answer.text.strip():
+            raise HTTPException(400, "no answer typed")
+        _session_errors(store.check_open, session_id)
+        question = _session_errors(store.question, session_id, question_id)
+        return await answer_turn(session_id, question_id, ask, question, answer.text, "text")
+
+    async def answer_turn(session_id: str, question_id: str, ask: int, question: dict, transcript: str,
+                          mode: str) -> dict:
+        """Everything after the words are known, shared by spoken and typed answers so they cannot drift:
+        command check -> filter -> rating -> extraction -> stored turn. The words are never logged."""
         command = commands.detect_command(transcript)  # VC-07: "repeat" / "slower" at any time; not an answer
         if command:
             return {"transcript": transcript, "symptoms": [], "extraction": "ok", "rating": None, "command": command,
@@ -189,7 +219,7 @@ def create_app(settings: Settings | None = None, *, transcriber: stt.Transcriber
                 except extract.ExtractionError:
                     extraction, found = "unavailable", None
         accepted = await run_in_threadpool(_session_errors, store.record_turn, session_id, question_id, ask,
-                                           transcript, answer_text, found, rated)
+                                           transcript, answer_text, found, rated, mode)
         labels = term_labels()
         symptoms = None if accepted is None else [
             {"term_code": s.term_code, "label": labels.get(s.term_code, s.term_code), "severity": s.severity,

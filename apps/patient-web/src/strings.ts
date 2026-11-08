@@ -36,8 +36,10 @@ const en = {
     repeat: 'Saying it again',
     slower: 'Saying it more slowly',
     moveOn: "That's okay, let's move on.",
-    hearAgain: 'Hear it again',
+    hearAgain: 'Repeat',
     slowerButton: 'Slower',
+    typeLabel: 'Or type your answer',
+    send: 'Send',
     tryAgain: 'Try again',
     startAgain: 'Start again',
     next: 'Next question',
@@ -60,6 +62,14 @@ const en = {
     notChecked: 'I could not check this answer for symptoms right now.',
     noSymptoms: 'No symptoms noted.',
     notedForReview: 'Noted for review:',
+  },
+
+  /** The sound controls at the top of every screen and beside "Repeat". */
+  sound: {
+    mute: 'Mute',
+    unmute: 'Unmute',
+    stop: 'Stop',
+    offNote: 'Sound is off. Tap Unmute to hear it.',
   },
 
   /** Every message the patient may see when something goes wrong, in plain words (src/messages.ts picks one). */
@@ -102,6 +112,12 @@ const en = {
       alreadyShared:
         'This check-in has already been shared, so no more answers can be added. Please start a new check-in.',
     },
+    typed: {
+      empty: 'Please type your answer in the box first, then tap Send.',
+      tooLong: 'That answer is too long. Please make it shorter, then tap Send again.',
+      unavailable:
+        'The check-in helper on this computer cannot read answers right now. Please ask your helper, or try again later.',
+    },
     correction: {
       notUnderstood:
         'Sorry, I did not understand the change. Nothing was changed. Please say it again, or tap to change it.',
@@ -110,12 +126,12 @@ const en = {
       other: 'Something went wrong. Nothing was changed. Please try again.',
     },
     summaryVoice: {
-      tapToHear: 'Tap “Hear it again” to hear your summary.',
+      tapToHear: 'Tap “Repeat” to hear your summary.',
       other: 'I cannot read your summary out loud right now. Please read it on the screen.',
     },
     question: 'I could not load the question. Please try again.',
     questionVoice: {
-      tapToHear: 'Tap “Hear it again” to hear the question.',
+      tapToHear: 'Tap “Repeat” to hear the question.',
       other: 'I cannot say the question out loud right now. Please read it on the screen.',
     },
     consentLoad: 'I could not show who you share with. Nothing was changed. Please try again.',
@@ -212,7 +228,7 @@ const en = {
     putting: 'Putting your summary together…',
     title: "Here's what you're sharing",
     alreadyShared: 'You have already shared this check-in.',
-    hearAgain: 'Hear it again',
+    hearAgain: 'Repeat',
     slower: 'Slower',
     toldHeading: 'What you told me',
     unanswered: (count: number) =>

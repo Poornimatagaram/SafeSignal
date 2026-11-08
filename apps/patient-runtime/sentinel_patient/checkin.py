@@ -2,6 +2,7 @@
 
 - start: a `checkin_session` row tied to the cached survey (status 'partial' until approved).
 - turn: an `answer_turn` row (transcript_text stays on the device) and the coded symptoms merged into a draft.
+  Each answer also sets the session's input_mode (voice, text or mixed; D-066), which the record carries.
   Only questions that ask about symptoms (wellbeing, symptom screen, exposure) may add symptoms: the model invents
   one for answers like "it started two days ago", and the guard would turn that into SE_OTHER_REVIEW.
   Answers to the severity and onset questions fill in the symptoms from the latest answer that reported any
@@ -39,6 +40,7 @@ from .state_store import JsonFile
 from .survey import latest_survey, survey_questions, term_labels
 
 SEVERITIES = ("mild", "moderate", "severe")
+INPUT_MODES = ("voice", "text")  # how one answer was given; a session can also be "mixed" (D-066)
 SYMPTOM_PURPOSES = frozenset({"wellbeing", "symptom_screen", "exposure"})  # schema/enums.json question_purpose
 DESTINATION = "company_record"
 ALERT = "alert"
@@ -167,15 +169,20 @@ class CheckinStore:
         return {"action": "next", "unanswered": True}
 
     def record_turn(self, session_id: str, question_id: str, ask: int, transcript: str, answer_text: str,
-                    extracted: list | None, rating: str | None = None) -> list | None:
+                    extracted: list | None, rating: str | None = None, mode: str = "voice") -> list | None:
         """Store the answer (with its rating) and update the draft. `answer_text` is the filtered part of the answer
-        that answers the question (the relevant sentences of a rambling reply). Returns the symptoms taken from this
+        that answers the question (the relevant sentences of a rambling reply). `mode` is how it was given, "voice"
+        or "text"; the session's input_mode follows it (D-066, see _input_mode). Returns the symptoms taken from this
         answer (None if the model was unavailable)."""
+        if mode not in INPUT_MODES:
+            raise ValueError("mode must be voice or text")
         with self._lock, closing(connect(self.db_path)) as conn, conn:
             session = self._session(conn, session_id)
             if self._outbox(conn, session_id):
                 raise AlreadyShared(session_id)
             question = self._question(conn, session, question_id)
+            conn.execute("UPDATE checkin_session SET input_mode = ? WHERE session_id = ?",
+                         (self._input_mode(conn, session, mode), session_id))
             conn.execute("INSERT INTO answer_turn (session_id, question_id, attempt, prompt_text, transcript_text, "
                          "rating, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                          (session_id, question_id, ask, question["asks"][ask], transcript, rating, utc_now()))
@@ -185,6 +192,16 @@ class CheckinStore:
                 return self._apply_turn(draft, question, question_id, answer_text, extracted, rating)
             finally:
                 self._save_draft(session_id)
+
+    @staticmethod
+    def _input_mode(conn, session, mode: str) -> str:
+        """D-066: the first answer sets the session's mode; a later answer given the other way makes it "mixed",
+        and mixed stays mixed. Commands ("repeat", "slower") are not answers and never get here."""
+        prior = conn.execute("SELECT 1 FROM answer_turn WHERE session_id = ? LIMIT 1",
+                             (session["session_id"],)).fetchone()
+        if prior is None:
+            return mode
+        return session["input_mode"] if session["input_mode"] == mode else "mixed"
 
     @staticmethod
     def _apply_turn(draft: Draft, question: dict, question_id: str, answer_text: str, extracted: list | None,
@@ -236,11 +253,11 @@ class CheckinStore:
                 if draft.record_id is None:  # the id shown is the id sent, even after a restart
                     draft.record_id = egress_gate.new_record_id()
                     self._save_draft(session_id)
-                record = self._record(conn, draft.record_id, items, unanswered)
+                record = self._record(conn, draft.record_id, items, unanswered, session["input_mode"])
             # Field names only (no values) even while a severity is missing, so the screen can say what will go.
             fields = egress_gate.field_names(record or self._record(
                 conn, "rec_00000000", [{**i, "severity": i["severity"] or "mild"} for i in items], unanswered,
-                validate=False))
+                session["input_mode"], validate=False))
             care = self._care_preview(conn, items, base_url)
         return {"session_id": session_id, "shared": shared, "items": items, "needs_severity": needs,
                 "unanswered_questions": unanswered, "text": _plain_words(items, unanswered),
@@ -358,7 +375,8 @@ class CheckinStore:
                 if needs:
                     raise NeedsSeverity(needs)
                 record_id = draft.record_id or egress_gate.new_record_id()
-                record = self._record(conn, record_id, items, self._unanswered(conn, session_id, session["config_id"]))
+                record = self._record(conn, record_id, items, self._unanswered(conn, session_id, session["config_id"]),
+                                     session["input_mode"])
                 now = utc_now()
                 conn.executemany(
                     "INSERT INTO symptom_event (event_id, session_id, term_code, severity, onset, known_side_effect, "
@@ -500,14 +518,15 @@ class CheckinStore:
             "(rating IS NULL AND trim(coalesce(transcript_text, '')) != ''))", (session_id,))}
         return sum(1 for q in survey_questions(conn, config_id) if q["question_id"] not in answered)
 
-    def _record(self, conn, record_id: str, items: list[dict], unanswered: int, *, validate: bool = True) -> dict:
+    def _record(self, conn, record_id: str, items: list[dict], unanswered: int, input_mode: str, *,
+                validate: bool = True) -> dict:
         profile = conn.execute("SELECT * FROM patient_profile WHERE patient_ref = ?", (self.patient_ref,)).fetchone()
         consent = conn.execute("SELECT * FROM consent ORDER BY consent_id DESC LIMIT 1").fetchone()
         symptoms = [{"term_code": i["term_code"], "severity": i["severity"], "onset": i["onset"],
                      "known_side_effect": i["known_side_effect"],
                      "possible_link_flag": bool(i.get("possible_link", False))} for i in items]
         kwargs = dict(record_id=record_id, profile=dict(profile), consent=dict(consent), symptoms=symptoms,
-                      unanswered_questions=unanswered, reporter=profile["reporter_default"], input_mode="voice")
+                      unanswered_questions=unanswered, reporter=profile["reporter_default"], input_mode=input_mode)
         if validate:
             return egress_gate.build_company_record(**kwargs)
         try:

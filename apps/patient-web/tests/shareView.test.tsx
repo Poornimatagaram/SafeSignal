@@ -224,9 +224,9 @@ describe('spoken summary and "Change one answer" (VC-08)', () => {
     correction: { ...INITIAL_SHARE_STATE.correction, ...patch },
   })
 
-  it('offers "Hear it again", "Slower" and a big "Change one answer" while unused', () => {
+  it('offers "Repeat", "Slower" and a big "Change one answer" while unused', () => {
     const html = render(review)
-    expect(buttonTag(html, 'Hear it again')).toContain('aria-disabled="false"')
+    expect(buttonTag(html, 'Repeat')).toContain('aria-disabled="false"')
     expect(buttonTag(html, 'Slower')).toContain('aria-disabled="false"')
     expect(buttonTag(html, 'Change one answer')).toContain('button--huge')
     expect(buttonTag(html, 'Share this')).toContain('aria-disabled="false"')
@@ -235,7 +235,7 @@ describe('spoken summary and "Change one answer" (VC-08)', () => {
   it('hides "Change one answer" once used or shared, and the voice buttons with no spoken text', () => {
     expect(() => buttonTag(render({ ...review, summary: SUMMARY_CORRECTED }), 'Change one answer')).toThrow()
     expect(() => buttonTag(render({ ...review, summary: { ...SUMMARY_READY, shared: true } }), 'Change one answer')).toThrow()
-    expect(() => buttonTag(render({ ...review, summary: { ...SUMMARY_READY, spoken: null } }), 'Hear it again')).toThrow()
+    expect(() => buttonTag(render({ ...review, summary: { ...SUMMARY_READY, spoken: null } }), 'Repeat')).toThrow()
   })
 
   it('the menu offers saying or tapping the change, and a way out', () => {

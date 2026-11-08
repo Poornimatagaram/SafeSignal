@@ -1,6 +1,6 @@
 # SafeSignal patient side
 
-Walter, 92, answers a few spoken questions about side effects on his own computer. Everything is heard, filtered and coded on the device, and nothing is shared until he taps **Share this**. Then the drug company gets coded answers only, and his care team gets a sealed copy only they can open.
+Walter, 92, answers a few spoken questions about side effects on his own computer, by voice or by typing. Everything is heard, filtered and coded on the device, and nothing is shared until he taps **Share this**. Then the drug company gets coded answers only, and his care team gets a sealed copy only they can open.
 
 <p align="center">
   <img src="../patient-web/docs/screenshots/checkin-chat.png" alt="The check-in chat: a spoken question bubble, and Walter's answer as his own bubble" width="300">
@@ -70,7 +70,8 @@ Settings, CORS origins and the demo-morning checklist are in [`DEMO.md`](DEMO.md
 <summary><strong>Architecture</strong></summary>
 
 **Runtime** (`apps/patient-runtime/sentinel_patient`):
-- **Voice in:** the screen records with MediaRecorder and posts the raw audio to `POST /checkin/turn`. `stt.py` decodes it in memory and transcribes it with faster-whisper `base.en`. Audio is never written to disk.
+- **Voice in:** the screen records with MediaRecorder and posts the raw audio to `POST /checkin/turn`. `stt.py` decodes it in memory and transcribes it with faster-whisper `base.en`. Audio is never written to disk. A typed answer (`POST /checkin/turn/text`) joins the same steps at the transcript, and the record's `input_mode` becomes `voice`, `text` or `mixed`.
+- **Voice out:** `tts.py` speaks with macOS `say`: "Ava (Premium)" if installed, then "Samantha (Enhanced)", then the system default, at a gentle 155 words per minute (60 for "slower"). Piper is the alternative.
 - **Filter and code:** `filter.py` replaces names, addresses, phones, emails, dates of birth and places with placeholders. `rating.py` decides whether the answer actually answered the question; if not, the question is asked more simply, up to 2 times. `extract.py` codes symptoms with the local model, under rules that override it: unsure means `SE_OTHER_REVIEW`, and a missing severity is never guessed.
 - **Check-in:** `checkin.py` holds the draft, which is saved after every change so a restart loses nothing (`state_store.py`). It also builds the summary, applies one correction, and flags a possible link to something new Walter started "for review" (`exposure.py`).
 - **Sharing:** `egress_gate.py` is the only module that can reach the network. It builds and validates each payload against `schema/`, writes it to the outbox, sends it through `SentinelClient`, logs the request in `egress_log`, and returns a receipt.
@@ -82,9 +83,10 @@ Settings, CORS origins and the demo-morning checklist are in [`DEMO.md`](DEMO.md
 - `App.tsx` routes between Home, the check-in chat (`CheckinChat.tsx`), the summary and receipt (`ShareScreen.tsx`), consent (`ConsentScreen.tsx`, `SetupScreen.tsx`) and the network log (`NetworkLogScreen.tsx`).
 - State machines without React: `questionFlow.ts`, `shareFlow.ts`, `consentFlow.ts`, `setupFlow.ts` and `networkLog.ts`. `api.ts` is the only code that calls `fetch`, and only the runtime.
 - Every word on screen is in `strings.ts`, ready for a second language.
+- A sound bar on every screen: Mute/Unmute (remembered for the browser session only) and Stop while something is playing.
 - The layout is phone-sized (430px), and the app is installable (a manifest and a small offline-shell worker that never caches runtime calls).
 
-**Runtime API** (localhost only): `GET /health`; `POST /checkin/sessions`; `GET /checkin/question[/audio]`; `POST /checkin/turn`; `GET /checkin/sessions/{id}/summary[/audio]`; `POST …/correction`; `POST …/approve` (the only route that sends a check-in); `GET …/receipt`; `GET|PUT /consent`; `PUT /consent/setup`; `GET /network-log`.
+**Runtime API** (localhost only): `GET /health`; `POST /checkin/sessions`; `GET /checkin/question[/audio]`; `POST /checkin/turn` (audio); `POST /checkin/turn/text` (typed); `GET /checkin/sessions/{id}/summary[/audio]`; `POST …/correction`; `POST …/approve` (the only route that sends a check-in); `GET …/receipt`; `GET|PUT /consent`; `PUT /consent/setup`; `GET /network-log`.
 
 </details>
 
@@ -109,11 +111,11 @@ Settings, CORS origins and the demo-morning checklist are in [`DEMO.md`](DEMO.md
 <summary><strong>Tests and eval results</strong> (2026-11-08)</summary>
 
 ```bash
-cd apps/patient-runtime && uv run pytest -q                                   # 762 passed (incl. live tests against the service on :8000)
+cd apps/patient-runtime && uv run pytest -q                                   # 782 passed (incl. live tests against the service on :8000)
 cd ../.. && uv run --project apps/patient-runtime pytest -q evals/patient     # 59 passed
 uv run --project apps/patient-runtime python evals/patient/leakage_eval.py    # PV-01, needs Ollama
 uv run --project apps/patient-runtime python evals/patient/reask_eval.py      # VC-04
-npm test --prefix apps/patient-web                                            # 294 passed
+npm test --prefix apps/patient-web                                            # 327 passed
 ```
 
 | Eval | Result |

@@ -1,7 +1,7 @@
 {
   "eval": "patient_reask_rating",
   "requirement": "VC-04 (pass/fail); VC-06 extraction reported",
-  "run_at_utc": "2026-11-08T05:34:10Z",
+  "run_at_utc": "2026-11-08T12:28:15Z",
   "dataset": "data/patient/reask_cases.json",
   "dataset_sha256": "cf67dd021c653f2ab954f1f221e7ec994199a6e56791e8bbde3f87d500e6e7e4",
   "pass_rule": "at least 16 of 20 ratings correct",

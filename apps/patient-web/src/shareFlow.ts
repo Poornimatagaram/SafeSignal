@@ -4,7 +4,7 @@
 // is the only code in the app that calls `client.approve` (tests/approval.test.ts checks both). Loading the
 // summary, choosing a severity, "Not now" and going back never send anything.
 //
-// Also here: the spoken summary (played when it appears, "Hear it again", "Slower"), the one correction before
+// Also here: the spoken summary (played when it appears, "Repeat", "Slower"), the one correction before
 // sharing (VC-08), and watching a receipt saved while offline until the runtime's background retry sends it (PV-07).
 import {
   receiptEnvelopes,
@@ -75,7 +75,7 @@ export interface ShareFlow {
   notNow(): void
   /** From "Nothing was shared" back to the summary (a mistaken "Not now" tap). Makes no request. */
   backToSummary(): void
-  /** Read the summary out loud ("Hear it again"; `slow` for "Slower"). Also runs when a summary appears. */
+  /** Read the summary out loud ("Repeat"; `slow` for "Slower"). Also runs when a summary appears. */
   speakSummary(slow: boolean): Promise<void>
   /** Stop the summary voice (the patient is about to speak). */
   stopVoice(): void
