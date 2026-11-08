@@ -51,3 +51,39 @@ The model name recorded in the results comes from `PATIENT_OLLAMA_MODEL` (defaul
 The file and the printed summary contain only case ids, identifier types, counts and term codes: never transcript text or identifier values (project rule: never log patient words, kept even for synthetic data). An extracted term code that is not in `schema/enums.json` is written as `INVALID`.
 
 Results from real runs are committed here, failures included (`evals/README.md`, Scoping Doc 17.4).
+
+## Answer rating (VC-04, VC-06): `reask_eval.py`
+
+Checks the answer rater against 20 scripted re-ask cases (Scoping Doc 12.1 VC-04 to VC-06, 17.3 "Answer rating"). Dataset: `data/patient/reask_cases.json` (see `data/patient/README.md`).
+
+For each case the harness runs what the runtime runs:
+1. `redact(answer).text` from `sentinel_patient.filter`.
+2. `rate_answer(question, ask, filtered_text)` from `sentinel_patient.rating`, with the question taken from `schema/examples/survey_config.valid.json`; it returns `Rating(rating, relevant_text, source)`.
+3. `rating` is compared with `expected_rating`. For `rambling` cases, every `expected_relevant` phrase must be in `relevant_text` and no `expected_not_relevant` phrase may be (case-insensitive, whitespace collapsed).
+
+### Metrics
+| Metric | Role |
+| --- | --- |
+| Ratings correct | **Pass/fail.** PASS = at least 16 of 20 (VC-04). |
+| Confusion table (expected x got), per-rating counts | Reported only. |
+| Rambling extraction: rambling cases whose `relevant_text` keeps the answer and drops the off-topic parts | Reported only (VC-06). |
+| Source mix: count of each `source` (for example model or rule) | Reported only. |
+
+A case where `rate_answer` raises is counted as wrong (`got` = `ERROR`, `status` = `error:<ExceptionType>`); the other cases still run.
+
+### Run
+```bash
+uv run --project apps/patient-runtime python evals/patient/reask_eval.py              # writes evals/patient/results/reask_results.json
+uv run --project apps/patient-runtime python evals/patient/reask_eval.py --out /tmp/x.json --data path/to/cases.json
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Pass: at least 16 of 20 ratings correct |
+| 1 | Fail |
+| 2 | The filter or rater could not be imported. Nothing evaluated, no results file written. |
+
+### Results file
+`evals/patient/results/reask_results.json` (or `--out`): `run_at_utc`, `dataset`, `dataset_sha256`, `pass_rule`, `pass`; `totals` (`ratings_correct`, `rating_accuracy`, `target_correct`, `errors`, `per_rating`, `confusion`, `rambling_extraction`, `source_mix`); `cases[]` with `id`, `question_id`, `purpose`, `ask`, `status`, `expected`, `got`, `source`, `rating_pass` and, for rambling cases, `extraction` as counts (`relevant_kept`/`relevant_expected`, `off_topic_kept`/`off_topic_listed`, `pass`).
+
+Never answer text or `relevant_text`. A rating outside enum `answer_rating` is written as `INVALID`; a `source` that is not a short lower-case token is written as `OTHER`.

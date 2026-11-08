@@ -57,3 +57,70 @@ Ten spoken check-in answers, written to be heavy with personal identifiers, each
 1. Write a new entry with the next `lk_` id. Invent everything: no real person, a 555-01xx phone, an `example.com` or `example.org` email, made-up streets and facilities.
 2. List every identifier with its exact text from the transcript, and label the expected symptoms with the rules above.
 3. Run `uv run --project apps/patient-runtime pytest -q evals/patient` from the repository root. The dataset tests check ids, enums, that every value appears in its transcript and that all six identifier types are covered. They also pin the case count at 10, so update `test_dataset_shape` in `evals/patient/test_leakage_eval.py` when adding cases.
+
+## `reask_cases.json`
+
+Twenty spoken answers to the example survey's questions (`schema/examples/survey_config.valid.json`, q1 to q6), each labelled with the rating a correct rater gives it. Used by the answer-rating evaluation (`evals/patient/reask_eval.py`, VC-04, with VC-06 extraction reported). Scoping Doc 17.3 "Re-ask cases (20)".
+
+| | |
+| --- | --- |
+| Source | Hand-written for this project, without running the rater. No real people: the few names are invented (the filter redacts them before rating). |
+| Licence | MIT, the repository licence (`LICENSE`). |
+| Contract | `expected_rating` from enum `answer_rating`; `question_id` and `ask` index into the example survey, whose `purpose` values cover enum `question_purpose`. |
+
+### Format
+
+```json
+{"schema_version": "2.0", "source": "...", "survey": "schema/examples/survey_config.valid.json", "cases": [
+  {"id": "rq_02", "question_id": "q2", "ask": 0, "style": "slow", "answer": "...",
+   "expected_rating": "rambling", "expected_relevant": ["..."], "expected_not_relevant": ["..."]}
+]}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `id` | `rq_` plus two digits, unique |
+| `question_id`, `ask` | the question and which of its three wordings (`asks[0..2]`, D-017) was spoken; ask 1 and 2 are the re-asks |
+| `style` | `slow` for Walter-style halting speech (pauses written as "...", fillers), else `plain` |
+| `answer` | the answer as speech-to-text would write it; `""` is silence |
+| `expected_rating` | `complete`, `partial`, `off_topic`, `rambling` or `no_answer` |
+| `expected_relevant` | phrases, copied verbatim from the answer, that answer the question; empty for `off_topic` and `no_answer`. Scored only for `rambling` cases: each must be in the rater's `relevant_text` |
+| `expected_not_relevant` | `rambling` cases only: off-topic phrases that must not be in `relevant_text` |
+
+### Labelling rules
+- `complete`: answers what this wording asks, however short ("Yes." to "Yes or no?").
+- `partial`: on the question but too vague or incomplete to fill the field (no severity word, "some of them", "not today, before that").
+- `off_topic`: short and about something else entirely.
+- `rambling`: long, mostly about something else, with the answer buried inside.
+- `no_answer`: silence, fillers only, or asking to hear the question again.
+- Phrases never contain a name or place, so redaction cannot remove them.
+
+### Cases
+
+| id | question (purpose) | ask | style | expected |
+| --- | --- | --- | --- | --- |
+| rq_01 | q1 wellbeing | 0 | plain | complete |
+| rq_02 | q2 symptom_screen | 0 | slow | rambling (demo: grandson story, then rash and cracked nails) |
+| rq_03 | q3 severity | 1 | slow | partial |
+| rq_04 | q4 onset | 0 | slow | complete |
+| rq_05 | q5 adherence | 1 | plain | partial |
+| rq_06 | q6 exposure | 2 | plain | off_topic |
+| rq_07 | q1 wellbeing | 1 | slow | off_topic |
+| rq_08 | q1 wellbeing | 2 | slow | no_answer |
+| rq_09 | q4 onset | 2 | plain | no_answer (silence) |
+| rq_10 | q6 exposure | 1 | plain | no_answer |
+| rq_11 | q3 severity | 0 | slow | rambling |
+| rq_12 | q4 onset | 1 | slow | rambling |
+| rq_13 | q5 adherence | 0 | slow | rambling |
+| rq_14 | q6 exposure | 0 | plain | rambling |
+| rq_15 | q2 symptom_screen | 2 | plain | complete |
+| rq_16 | q3 severity | 2 | plain | complete |
+| rq_17 | q5 adherence | 2 | plain | complete |
+| rq_18 | q2 symptom_screen | 1 | plain | partial |
+| rq_19 | q4 onset | 1 | plain | partial |
+| rq_20 | q5 adherence | 2 | slow | off_topic |
+
+Ratings: complete 5, rambling 5, partial 4, off_topic 3, no_answer 3. Asks: 0 x6, 1 x7, 2 x7. Nine `slow` cases.
+
+### Adding a case
+Use the next `rq_` id and the labelling rules above, then run `uv run --project apps/patient-runtime pytest -q evals/patient`. The dataset tests pin the count at 20 (the VC-04 target is 16 of 20), so change `test_dataset_shape` in `evals/patient/test_reask_eval.py` and `VC04_CASES` if the set grows.

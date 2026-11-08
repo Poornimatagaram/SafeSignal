@@ -1,7 +1,7 @@
 {
   "eval": "patient_leakage",
   "requirement": "PV-01",
-  "run_at_utc": "2026-11-08T03:15:10Z",
+  "run_at_utc": "2026-11-08T03:41:33Z",
   "model": "llama3.2:3b",
   "dataset": "data/patient/leakage_transcripts.json",
   "dataset_sha256": "2408c70cc329d4e2dd7386292e7f913e3956cd11945ccfb5b0eb6824d983be21",
