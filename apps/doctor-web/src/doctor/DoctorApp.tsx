@@ -4,6 +4,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { IdentityPicker } from '../components/IdentityPicker'
 import { useDoctorData } from '../lib/useDoctorData'
+import { useViewMode } from '../lib/viewMode'
+import { Clinic } from './Clinic'
 import { AdminPage } from './AdminPage'
 import { FullRecord, Guide } from './FullRecord'
 import { Hero } from './home/Hero'
@@ -23,6 +25,7 @@ export function DoctorApp() {
   const [orgFilter, setOrgFilter] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [section, setSection] = useState<string | null>(null)
+  const view = useViewMode()
 
   useEffect(() => {
     const on = () => setRoute(parseDoctorRoute(location.hash))
@@ -46,9 +49,11 @@ export function DoctorApp() {
 
   // Patient route: show that patient's page; other views open at the top.
   useEffect(() => {
-    if (route.view === 'patient') setTimeout(() => document.getElementById('patients')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+    if (route.view === 'patient' && view.mode === 'clinic') {
+      if (innerWidth < 980) setTimeout(() => document.querySelector('.cl-pane')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+    } else if (route.view === 'patient') setTimeout(() => document.getElementById('patients')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
     else if (!home) scrollTo({ top: 0 })
-  }, [route, home])
+  }, [route, home, view.mode])
 
   // Section highlight in the top bar, and the gentle reveal of cards as they scroll in.
   useEffect(() => {
@@ -59,7 +64,7 @@ export function DoctorApp() {
     const rev = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); rev.unobserve(e.target) } }), { rootMargin: '0px 0px -8% 0px' })
     if (!reduce) document.querySelectorAll('.reveal').forEach((el) => { if (el.getBoundingClientRect().top > innerHeight) rev.observe(el) })
     return () => { sec.disconnect(); rev.disconnect() }
-  }, [home, data.me, rows.length])
+  }, [home, data.me, rows.length, view.mode])
 
   if (data.me === undefined) return <div className="boot" aria-busy="true" />
   if (data.me === null)
@@ -89,6 +94,13 @@ export function DoctorApp() {
         detailHref={detailHref}
         activeSection={home ? section : route.view === 'record' || route.view === 'guide' ? 'detail' : null}
         onToast={setToast}
+        view={view.mode}
+        onView={(v) => {
+          view.choose(v)
+          setToast(v === 'clinic' ? 'Clinic view: only what you need each day' : 'Guided view: the full tour')
+          if (!home) location.hash = '#/'
+          scrollTo({ top: 0 })
+        }}
       />
       {(data.error || data.rejections.length > 0) && (
         <div className="wrap" style={{ marginTop: 16 }}>
@@ -97,7 +109,10 @@ export function DoctorApp() {
           </p>
         </div>
       )}
-      {home && (
+      {home && view.mode === 'clinic' && (
+        <Clinic data={data} rows={rows} gone={gone} alerts={alerts} openRef={openRef} syncNote={syncNote} orgName={orgName} onToast={setToast} />
+      )}
+      {home && view.mode === 'guided' && (
         <main id="home">
           <Hero rows={rows} focus={focus} syncNote={syncNote} />
           <Connect to="how" />

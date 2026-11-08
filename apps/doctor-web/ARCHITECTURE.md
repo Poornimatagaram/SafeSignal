@@ -82,7 +82,7 @@ Emergency organizations (Lakeside) do not sync routinely. A member states a code
 flowchart TB
   subgraph UI["src/components/"]
     APP["App.tsx: routes #/ patients · #/patient/ref · #/patient/ref/record · #/caregiver · #/about · #/learn"]
-    DOC["src/doctor/: DoctorApp, Nav, home/, Workspace, HistoryGrid, FullRecord, AdminPage"]
+    DOC["src/doctor/: DoctorApp, Nav, home/, Workspace, Clinic, HistoryGrid, FullRecord, AdminPage"]
     LAND["src/landing/: Landing, LearnMore (static, synthetic example)"]
     ORG["OrgPanel: memberships, key status, admin grants and revokes"]
     DVIEW["DoctorView: patient list by urgency"]

@@ -38,6 +38,7 @@ Keys and history (off camera, or on camera for the privacy story):
 | Time | Show | Say |
 |---|---|---|
 | 0:00 | B: home (player, alerts, summary), then Walter in Patients (latest report, 21-day history; tap a day; **See full record**) | "This is Dr. Shah at Northgate. Walter's check-ins were spoken at home and processed on his device. What arrives here is sealed to Northgate's care-team key, and only this browser can open it." |
+| 0:10 | B: top bar, **Clinic** | "This is what Dr. Shah opens every morning: only the alerts, the patients and the one patient she's looking at." Then back to **Guided** |
 | 0:12 | Point at the grid: rash mild → moderate, "C" days, purple dots | "Rash started 12 days ago and is getting worse. 'C' means his caregiver answered that day. Purple means a possible link, for review: a flag, never a cause." |
 | 0:25 | Pre-visit summary | "The summary is built from templates. No AI model sees patient data." |
 | 0:32 | Terminal: `scripts/send_demo_envelope.py --alert`, then B: **Sync now** | "He reports something severe right now." The severe alert tops the list. |
