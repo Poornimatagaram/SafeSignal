@@ -1,4 +1,4 @@
-"""Seed and persistence: full-scale counts, contract-valid synthetic records, the v2 signal, restart safety."""
+"""Seed and persistence: full-scale counts, contract-valid synthetic records, real trial rates, restart safety."""
 
 import json
 import time
@@ -10,7 +10,7 @@ from conftest import TODAY
 from sentinel_contract import CONTRACT_VERSION, SCHEMA_DIR, payload_sha256, validation_errors
 from sentinel_service import demo_ids as ids
 from sentinel_service.main import app
-from sentinel_service.seed import is_seeded, seed
+from sentinel_service.seed import arm_rates, is_seeded, seed, trial_map
 from sentinel_service.store import SqliteStore
 
 
@@ -31,11 +31,13 @@ def q(store, sql, *args):
 
 def test_full_scale_counts(full):
     s, summary, _ = full
-    assert summary["patients"] == 1000
+    fixtures = json.loads((SCHEMA_DIR / "demo_fixtures.json").read_text())
+    cohort_ids = [k["cohort_id"] for p in fixtures["programs"] for k in p["cohorts"]]
+    assert summary["programs"] == 3 and summary["patients"] == 250 * len(cohort_ids) == 3000
     assert summary["weeks"] == ["2026-W42", "2026-W43", "2026-W44", "2026-W45"]
-    assert summary["seconds"] < 30
+    assert summary["seconds"] < 60
     per_cohort = dict(q(s, "SELECT cohort_id, COUNT(*) FROM enrollment GROUP BY cohort_id"))
-    assert per_cohort == {"cohort_A": 250, "cohort_B": 250, "cohort_C": 250, "cohort_D": 250}
+    assert per_cohort == {k: 250 for k in cohort_ids}
     assert q(s, "SELECT cohort_id FROM enrollment WHERE patient_ref = ?", ids.WALTER)[0][0] == "cohort_B"
 
 
@@ -72,16 +74,48 @@ def test_known_side_effect_follows_the_label(full):
     s, _, _ = full
     known = dict(q(s, "SELECT term_code, MAX(known_side_effect) FROM symptom_record GROUP BY term_code"))
     assert known["SE_RASH"] == 1 and known["SE_DIARRHEA"] == 1
-    assert known["SE_DYSPNEA"] == 0 and known["SE_COUGH"] == 0  # reported for Tagrisso, not on its label in terms.json
+    assert known["SE_DYSPNEA"] == 1 and known["SE_COUGH"] == 1  # on both lung-cancer labels (C2 fix, D-079)
+    assert known["SE_NASAL"] == 0  # common in infants on both MELODY arms, but on no label
 
 
-def test_v2_dermatologic_signal_rises(full):
+def test_arm_rates_come_from_the_trial_extract():
+    tm = trial_map()
+    flaura = arm_rates("flaura", tm["meddra_to_term_code"])
+    assert flaura["EG000"]["SE_DIARRHEA"] >= round(167 / 279, 4)  # osimertinib arm, non-serious table
+    assert flaura["EG001"]["SE_RASH"] > flaura["EG000"]["SE_RASH"]  # comparator TKIs: more acne-like rash
+    mariposa = arm_rates("mariposa", tm["meddra_to_term_code"])
+    assert mariposa["EG000"]["SE_INFUSION_REACTION"] > 0.6  # 261/421 on amivantamab
+    assert mariposa["EG001"]["SE_INFUSION_REACTION"] == mariposa["EG002"]["SE_INFUSION_REACTION"] == 0
+
+
+def test_seeded_cohorts_follow_their_trial_arm(full):
     s, _, _ = full
-    rows = {(r["cohort_id"], r["iso_week"]): r["patients"] / r["reporting_patients"]
-            for r in s.cohorts_weekly(ids.PROGRAM_ID) if r["term_code"] == "SE_RASH"}
-    assert rows[("cohort_B", "2026-W45")] > rows[("cohort_B", "2026-W42")]
-    for other in ("cohort_A", "cohort_C", "cohort_D"):
-        assert rows[("cohort_B", "2026-W45")] > rows[(other, "2026-W45")]
+    tm = trial_map()
+    for program_id, spec in tm["programs"].items():
+        rates = arm_rates(spec["trial"], tm["meddra_to_term_code"])
+        for cohort_id, group in spec["cohorts"].items():
+            n = q(s, "SELECT COUNT(*) FROM enrollment WHERE cohort_id = ?", cohort_id)[0][0]
+            for term, p in rates[group].items():
+                k = q(s, "SELECT COUNT(DISTINCT r.patient_ref) FROM checkin_record r JOIN symptom_record x "
+                         "USING (record_id) WHERE r.cohort_id = ? AND x.term_code = ?", cohort_id, term)[0][0]
+                assert abs(k / n - p) < 0.12, (cohort_id, term, p, k / n)  # share ever reporting ~ trial share
+    infusion = dict(q(s, "SELECT r.cohort_id, COUNT(*) FROM checkin_record r JOIN symptom_record x USING (record_id) "
+                         "WHERE x.term_code = 'SE_INFUSION_REACTION' GROUP BY r.cohort_id"))
+    assert set(infusion) == {"cohort_ryb_A", "cohort_ryb_B"}  # amivantamab arms only
+
+
+def test_programs_cohorts_and_documents_credit_their_sources(full):
+    s, _, _ = full
+    out = s.programs()
+    assert out["company"]["display_name"] == "Halvaren Therapeutics"
+    assert [p["source_trial"] for p in out["programs"]] == ["FLAURA NCT02296125", "MARIPOSA NCT04487080",
+                                                            "MELODY NCT03979313"]
+    assert all(k["source_arm"] and k["enrolled"] == 250 for p in out["programs"] for k in p["cohorts"])
+    docs = s.documents(None)
+    assert len(docs) == 9 and {d["kind"] for d in docs} == {"protocol", "sap", "label"}
+    for d in docs:
+        assert d["source_url"].startswith(("https://cdn.clinicaltrials.gov/large-docs/",
+                                           "https://dailymed.nlm.nih.gov/"))
 
 
 def test_relay_alerts_only_for_linked_patients(full):
@@ -117,7 +151,12 @@ def test_proxy_reporting_and_input_modes_present(full):
     s, _, _ = full
     reporters = dict(q(s, "SELECT reporter, COUNT(*) FROM checkin_record WHERE source = 'device' GROUP BY reporter"))
     modes = dict(q(s, "SELECT input_mode, COUNT(*) FROM checkin_record WHERE source = 'device' GROUP BY input_mode"))
-    assert set(reporters) == {"self", "caregiver"} and 0.05 < reporters["caregiver"] / sum(reporters.values()) < 0.3
+    assert set(reporters) == {"self", "caregiver", "parent"}
+    adults = reporters["self"] + reporters["caregiver"]
+    assert 0.05 < reporters["caregiver"] / adults < 0.3
+    infant = dict(q(s, "SELECT reporter, COUNT(*) FROM checkin_record WHERE source = 'device' "
+                       "AND program_id = 'prog_beyfortus_01' GROUP BY reporter"))
+    assert set(infant) == {"parent"}  # a parent answers for a baby (D-058)
     assert set(modes) == {"voice", "text", "mixed"}
 
 
@@ -159,3 +198,26 @@ def test_healthz_reports_seed_state(tmp_path):
     finally:
         app.state.store.close()
         app.state.store = None
+
+
+def test_existing_database_gains_new_columns(tmp_path):
+    import sqlite3
+
+    old = sqlite3.connect(tmp_path / "company.db")  # a 2.1 program table, before label/source columns
+    old.execute("CREATE TABLE program (program_id TEXT PRIMARY KEY, company_id TEXT NOT NULL, "
+                "drug_name TEXT NOT NULL, created_at TEXT NOT NULL)")
+    old.execute("INSERT INTO program VALUES ('prog_demo_01', 'co_demo', 'Tagrisso', '2026-10-01T00:00:00Z')")
+    old.commit()
+    old.close()
+    s = SqliteStore.open(tmp_path)
+    cols = {r[1] for r in s.db.company.execute("PRAGMA table_info(program)")}
+    assert {"label", "source_trial"} <= cols
+    assert s.programs()["programs"][0]["source_trial"] is None  # old rows keep working until a reseed
+    s.close()
+
+
+def test_demo_program_matches_first_listed_program():
+    fx = json.loads((SCHEMA_DIR / "demo_fixtures.json").read_text())
+    first = fx["programs"][0]
+    assert {k: first[k] for k in fx["program"]} == fx["program"] and first["cohorts"] == fx["cohorts"]
+    assert all(p["program_id"] in trial_map()["programs"] for p in fx["programs"])

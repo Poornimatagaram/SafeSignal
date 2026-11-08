@@ -90,6 +90,12 @@
               "SE_DYSPNEA",
               "SE_COUGH",
               "SE_EDEMA",
+              "SE_NAUSEA",
+              "SE_VOMITING",
+              "SE_FEVER",
+              "SE_NASAL",
+              "SE_IRRITABILITY",
+              "SE_INJECTION_SITE",
               "SE_OTHER_REVIEW"
             ]
           },

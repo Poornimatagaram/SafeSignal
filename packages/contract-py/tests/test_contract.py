@@ -1,6 +1,7 @@
 """Contract tests: schema files, examples, hash vectors and SQL. Run on every build."""
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -57,7 +58,8 @@ def test_enums_match_schemas():
     e = enums()
     rec = json.loads((SCHEMA_DIR / "company_record.json").read_text())["properties"]
     sym = rec["symptoms"]["items"]["properties"]
-    assert rec["cohort_id"]["enum"] == e["cohort_id"]
+    assert rec["cohort_id"]["pattern"] == e["id_patterns"]["cohort_id"]  # 2.2: cohorts unique across programs
+    assert all(re.match(e["id_patterns"]["cohort_id"], k) for k in e["cohort_id"])
     assert rec["drug_version"]["enum"] == e["drug_version"]
     assert rec["status"]["enum"] == e["checkin_status"]
     assert sym["term_code"]["enum"] == e["term_code"]
@@ -79,8 +81,10 @@ def test_sql_applies_twice(sql, tmp_path: Path):
 def test_cohort_view_suppresses_small_groups(tmp_path: Path):
     db = sqlite3.connect(tmp_path / "c.db")
     db.executescript((SCHEMA_DIR / "company.sql").read_text())
-    db.execute("INSERT INTO program VALUES ('prog_demo_01','co','Tagrisso','t')")
-    db.execute("INSERT INTO cohort VALUES ('cohort_B','prog_demo_01','v2','B',250)")
+    db.execute("INSERT INTO program (program_id, company_id, drug_name, created_at) "
+               "VALUES ('prog_demo_01','co','Tagrisso','t')")
+    db.execute("INSERT INTO cohort (cohort_id, program_id, drug_version, label, target_size) "
+               "VALUES ('cohort_B','prog_demo_01','v2','B',250)")
     db.execute("INSERT INTO term_code VALUES ('SE_RASH','Rash','[]','[]',0)")
     db.execute("INSERT INTO term_code VALUES ('SE_COUGH','Cough','[]','[]',0)")
     for i in range(6):
@@ -108,7 +112,11 @@ def test_demo_fixtures_match_contract():
     f = json.loads((SCHEMA_DIR / "demo_fixtures.json").read_text())
     pat = enums()["id_patterns"]
     cohorts = {c["cohort_id"]: c["drug_version"] for c in f["cohorts"]}
-    assert set(cohorts) == set(enums()["cohort_id"])
+    every = [c["cohort_id"] for p in f["programs"] for c in p["cohorts"]]
+    assert sorted(every) == sorted(enums()["cohort_id"]) and len(set(every)) == len(every)
+    assert set(cohorts) <= set(every)
+    assert re.match(pat["company_id"], f["company"]["company_id"])
+    assert all(p["company_id"] == f["company"]["company_id"] for p in f["programs"])
     assert re.match(pat["program_id"], f["program"]["program_id"])
     for d in f["doctors"]:
         assert re.match(pat["doctor_id"], d["doctor_id"])

@@ -308,3 +308,55 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Real-data seed: fictional company name, ClinicalTrials.gov per-arm rates (FLAURA, MARIPOSA), OnSIDES-corrected terms, trial documents in the company `document` table; an infant program (MELODY) needs new term codes, so it is a contract change.
 2. Company portal (`apps/company-web`).
 3. Ask the repo owner to protect `main` and require CI (D-045).
+
+---
+
+## Session 012 — 2026-11-08 (Sun) · Real-data seed, contract 2.2
+
+**Goal:** Ground the fictional company in real public data: a company name, real per-arm rates, label-verified terms, real trial documents and several programs (handoff item 1).
+
+**Outputs**
+- Fictional company **Halvaren Therapeutics** (D-078).
+- `data/company/`:
+  - `fetch_ctgov.py` → `ctgov/` (FLAURA, MARIPOSA, MELODY extracts).
+  - `fetch_labels.py` → `labels/` (Tagrisso, Rybrevant, Beyfortus).
+  - `fetch_documents.py` → gitignored `documents/` (6 PDFs, 19 MB).
+  - `trial_map.json` and `surveys/infant_v1.json`.
+- Contract 2.2, additive (D-079, D-081):
+  - `cohort_id` is a pattern.
+  - 6 new term codes.
+  - Label-verified `drug_scope`.
+  - `company` table, plus program, cohort and document credit columns.
+  - Input-mode counts on completion.
+  - 4 company endpoints.
+- Seed: 3 programs × 4 cohorts × 250 patients, sampled from real arm rates. The invented `STORY` and the openFDA weights are gone (D-053 superseded).
+- `db.py` adds new columns to existing databases (D-082).
+
+**Verification**
+- Tests: contract-py 24, service 52 (was 44), contract-ts 8/8.
+- New tests:
+  - Arm rates match the extracts.
+  - Each seeded cohort's share of patients ever reporting a term is within 0.12 of its arm's trial share.
+  - Infusion reactions appear only in the amivantamab cohorts.
+  - Infant check-ins are all `parent`.
+  - Every `drug_scope` row matches the label text.
+  - The documents and their links.
+  - The column migration.
+- Live seed (scratch directory): 3 programs, 3,000 patients, 80,990 check-ins, 44,821 symptom reports, 9 documents, in about 3 s.
+- Examples: no diff from `build_examples.py`. OpenAPI and `api.d.ts` regenerated.
+
+**Findings**
+- openFDA's label API has no harmonized `brand_name` for Tagrisso. It matches on `spl_product_data_elements` instead.
+- FLAURA's China arms report mouth sores as "Mouth ulceration", not "Stomatitis". Non-serious events are listed only above 5%, so rare terms are 0 in the small China arms. Both are kept as real messiness.
+- "Corvane" was rejected as a name because it is too close to Corvus Pharmaceuticals.
+
+**Decisions:** D-078 to D-082 (D-053 superseded; D-061 and D-071 resolved).
+
+**Open items**
+- D-008, D-039.
+- Branch protection on `main` needs the repo owner (D-045).
+
+**Next**
+1. Company portal (`apps/company-web`) on the 2.2 endpoints.
+2. Ask the repo owner to protect `main`.
+

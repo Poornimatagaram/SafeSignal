@@ -12,6 +12,7 @@ The patient's screen (Walter, 92): large-text, voice-first check-in UI, spoken s
 - Env vars use the `PATIENT_` prefix (Vite: `VITE_PATIENT_*`).
 
 ## Changed from the scoping doc
+- **Contract 2.2** (additive, D-079, D-081): six new term codes (`SE_NAUSEA`, `SE_VOMITING`, `SE_FEVER`, `SE_NASAL`, `SE_IRRITABILITY`, `SE_INJECTION_SITE`), and `cohort_id` is a pattern (cohorts are unique across 3 programs, e.g. `cohort_ryb_A`). The demo patients' program and cohorts are unchanged. Reseed (`scripts/reset_all.sh --seed`) to get the new programs.
 - **Contract 2.0** (`docs/design/contract-2.0.md`): patients of any age, answered by the patient or a proxy (parent, caregiver); voice **or typing**; setup screens for consent to the care team, the caregiver, emergency hospitals and up to 3 emergency contacts (for example 911 or a preferred hospital), each explained in plain words and opt-in (D-058, D-059, D-067). Show who is answering on every screen.
 - Paths: `web/patient/` → `apps/patient-web/` (D-030).
 - The receipt lists field names from the runtime's `SendResult.fields_sent` (format `symptoms[].term_code`) and the `payload_sha256`.

@@ -38,6 +38,7 @@ Use only `from sentinel_contract.client import SentinelClient, build_envelope` (
 - `SendRetryable` (5xx or no network): keep in `outbox`, retry with `BACKOFF_SECONDS`.
 
 ## Changed from the scoping doc and from contract 1.x (these override Sections 25–26)
+- **Contract 2.2** (additive, D-079, D-081): six new term codes (`SE_NAUSEA`, `SE_VOMITING`, `SE_FEVER`, `SE_NASAL`, `SE_IRRITABILITY`, `SE_INJECTION_SITE`), and `cohort_id` is a pattern (cohorts are unique across 3 programs, e.g. `cohort_ryb_A`). The demo patients' program and cohorts are unchanged. Reseed (`scripts/reset_all.sh --seed`) to get the new programs. Shortness of breath and cough are now `known_side_effect: true` for Tagrisso (label-verified).
 - **Every payload carries `"schema_version": "2.0"`.** The envelope and alert examples in 26.6 (`envelope_version`, `alert_version`) are wrong (D-014, D-070).
 - **Records go to organizations, not doctors** (D-064): seal the doctor payload to the care-team organization's key, plus one more envelope (own `envelope_id`) for each consented emergency organization (D-065). Envelopes carry `org_id`.
 - **Consent payload 2.0** (D-067): `care_org_id`, `share_care_team`, caregiver fields, `emergency_consent`, `emergency_org_ids` and up to 3 `emergency_contacts` (`contact_type`, `phone`, optional `org_id`, `priority`). Without `emergency_consent` both lists must be empty. Set at setup with the user's explicit consent; labels and names stay on the device.

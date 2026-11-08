@@ -1,6 +1,7 @@
 -- Company DB (Sentinel service, company tenant). Scoping Doc 26.4.
 -- Holds pseudonymized records only. Company endpoints read the v_* views and exports, never base tables directly.
--- Changes from the scoping doc are tagged with their decision ID (docs/DECISIONS.md). Contract 2.0.
+-- Changes from the scoping doc are tagged with their decision ID (docs/DECISIONS.md). Contract 2.2.
+-- Columns added after 2.0 are nullable so db.py can add them to an existing database (ALTER TABLE ADD COLUMN).
 
 CREATE TABLE IF NOT EXISTS schema_meta (
   id              INTEGER PRIMARY KEY CHECK (id = 1),
@@ -8,11 +9,21 @@ CREATE TABLE IF NOT EXISTS schema_meta (
   applied_at      TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS company (           -- 2.2 (D-078): the fictional sponsor shown in the company portal
+  company_id      TEXT PRIMARY KEY,             -- co_xxx
+  display_name    TEXT NOT NULL,
+  note            TEXT
+);
+
 CREATE TABLE IF NOT EXISTS program (
   program_id      TEXT PRIMARY KEY,
   company_id      TEXT NOT NULL,
   drug_name       TEXT NOT NULL,
-  created_at      TEXT NOT NULL
+  created_at      TEXT NOT NULL,
+  label           TEXT,                         -- 2.2: e.g. 'Tagrisso (osimertinib), first-line EGFR-mutant lung cancer'
+  population      TEXT,                         -- 2.2: 'adults' | 'infants'
+  source_trial    TEXT,                         -- 2.2 (D-081): real trial the rates come from, e.g. 'FLAURA NCT02296125'
+  source_url      TEXT                          -- 2.2: public results page of that trial
 );
 
 CREATE TABLE IF NOT EXISTS cohort (
@@ -20,7 +31,8 @@ CREATE TABLE IF NOT EXISTS cohort (
   program_id      TEXT NOT NULL REFERENCES program(program_id),
   drug_version    TEXT NOT NULL,
   label           TEXT NOT NULL,
-  target_size     INTEGER
+  target_size     INTEGER,
+  source_arm      TEXT                          -- 2.2 (D-081): real trial arm the cohort's rates come from
 );
 
 CREATE TABLE IF NOT EXISTS survey_config (
@@ -85,13 +97,15 @@ CREATE TABLE IF NOT EXISTS symptom_record (
 
 CREATE INDEX IF NOT EXISTS ix_symptom_record ON symptom_record(record_id);
 
-CREATE TABLE IF NOT EXISTS document (           -- document assistant (Could)
+CREATE TABLE IF NOT EXISTS document (           -- document assistant (Could); 2.2 lists real public documents (D-080)
   doc_id          TEXT PRIMARY KEY,
   title           TEXT NOT NULL,
   source_url      TEXT NOT NULL,
-  version         TEXT NOT NULL,
+  version         TEXT NOT NULL,                -- date of the public document, e.g. '2018-03-07'
   approved_by     TEXT NOT NULL,
-  approved_at     TEXT NOT NULL
+  approved_at     TEXT NOT NULL,
+  program_id      TEXT REFERENCES program(program_id),  -- 2.2
+  kind            TEXT CHECK (kind IN ('protocol','sap','label'))  -- 2.2
 );
 
 CREATE TABLE IF NOT EXISTS access_log (
@@ -138,7 +152,10 @@ SELECT program_id, cohort_id, drug_version, iso_week,
        COUNT(*) AS records,
        COUNT(DISTINCT patient_ref) AS patients,
        ROUND(1.0 * SUM(status = 'completed') / COUNT(*), 3) AS completion_rate,
-       ROUND(1.0 * SUM(status = 'missed') / COUNT(*), 3) AS missed_rate
+       ROUND(1.0 * SUM(status = 'missed') / COUNT(*), 3) AS missed_rate,
+       COALESCE(SUM(input_mode = 'voice'), 0) AS voice_records,  -- 2.2: answered records by input mode (D-059)
+       COALESCE(SUM(input_mode = 'text'), 0) AS text_records,
+       COALESCE(SUM(input_mode = 'mixed'), 0) AS mixed_records
 FROM checkin_record
 GROUP BY program_id, cohort_id, drug_version, iso_week
 HAVING COUNT(DISTINCT patient_ref) >= 5;

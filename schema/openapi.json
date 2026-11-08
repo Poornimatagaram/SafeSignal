@@ -3,7 +3,7 @@
   "info": {
     "title": "Sentinel service",
     "description": "SafeSignal / Sentinel API. Contract source of truth: schema/ in the repository. Every request except /healthz needs X-Role and X-Actor-Id headers.",
-    "version": "2.1"
+    "version": "2.2"
   },
   "paths": {
     "/healthz": {
@@ -1899,7 +1899,333 @@
         }
       }
     },
+    "/v1/company/programs": {
+      "get": {
+        "tags": [
+          "company"
+        ],
+        "summary": "The company, its programs and cohorts, with the real trial each is grounded in (2.2)",
+        "operationId": "company_programs_v1_company_programs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/company/documents": {
+      "get": {
+        "tags": [
+          "company"
+        ],
+        "summary": "Trial protocol, statistical analysis plan and FDA label per program, with public source links (2.2)",
+        "operationId": "company_documents_v1_company_documents_get",
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Program Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Document"
+                  },
+                  "title": "Response Company Documents V1 Company Documents Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/v1/company/terms": {
+      "get": {
+        "tags": [
+          "company"
+        ],
+        "summary": "Term list for a program, for labelling dashboard rows (2.2)",
+        "operationId": "company_terms_v1_company_terms_get",
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Program Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
     "/v1/company/cohorts/{cohort_id}/survey": {
+      "get": {
+        "tags": [
+          "company"
+        ],
+        "summary": "Current survey version for a cohort, for the survey editor (2.2)",
+        "operationId": "company_survey_v1_company_cohorts__cohort_id__survey_get",
+        "parameters": [
+          {
+            "name": "cohort_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cohort Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      },
       "put": {
         "tags": [
           "company"
@@ -2169,6 +2495,58 @@
         ],
         "title": "AlertAccepted"
       },
+      "CohortInfo": {
+        "properties": {
+          "cohort_id": {
+            "type": "string",
+            "title": "Cohort Id"
+          },
+          "drug_version": {
+            "type": "string",
+            "title": "Drug Version"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "target_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Size"
+          },
+          "source_arm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Arm"
+          },
+          "enrolled": {
+            "type": "integer",
+            "title": "Enrolled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cohort_id",
+          "drug_version",
+          "label",
+          "target_size",
+          "source_arm",
+          "enrolled"
+        ],
+        "title": "CohortInfo"
+      },
       "CohortWeeklyRow": {
         "properties": {
           "program_id": {
@@ -2224,6 +2602,36 @@
         ],
         "title": "CohortWeeklyRow"
       },
+      "Company": {
+        "properties": {
+          "company_id": {
+            "type": "string",
+            "title": "Company Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "company_id",
+          "display_name",
+          "note"
+        ],
+        "title": "Company"
+      },
       "CompletionRow": {
         "properties": {
           "program_id": {
@@ -2257,6 +2665,18 @@
           "missed_rate": {
             "type": "number",
             "title": "Missed Rate"
+          },
+          "voice_records": {
+            "type": "integer",
+            "title": "Voice Records"
+          },
+          "text_records": {
+            "type": "integer",
+            "title": "Text Records"
+          },
+          "mixed_records": {
+            "type": "integer",
+            "title": "Mixed Records"
           }
         },
         "type": "object",
@@ -2268,7 +2688,10 @@
           "records",
           "patients",
           "completion_rate",
-          "missed_rate"
+          "missed_rate",
+          "voice_records",
+          "text_records",
+          "mixed_records"
         ],
         "title": "CompletionRow"
       },
@@ -2350,6 +2773,73 @@
           "updated_at"
         ],
         "title": "ConsentState"
+      },
+      "Document": {
+        "properties": {
+          "doc_id": {
+            "type": "string",
+            "title": "Doc Id"
+          },
+          "program_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Id"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "protocol",
+                  "sap",
+                  "label"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "approved_by": {
+            "type": "string",
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "type": "string",
+            "title": "Approved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "doc_id",
+          "program_id",
+          "kind",
+          "title",
+          "source_url",
+          "version",
+          "approved_by",
+          "approved_at"
+        ],
+        "title": "Document"
       },
       "EmergencyAccessBody": {
         "properties": {
@@ -2938,6 +3428,107 @@
           "has_key_grant"
         ],
         "title": "OrgMembership"
+      },
+      "ProgramInfo": {
+        "properties": {
+          "program_id": {
+            "type": "string",
+            "title": "Program Id"
+          },
+          "drug_name": {
+            "type": "string",
+            "title": "Drug Name"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "population": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population"
+          },
+          "source_trial": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Trial"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "cohorts": {
+            "items": {
+              "$ref": "#/components/schemas/CohortInfo"
+            },
+            "type": "array",
+            "title": "Cohorts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "program_id",
+          "drug_name",
+          "label",
+          "population",
+          "source_trial",
+          "source_url",
+          "cohorts"
+        ],
+        "title": "ProgramInfo"
+      },
+      "ProgramsResponse": {
+        "properties": {
+          "company": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Company"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "programs": {
+            "items": {
+              "$ref": "#/components/schemas/ProgramInfo"
+            },
+            "type": "array",
+            "title": "Programs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "company",
+          "programs"
+        ],
+        "title": "ProgramsResponse"
       },
       "PublicKeyBody": {
         "properties": {

@@ -13,6 +13,9 @@ keys/
 *.webm
 *.ogg
 recordings/
+# Sponsor-authored trial PDFs: fetched locally by data/company/fetch_documents.py, never committed (D-080)
+data/company/documents/
+*.pdf
 
 # Python
 __pycache__/

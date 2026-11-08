@@ -21,13 +21,23 @@
     "payload_sha256": "^[a-f0-9]{64}$",
     "org_id": "^org_[a-f0-9]{8}$",
     "contact_id": "^ec_[a-f0-9]{8}$",
-    "phone": "^(\\+[1-9][0-9]{6,14}|[0-9]{3})$"
+    "phone": "^(\\+[1-9][0-9]{6,14}|[0-9]{3})$",
+    "cohort_id": "^cohort_[A-Za-z0-9_]{1,24}$",
+    "company_id": "^co_[a-z0-9_]{1,24}$"
   },
   "cohort_id": [
     "cohort_A",
     "cohort_B",
     "cohort_C",
-    "cohort_D"
+    "cohort_D",
+    "cohort_ryb_A",
+    "cohort_ryb_B",
+    "cohort_ryb_C",
+    "cohort_ryb_D",
+    "cohort_inf_A",
+    "cohort_inf_B",
+    "cohort_inf_C",
+    "cohort_inf_D"
   ],
   "drug_version": [
     "v1",
@@ -158,6 +168,12 @@
     "SE_DYSPNEA",
     "SE_COUGH",
     "SE_EDEMA",
+    "SE_NAUSEA",
+    "SE_VOMITING",
+    "SE_FEVER",
+    "SE_NASAL",
+    "SE_IRRITABILITY",
+    "SE_INJECTION_SITE",
     "SE_OTHER_REVIEW"
   ]
 }

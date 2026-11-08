@@ -429,6 +429,25 @@ class SqliteStore:
         return _rows(self.db.company.execute(
             "SELECT * FROM v_completion_weekly WHERE program_id = ? ORDER BY iso_week, cohort_id", (program_id,)))
 
+    def programs(self) -> dict:
+        c = self.db.company
+        company = c.execute("SELECT company_id, display_name, note FROM company LIMIT 1").fetchone()
+        progs = _rows(c.execute("SELECT program_id, drug_name, label, population, source_trial, source_url "
+                                "FROM program ORDER BY rowid"))
+        for p in progs:
+            p["cohorts"] = _rows(c.execute(
+                "SELECT k.cohort_id, k.drug_version, k.label, k.target_size, k.source_arm, "
+                "(SELECT COUNT(*) FROM enrollment e WHERE e.cohort_id = k.cohort_id AND e.active = 1) AS enrolled "
+                "FROM cohort k WHERE k.program_id = ? ORDER BY k.cohort_id", (p["program_id"],)))
+        return {"company": dict(company) if company else None, "programs": progs}
+
+    def documents(self, program_id: str | None) -> list[dict]:
+        sql = "SELECT doc_id, program_id, kind, title, source_url, version, approved_by, approved_at FROM document"
+        args: tuple = ()
+        if program_id:
+            sql, args = sql + " WHERE program_id = ?", (program_id,)
+        return _rows(self.db.company.execute(sql + " ORDER BY program_id, kind, doc_id", args))
+
     def publish_survey(self, actor_id: str, cohort_id: str, payload: dict) -> dict:
         c = self.db.company
         if c.execute("SELECT 1 FROM cohort WHERE cohort_id = ?", (cohort_id,)).fetchone() is None:

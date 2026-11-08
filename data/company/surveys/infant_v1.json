@@ -1,0 +1,52 @@
+{
+  "schedule": {
+    "every_days": 1
+  },
+  "questions": [
+    {
+      "question_id": "q1",
+      "purpose": "wellbeing",
+      "asks": [
+        "How has your baby been since yesterday?",
+        "Has your baby seemed any different since yesterday?",
+        "Has your baby seemed unwell, yes or no?"
+      ]
+    },
+    {
+      "question_id": "q2",
+      "purpose": "symptom_screen",
+      "asks": [
+        "Have you noticed a temperature, a rash, a runny nose, or anything at the injection spot?",
+        "Any fever, rash, snuffles or soreness where the injection was?",
+        "Is it a fever, a rash, the injection spot, or nothing new?"
+      ]
+    },
+    {
+      "question_id": "q3",
+      "purpose": "severity",
+      "asks": [
+        "How much is it bothering your baby?",
+        "Is it mild, moderate or severe?",
+        "Is your baby feeding and sleeping less because of it, yes or no?"
+      ]
+    },
+    {
+      "question_id": "q4",
+      "purpose": "onset",
+      "asks": [
+        "When did you first notice it?",
+        "Did it start today, in the last few days, or earlier?",
+        "Did it start this week, yes or no?"
+      ]
+    },
+    {
+      "question_id": "q5",
+      "purpose": "exposure",
+      "asks": [
+        "Has anything changed for your baby, like a new formula, food, soap or other vaccines?",
+        "Any new feeds, creams or jabs?",
+        "Yes or no?"
+      ]
+    }
+  ]
+}

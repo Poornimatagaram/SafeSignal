@@ -299,6 +299,34 @@ def completion(program_id: str, a: Actor = Depends(actor), s: SqliteStore = Depe
     return s.completion(program_id)
 
 
+@app.get("/v1/company/programs", response_model=m.ProgramsResponse, responses=ERRORS, tags=["company"],
+         summary="The company, its programs and cohorts, with the real trial each is grounded in (2.2)")
+def company_programs(a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, *COMPANY_READ)
+    return s.programs()
+
+
+@app.get("/v1/company/documents", response_model=list[m.Document], responses=ERRORS, tags=["company"],
+         summary="Trial protocol, statistical analysis plan and FDA label per program, with public source links (2.2)")
+def company_documents(program_id: Optional[str] = None, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, *COMPANY_READ)
+    return s.documents(program_id)
+
+
+@app.get("/v1/company/terms", response_model=m.TermsResponse, responses=ERRORS, tags=["company"],
+         summary="Term list for a program, for labelling dashboard rows (2.2)")
+def company_terms(program_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, *COMPANY_READ)
+    return s.get_terms(program_id)
+
+
+@app.get("/v1/company/cohorts/{cohort_id}/survey", response_model=m.SurveyResponse, responses=ERRORS,
+         tags=["company"], summary="Current survey version for a cohort, for the survey editor (2.2)")
+def company_survey(cohort_id: str, a: Actor = Depends(actor), s: SqliteStore = Depends(store)):
+    need(a, *COMPANY_READ)
+    return s.get_survey(cohort_id)
+
+
 @app.put("/v1/company/cohorts/{cohort_id}/survey", response_model=m.SurveyPublished, status_code=201,
          responses=ERRORS, tags=["company"], summary="Publish a survey version (schema/survey_config.json)")
 def publish_survey(cohort_id: str, payload: Payload = Body(...), a: Actor = Depends(actor),

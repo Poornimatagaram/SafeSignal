@@ -7,7 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from nacl.public import PrivateKey, SealedBox
 
-from sentinel_contract import CONTRACT_VERSION, SCHEMA_DIR, ContractError, canonical, payload_sha256
+from sentinel_contract import (CONTRACT_VERSION, SCHEMA_DIR, ContractError, canonical, payload_sha256,
+                               validation_errors)
 from sentinel_contract.client import SendRejected, SentinelClient, build_envelope
 from sentinel_service import demo_ids as ids
 from sentinel_service.main import app
@@ -83,7 +84,8 @@ def test_contract_version_header_and_terms(c):
     r = c.get("/v1/terms", params={"program_id": ids.PROGRAM_ID}, headers=PT)
     assert r.headers["X-Schema-Version"] == CONTRACT_VERSION
     terms = {t["term_code"]: t for t in r.json()["terms"]}
-    assert terms["SE_RASH"]["known_for_program"] is True and terms["SE_COUGH"]["known_for_program"] is False
+    assert terms["SE_RASH"]["known_for_program"] is True and terms["SE_COUGH"]["known_for_program"] is True
+    assert terms["SE_INFUSION_REACTION"]["known_for_program"] is False  # Rybrevant only
 
 
 def test_survey_includes_schedule(c):
@@ -163,6 +165,34 @@ def test_cohort_rows_never_below_5(seeded):
     assert rows and all(r["patients"] >= 5 and r["reporting_patients"] >= 5 for r in rows)
     assert all(r["severe_patients"] is None or r["severe_patients"] == 0 or r["severe_patients"] >= 5 for r in rows)
     assert len(comp) == 4 * 2 and all(0 < r["completion_rate"] < 1 and r["missed_rate"] > 0 for r in comp)
+    for r in comp:  # input modes count answered records only
+        answered = r["voice_records"] + r["text_records"] + r["mixed_records"]
+        assert abs(answered - r["records"] * (1 - r["missed_rate"])) <= 1
+
+
+def test_company_programs_documents_terms_and_survey(c):
+    body = c.get("/v1/company/programs", headers=COMPANY_READER).json()
+    assert body["company"]["company_id"] == "co_halvaren"
+    progs = {p["program_id"]: p for p in body["programs"]}
+    assert set(progs) == {ids.PROGRAM_ID, "prog_rybrevant_01", "prog_beyfortus_01"}
+    assert progs["prog_beyfortus_01"]["population"] == "infants"
+    walter_cohort = next(k for k in progs[ids.PROGRAM_ID]["cohorts"] if k["cohort_id"] == "cohort_B")
+    assert "Osimertinib" in walter_cohort["source_arm"]
+    docs = c.get("/v1/company/documents", params={"program_id": "prog_rybrevant_01"}, headers=COMPANY_READER).json()
+    assert {d["kind"] for d in docs} == {"protocol", "sap", "label"}
+    terms = c.get("/v1/company/terms", params={"program_id": "prog_beyfortus_01"}, headers=COMPANY_READER).json()
+    known = {t["term_code"] for t in terms["terms"] if t["known_for_program"]}
+    assert known == {"SE_RASH", "SE_INJECTION_SITE"}
+    survey = c.get("/v1/company/cohorts/cohort_inf_A/survey", headers=COMPANY_READER).json()
+    assert "baby" in survey["questions"][0]["asks"][0]
+    assert c.get("/v1/company/programs", headers=PT).status_code == 403
+
+
+def test_record_for_a_second_program_cohort_is_valid():
+    rec = dict(example("company_record"), program_id="prog_rybrevant_01", cohort_id="cohort_ryb_A")
+    rec["symptoms"] = [dict(rec["symptoms"][0], term_code="SE_INFUSION_REACTION")]
+    assert validation_errors("company_record", rec) == []
+    assert validation_errors("company_record", dict(rec, cohort_id="cohort A")) != []
 
 
 def test_export_has_no_receipt_time_and_includes_reporter(c):
