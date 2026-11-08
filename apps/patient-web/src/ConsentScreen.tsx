@@ -11,6 +11,8 @@ export interface ConsentViewProps {
   onToggle: (key: ConsentKey) => void
   onRetry: () => void
   onBack: () => void
+  /** "Change my choices": the setup page (care team, caregiver, emergencies). */
+  onSetup?: () => void
   headingRef?: RefObject<HTMLHeadingElement | null>
 }
 
@@ -49,7 +51,7 @@ export function consentReceiptText(receipt: OutboxReceipt | null): string {
   }
 }
 
-export function ConsentScreen({ flow, onBack }: { flow: ConsentFlow; onBack: () => void }) {
+export function ConsentScreen({ flow, onBack, onSetup }: { flow: ConsentFlow; onBack: () => void; onSetup?: () => void }) {
   const state = useSyncExternalStore(flow.subscribe, flow.getState)
   const heading = useRef<HTMLHeadingElement>(null)
 
@@ -65,11 +67,12 @@ export function ConsentScreen({ flow, onBack }: { flow: ConsentFlow; onBack: () 
       onToggle={(key) => void flow.toggle(key)}
       onRetry={() => void flow.load()}
       onBack={onBack}
+      onSetup={onSetup}
     />
   )
 }
 
-export function ConsentView({ state, onToggle, onRetry, onBack, headingRef }: ConsentViewProps) {
+export function ConsentView({ state, onToggle, onRetry, onBack, onSetup, headingRef }: ConsentViewProps) {
   const { consent } = state
   return (
     <main className="screen">
@@ -103,6 +106,11 @@ export function ConsentView({ state, onToggle, onRetry, onBack, headingRef }: Co
         </div>
       )}
 
+      {onSetup && state.phase === 'ready' && (
+        <button type="button" className="button button--primary button--huge" onClick={onSetup}>
+          Change my choices
+        </button>
+      )}
       <button type="button" className="button button--secondary button--huge" onClick={onBack}>
         Back to my check-in
       </button>

@@ -98,6 +98,7 @@ export const RECEIPT_SENT: EgressReceipt = {
   response_code: 201,
   alert: null,
   envelope: null,
+  envelopes: [],
 }
 
 export const RECEIPT_QUEUED: EgressReceipt = { ...RECEIPT_SENT, status: 'queued', sent_at: null, response_code: null }
@@ -142,7 +143,7 @@ export const CARE_FIELDS = [
   'trend',
 ]
 
-export const CARE: CareShare = { org_id: 'org_demo_clinic', method: 'POST', url: SERVICE_ENVELOPES, sealed: true, fields: CARE_FIELDS }
+export const CARE: CareShare = { org_id: 'org_demo_clinic', method: 'POST', url: SERVICE_ENVELOPES, sealed: true, fields: CARE_FIELDS, emergency: [] }
 
 /** Ready to share, also with the care team (sealed). */
 export const SUMMARY_WITH_CARE: CheckinSummary = { ...SUMMARY_READY, share: { ...SUMMARY_READY.share, care: CARE } }
@@ -190,4 +191,6 @@ export const CONSENT_ON: ConsentState = {
   has_care_team: true,
   has_caregiver: true,
   receipt: null,
+  setup: null,
+  options: { organizations: [], caregivers: [] },
 }

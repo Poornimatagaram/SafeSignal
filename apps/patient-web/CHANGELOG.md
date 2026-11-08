@@ -2,11 +2,13 @@
 
 Changes in this app, newest first. Owned by this app's owner (root `CLAUDE.md`).
 
-## 2026-11-08: Task A7, consent switches and the sealed doctor copy
+## 2026-11-08: Task A7, consent switches and setup, and the sealed copies
+- Added: "Set up who I share with" (`SetupScreen.tsx`, `setupFlow.ts`), opened by "Change my choices". Four steps: care team, caregiver (with "Only alerts" or "Alerts and a summary"), emergencies (yes/no, up to 3 hospitals, up to 3 contacts with an optional name that stays on this computer), then a review with "What will be sent" and one "Save and send" (`PUT /consent/setup`). The runtime's 422 message is shown in plain words.
+- Added: one sealed copy per organization on the receipt (`envelopes`), and on the summary: "Also sealed for <hospital>: they can open it only in an emergency, and that is logged."
 - Added: "Who I share with" page (`ConsentScreen.tsx`, `consentFlow.ts`), opened from the start screen. Two big switches, "Share with my doctor" and "Share with my caregiver" (`role="switch"`, `aria-checked`, whole row tappable, On/Off in words), each with one plain line on what it means. After a change: "Saved and sent.", or "Saved on this device. It will be sent when you're back online." (polled until sent). A switch with nobody set up is disabled with a reason.
 - Added: the summary's "What will be shared" has a "Your doctor" section: what is inside the sealed copy in plain words, or "Your doctor gets nothing from this check-in" when sharing is off. "Show exactly what is sent" also lists the sealed copy's fields.
 - Added: the receipt shows the doctor's sealed copy (sent, with time and fingerprint; waiting for the hospital's key; or waiting for the connection), and polling continues while it waits.
-- Tests: `tests/consent.test.tsx`; 211 in total.
+- Tests: `tests/consent.test.tsx`, `tests/setup.test.tsx`; 232 in total.
 
 ## 2026-11-08
 - Added: voice commands during questions (VC-07). A turn may come back as `command: "repeat"|"slower"` (or `next.action` repeat/slower): not an answer. The screen replays the same wording at once (slow for "slower"), shows a small "Saying it again" / "Saying it more slowly", and waits for the answer with the same `ask`; it never counts as a re-ask. `command` missing, null or unknown reads as a normal answer.

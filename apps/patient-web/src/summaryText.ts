@@ -1,6 +1,6 @@
 // Plain words for the summary, the "what will be shared" box and the egress receipt.
 // Symptoms are always "for review", never described as caused by anything.
-import type { EnvelopeState, Onset, ReceiptAlert, ReceiptStatus, Severity, SummaryItem } from './api.ts'
+import { envelopeAsList, type CareEnvelope, type EnvelopeState, type LinkType, type OrgName, type Onset, type ReceiptAlert, type ReceiptStatus, type Severity, type SummaryItem } from './api.ts'
 
 const ONSET_WORDS: Record<string, string> = {
   today: 'today',
@@ -151,30 +151,60 @@ export const CARE_TEAM_OFF = 'Your doctor gets nothing from this check-in: shari
 /** Where the care team's sealed record goes, when the runtime gives no name for it. */
 export const CARE_TEAM_DESTINATION = 'Your care team (sealed: only your doctors can read it)'
 
-/**
- * One plain line about the care team's sealed record on the receipt, or null when there is none (not sharing).
- * A sent record shows its details (destination, time, fingerprint) instead of a waiting line.
- */
-export function envelopeText(envelope: EnvelopeState): string | null {
-  if (envelope === null) return null
-  if (envelope.status === 'waiting') {
-    switch (envelope.reason) {
-      case 'no_key':
-        return "Your doctors' sealed copy is waiting: their hospital has not set up its lock yet. It will be sent later by itself."
-      case 'offline':
-        return "Your doctors' sealed copy is saved on this computer. It will be sent when you're back online."
-      case 'refused':
-        return "The service did not accept your doctors' sealed copy. Please tell your helper."
-      default:
-        return "Your doctors' sealed copy is waiting on this computer. It will be sent later by itself."
+/** Where an emergency hospital's sealed copy goes, when the runtime gives no name for it. */
+export const EMERGENCY_DESTINATION = 'Your emergency hospital (sealed: opened only in an emergency, and that is logged)'
+
+/** "Also sealed for an emergency: City Hospital and Lakeside Hospital. ..." or null when none. */
+export function emergencyCopyText(orgs: readonly OrgName[]): string | null {
+  if (orgs.length === 0) return null
+  const names = orgs.map((org) => org.display_name)
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+  return `Also sealed for ${list}: they can open it only in an emergency, and that is logged.`
+}
+
+/** Plain words for who a sealed copy is for. */
+export function sealedCopyDestination(copy: CareEnvelope): string {
+  if (copy.label.trim() !== '') return copy.label
+  return copy.link_type === 'emergency' ? EMERGENCY_DESTINATION : CARE_TEAM_DESTINATION
+}
+
+/** The heading of a sent sealed copy on the receipt. */
+export function sealedCopyHeading(linkType: LinkType): string {
+  return linkType === 'emergency' ? "Emergency hospital's sealed copy" : "Your doctor's sealed copy"
+}
+
+/** One plain line about one sealed copy on the receipt. */
+export function sealedCopyText(copy: CareEnvelope): string {
+  const emergency = copy.link_type === 'emergency'
+  const noun = emergency ? "The emergency hospital's sealed copy" : "Your doctors' sealed copy"
+  const refused = `The service did not accept ${emergency ? "the emergency hospital's" : "your doctors'"} sealed copy. Please tell your helper.`
+  const offline = `${noun} is saved on this computer. It will be sent when you're back online.`
+  if (copy.receipt) {
+    switch (copy.receipt.status) {
+      case 'sent':
+        return emergency
+          ? 'Your emergency hospital got a sealed copy: they can open it only in an emergency, and that is logged.'
+          : 'Your doctors got a sealed copy: only they can read it.'
+      case 'queued':
+        return offline
+      case 'failed':
+        return refused
     }
   }
-  switch (envelope.status) {
-    case 'sent':
-      return 'Your doctors got a sealed copy: only they can read it.'
-    case 'queued':
-      return "Your doctors' sealed copy is saved on this computer. It will be sent when you're back online."
-    case 'failed':
-      return "The service did not accept your doctors' sealed copy. Please tell your helper."
+  switch (copy.waiting) {
+    case 'no_key':
+      return `${noun} is waiting: ${emergency ? 'that hospital has' : 'their hospital has'} not set up its lock yet. It will be sent later by itself.`
+    case 'offline':
+      return offline
+    case 'refused':
+      return refused
+    default:
+      return `${noun} is waiting on this computer. It will be sent later by itself.`
   }
+}
+
+/** One plain line about the care team's sealed record (the single `envelope` field), or null when not sharing. */
+export function envelopeText(envelope: EnvelopeState): string | null {
+  const [copy] = envelopeAsList(envelope)
+  return copy ? sealedCopyText(copy) : null
 }

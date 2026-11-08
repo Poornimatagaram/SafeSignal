@@ -639,3 +639,60 @@ ul {
   font-size: 1.1rem;
   color: var(--ink-soft);
 }
+
+/* "Set up who I share with": big fields, one contact per box, the review in boxes. */
+.contacts,
+.contact,
+.review,
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contact,
+.review {
+  padding: 24px;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.review > .button {
+  align-self: flex-start;
+}
+
+.contact__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.field label {
+  font-size: 1.25rem; /* 30 px */
+  font-weight: 700;
+}
+
+.input {
+  min-height: 72px;
+  padding: 12px 20px;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 1.25rem; /* 30 px */
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.input:focus-visible {
+  outline: 5px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.problems {
+  flex: 1 1 300px;
+  padding-left: 1.2em;
+}
+
+.problems li + li {
+  margin-top: 8px;
+}

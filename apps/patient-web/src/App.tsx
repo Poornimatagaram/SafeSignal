@@ -15,12 +15,14 @@ import { createShareFlow, type ShareFlow } from './shareFlow.ts'
 import { ShareScreen } from './ShareScreen.tsx'
 import { createConsentFlow, type ConsentFlow } from './consentFlow.ts'
 import { ConsentScreen } from './ConsentScreen.tsx'
+import { createSetupFlow, type SetupFlow } from './setupFlow.ts'
+import { SetupScreen } from './SetupScreen.tsx'
 import { AlertIcon, ArrowIcon, HourglassIcon, MicIcon, SlowIcon, SpeakerIcon, StopIcon } from './Icons.tsx'
 
 const client = createRuntimeClient()
 
-/** start -> question (one per survey question) -> share (summary, approval, receipt); start <-> consent. */
-type Screen = 'start' | 'question' | 'share' | 'consent'
+/** start -> question (one per survey question) -> share (summary, approval, receipt); start <-> consent <-> setup. */
+type Screen = 'start' | 'question' | 'share' | 'consent' | 'setup'
 /** Push-to-talk is a toggle (tap to start, tap to stop): holding a button is hard with a hand tremor. */
 type Talk = 'idle' | 'starting' | 'listening' | 'sending'
 /**
@@ -48,6 +50,8 @@ export default function App() {
   const [notice, setNotice] = useState<Notice>(null)
   // "Who I share with": created when opened from the start screen, disposed when leaving it.
   const [consentFlow, setConsentFlow] = useState<ConsentFlow | null>(null)
+  // "Set up who I share with": created when opened from "Who I share with".
+  const [setupFlow, setSetupFlow] = useState<SetupFlow | null>(null)
 
   const session = useRef<CheckinSession | null>(null) // today's check-in; every answer is sent with its id
   const player = useRef<Player | null>(null)
@@ -83,10 +87,23 @@ export default function App() {
 
   // Leaving "Who I share with" stops watching a queued change (the runtime still sends it by itself).
   useEffect(() => () => consentFlow?.dispose(), [consentFlow])
+  useEffect(() => () => setupFlow?.dispose(), [setupFlow])
 
   const openConsent = () => {
     setConsentFlow(createConsentFlow(client))
     setScreen('consent')
+  }
+
+  const openSetup = () => {
+    setConsentFlow(null)
+    setSetupFlow(createSetupFlow(client))
+    setScreen('setup')
+  }
+
+  // Back to "Who I share with", loaded again so it shows what was just saved.
+  const closeSetup = () => {
+    setSetupFlow(null)
+    openConsent()
   }
 
   const closeConsent = () => {
@@ -326,7 +343,11 @@ export default function App() {
   }
 
   if (screen === 'consent' && consentFlow) {
-    return <ConsentScreen flow={consentFlow} onBack={closeConsent} />
+    return <ConsentScreen flow={consentFlow} onBack={closeConsent} onSetup={openSetup} />
+  }
+
+  if (screen === 'setup' && setupFlow) {
+    return <SetupScreen flow={setupFlow} onClose={closeSetup} />
   }
 
   if (screen === 'share' && shareFlow) {

@@ -7,8 +7,9 @@ import {
   SEVERITIES,
   type CheckinSummary,
   type CorrectionChange,
+  receiptEnvelopes,
+  type CareEnvelope,
   type EgressReceipt,
-  type EnvelopeState,
   type Severity,
   type SummaryItem,
 } from './api.ts'
@@ -30,11 +31,13 @@ import {
 } from './messages.ts'
 import {
   alertText,
-  CARE_TEAM_DESTINATION,
   CARE_TEAM_OFF,
   CARE_TEAM_SEALED,
   careTeamPartsText,
-  envelopeText,
+  emergencyCopyText,
+  sealedCopyDestination,
+  sealedCopyHeading,
+  sealedCopyText,
   formatLocalTime,
   itemLabel,
   NOTHING_TO_REPORT,
@@ -656,6 +659,7 @@ function WhatWillBeShared({ summary }: { summary: CheckinSummary }) {
                 <li key={text}>{text}</li>
               ))}
             </ul>
+            {emergencyCopyText(share.care.emergency) && <p>{emergencyCopyText(share.care.emergency)}</p>}
           </>
         ) : (
           <p>{CARE_TEAM_OFF}</p>
@@ -746,7 +750,11 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
           {alertText(receipt.alert)}
         </p>
       )}
-      <EnvelopeLine envelope={receipt.envelope} />
+      {receiptEnvelopes(receipt).map((copy, i) => (
+        <p key={`${copy.org_id}-${i}`} className="lead alert-line" aria-live="polite">
+          {sealedCopyText(copy)}
+        </p>
+      ))}
 
       <dl className="receipt">
         <div>
@@ -791,7 +799,9 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
         </div>
       </dl>
 
-      <EnvelopeReceipt envelope={receipt.envelope} />
+      {receiptEnvelopes(receipt).map((copy, i) => (
+        <SealedCopyReceipt key={`${copy.org_id}-${i}`} copy={copy} index={i} />
+      ))}
 
       <div className="closing">
         <CheckIcon className="icon icon--large" />
@@ -801,40 +811,31 @@ function ReceiptPage({ receipt, headingRef }: { receipt: EgressReceipt; headingR
   )
 }
 
-/** The care team's sealed copy in one plain line (updated in place while it waits). Nothing when not sharing. */
-function EnvelopeLine({ envelope }: { envelope: EnvelopeState }) {
-  const text = envelopeText(envelope)
-  if (text === null) return null
-  return (
-    <p className="lead alert-line" aria-live="polite">
-      {text}
-    </p>
-  )
-}
-
 /** A sent sealed copy: where it went, when, and its fingerprint (the network log has the same one). */
-function EnvelopeReceipt({ envelope }: { envelope: EnvelopeState }) {
-  if (envelope === null || envelope.status !== 'sent') return null
+function SealedCopyReceipt({ copy, index }: { copy: CareEnvelope; index: number }) {
+  const receipt = copy.receipt
+  if (receipt === null || receipt.status !== 'sent') return null
+  const headingId = `sealed-copy-${index}`
   return (
-    <section className="care-receipt" aria-labelledby="care-receipt-heading">
-      <h2 id="care-receipt-heading" className="subtitle">
-        Your doctor's sealed copy
+    <section className="care-receipt" aria-labelledby={headingId}>
+      <h2 id={headingId} className="subtitle">
+        {sealedCopyHeading(copy.link_type)}
       </h2>
       <dl className="receipt">
         <div>
           <dt>Sent to</dt>
-          <dd>{envelope.label ?? CARE_TEAM_DESTINATION}</dd>
+          <dd>{sealedCopyDestination(copy)}</dd>
         </div>
-        {envelope.sent_at && (
+        {receipt.sent_at && (
           <div>
             <dt>Sent at</dt>
-            <dd>{formatLocalTime(envelope.sent_at)}</dd>
+            <dd>{formatLocalTime(receipt.sent_at)}</dd>
           </div>
         )}
         <div>
           <dt>Fingerprint</dt>
           <dd>
-            <p className="mono fingerprint">{envelope.payload_sha256}</p>
+            <p className="mono fingerprint">{receipt.payload_sha256}</p>
             <p className="note">
               This code is a fingerprint of the sealed copy. It matches the entry in this computer's network log.
             </p>
