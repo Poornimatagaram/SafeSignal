@@ -360,6 +360,8 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 1. Company portal (`apps/company-web`) on the 2.2 endpoints.
 2. Ask the repo owner to protect `main`.
 
+---
+
 ## Session 013 — 2026-11-08 (Sun) · End-to-end check across personas
 
 **Goal:** connect the three personas through the service and prove each sees its intended slice of the same check-in.
@@ -375,4 +377,25 @@ One entry per working session, newest at the bottom. Each entry: goal, outputs, 
 **Next**
 1. Point the patient owner at `scripts/e2e_check.py` as the reference for the egress gate's calls.
 2. Not automated yet in 26.15: network-off check-in, leakage evaluation, patient receipt on screen.
+
+---
+
+## Session 015 — 2026-11-08 (Sun) · Company-side overview
+
+**Goal:** Write down what the company side does across the whole product and what is left, before merging #14 (end-to-end check) and #15 (company portal).
+
+**Outputs**
+- `docs/company/company-side-overview.md`: the contract, the service, the drug company's product, the data and demo setup, project upkeep, what is left, and what other owners handle.
+
+**Verification**
+- Documentation only. Facts were checked against `main` at `b0200e7` and the open PRs.
+
+**Open items**
+- Branch protection (repo owner).
+- D-008.
+- Team integration run once the patient egress gate (A4, patient side) exists.
+
+**Next**
+1. Merge this PR, then #14 and #15 (each needs `main` merged in for the log files).
+2. Plan the next steps with the product owner.
 
